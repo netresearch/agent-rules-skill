@@ -373,27 +373,26 @@ Let the generator extract them automatically.
 
 ## Installation
 
-### Claude Code Marketplace
+### Option 1: Via Netresearch Marketplace (Recommended)
 
-Add to `.claude/marketplace.json`:
-
-```json
-{
-  "name": "agents",
-  "description": "Generate AGENTS.md files following public convention",
-  "version": "1.0.0",
-  "path": "/tmp/agents-skill"
-}
+```bash
+/plugin marketplace add netresearch/claude-code-marketplace
 ```
 
-### Direct Usage
+Then browse skills with `/plugin`.
+
+### Option 2: Download Release
+
+Download the [latest release](https://github.com/netresearch/agents-skill/releases/latest) and extract to `~/.claude/skills/agents/`
+
+### Option 3: Manual Installation
 
 ```bash
 # Clone skill
-git clone https://github.com/netresearch/agents-skill.git /tmp/agents-skill
+git clone https://github.com/netresearch/agents-skill.git ~/.claude/skills/agents
 
 # Generate for current project
-/tmp/agents-skill/scripts/generate-agents.sh .
+~/.claude/skills/agents/scripts/generate-agents.sh .
 ```
 
 ## Troubleshooting
