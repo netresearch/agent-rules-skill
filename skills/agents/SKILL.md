@@ -15,12 +15,16 @@ When standardizing existing projects, use this skill to generate consistent agen
 
 When ensuring multi-repo consistency, use this skill to apply the same standards across repositories.
 
+When checking if AGENTS.md files are up to date, use the freshness checking scripts to compare file timestamps with git commits.
+
 ## Capabilities
 
 - **Thin root files** (~30 lines) with precedence rules and global defaults
 - **Scoped files** for subsystems (backend/, frontend/, internal/, cmd/)
 - **Auto-extracted commands** from Makefile, package.json, composer.json, go.mod
 - **Language-specific templates** for Go, PHP, TypeScript, Python, hybrid projects
+- **Freshness checking** - Detects if AGENTS.md files are outdated by comparing their "Last updated" date with git commits
+- **Automatic timestamps** - All generated files include creation/update dates in the header
 
 ## Running Scripts
 
@@ -45,6 +49,32 @@ To validate AGENTS.md structure compliance:
 
 ```bash
 scripts/validate-structure.sh /path/to/project
+```
+
+Options:
+- `--check-freshness, -f` - Also check if files are up to date with git commits
+- `--verbose, -v` - Show detailed output
+
+### Checking Freshness
+
+To check if AGENTS.md files are up to date with recent git commits:
+
+```bash
+scripts/check-freshness.sh /path/to/project
+```
+
+This script:
+- Extracts the "Last updated" date from the AGENTS.md header
+- Checks git commits since that date for files in the relevant scope
+- Reports if there are commits that might require AGENTS.md updates
+
+Options:
+- `--verbose, -v` - Show commit details and changed files
+- `--threshold=DAYS` - Days threshold to consider stale (default: 7)
+
+Example with full validation:
+```bash
+scripts/validate-structure.sh /path/to/project --check-freshness --verbose
 ```
 
 ### Detecting Project Type
