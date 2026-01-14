@@ -282,19 +282,19 @@ Templates should include before/after examples:
 
 | ID | Feature | Effort | Value | Priority | Status |
 |----|---------|--------|-------|----------|--------|
-| 0.1 | Add agents.md spec link | Very Low | Medium | **P0** | TODO |
-| 0.2 | Fix Docker Compose detection | Very Low | Low | **P0** | TODO |
-| 0.3 | Add extraction summary | Low | High | **P0** | TODO |
-| 1.1 | Parse README/CONTRIBUTING | Medium | High | **P1** | TODO |
-| 1.2 | Parse .github/ templates | Medium | High | **P1** | TODO |
-| 1.3 | Parse IDE settings | Medium | Medium | **P1** | TODO |
-| 1.4 | Parse AI agent configs | Medium | High | **P1** | TODO |
-| 2.1 | Deep config parsing | High | High | **P2** | TODO |
-| 2.2 | CI workflow extraction | Medium | Medium | **P2** | TODO |
-| 3.1 | Git history analysis | High | Medium | **P3** | TODO |
-| 3.2 | Commit convention detection | Medium | Medium | **P3** | TODO |
-| 4.1 | Boundaries in templates | Low | High | **P4** | TODO |
-| 4.2 | Code examples in templates | Medium | High | **P4** | TODO |
+| 0.1 | Add agents.md spec link | Very Low | Medium | **P0** | ✅ DONE |
+| 0.2 | Fix Docker Compose detection | Very Low | Low | **P0** | ✅ DONE |
+| 0.3 | Add extraction summary | Low | High | **P0** | ✅ DONE |
+| 1.1 | Parse README/CONTRIBUTING | Medium | High | **P1** | ✅ DONE |
+| 1.2 | Parse .github/ templates | Medium | High | **P1** | ✅ DONE |
+| 1.3 | Parse IDE settings | Medium | Medium | **P1** | ✅ DONE |
+| 1.4 | Parse AI agent configs | Medium | High | **P1** | ✅ DONE |
+| 2.1 | Deep config parsing | High | High | **P2** | ✅ DONE |
+| 2.2 | CI workflow extraction | Medium | Medium | **P2** | ✅ DONE |
+| 3.1 | Git history analysis | High | Medium | **P3** | ✅ DONE |
+| 3.2 | Commit convention detection | Medium | Medium | **P3** | ✅ DONE (part of 3.1) |
+| 4.1 | Boundaries in templates | Low | High | **P4** | ✅ DONE |
+| 4.2 | Code examples in templates | Medium | High | **P4** | ✅ DONE |
 
 ---
 
@@ -302,37 +302,38 @@ Templates should include before/after examples:
 
 ```
 scripts/
-├── generate-agents.sh          # Main generator (existing, enhanced)
-├── validate-structure.sh       # Structure validation (existing)
-├── check-freshness.sh          # Freshness check (existing)
-├── detect-project.sh           # Project detection (existing, enhanced)
+├── generate-agents.sh          # Main generator (enhanced with summary)
+├── validate-structure.sh       # Structure validation (enhanced with freshness)
+├── check-freshness.sh          # Freshness check (NEW)
+├── detect-project.sh           # Project detection (enhanced: IDE + agent configs)
 ├── detect-scopes.sh            # Scope detection (existing)
-├── extract-commands.sh         # Command extraction (existing, enhanced)
-├── extract-documentation.sh    # NEW: Parse README, CONTRIBUTING, etc.
-├── extract-platform-files.sh   # NEW: Parse .github/, .gitlab/, etc.
-├── extract-ide-settings.sh     # NEW: Parse .vscode/, .idea/, .editorconfig
-├── extract-agent-configs.sh    # NEW: Parse .cursor/, .claude/, .windsurf/
-├── extract-ci-commands.sh      # NEW: Parse CI workflow files
-├── analyze-git-history.sh      # NEW: Analyze commit patterns
+├── extract-commands.sh         # Command extraction (existing)
+├── extract-documentation.sh    # Parse README, CONTRIBUTING, etc. (NEW)
+├── extract-platform-files.sh   # Parse .github/, .gitlab/, etc. (NEW)
+├── extract-ide-settings.sh     # Parse .vscode/, .idea/, .editorconfig (NEW)
+├── extract-agent-configs.sh    # Parse .cursor/, .claude/, .windsurf/ (NEW)
+├── extract-quality-configs.sh  # Deep parse linter/formatter configs (NEW)
+├── extract-ci-commands.sh      # Parse CI workflow files (NEW)
+├── analyze-git-history.sh      # Analyze commit patterns (NEW)
 └── lib/
     ├── template.sh             # Template rendering (existing)
-    ├── json-utils.sh           # NEW: JSON parsing helpers
-    └── summary.sh              # NEW: Summary output formatting
+    └── summary.sh              # Summary output formatting (NEW)
 ```
 
 ---
 
 ## Success Metrics
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Config files scanned | 8 | 30+ |
-| Data points extracted | ~15 | 50+ |
-| Documentation files parsed | 0 | 5+ |
-| Platform files parsed | 0 | 10+ |
-| IDE/Agent configs parsed | 0 | 15+ |
-| Extraction summary | None | Full report |
-| agents.md spec compliance | Partial | Full |
+| Metric | Before | After P1 | Target |
+|--------|--------|----------|--------|
+| Config files scanned | 8 | 20+ | 30+ |
+| Data points extracted | ~15 | 40+ | 50+ |
+| Documentation files parsed | 0 | 5 (README, CONTRIBUTING, SECURITY, CHANGELOG, CODE_OF_CONDUCT) | 5+ |
+| Platform files parsed | 0 | 8 (PR templates, issue templates, CODEOWNERS, dependabot, renovate, FUNDING) | 10+ |
+| IDE configs parsed | 0 | 7 (editorconfig, vscode, idea, phpstorm, fleet, vim, neovim) | 10+ |
+| Agent configs parsed | 0 | 9 (cursor, claude, copilot, windsurf, aider, continue, codeium, tabnine, cody) | 10+ |
+| Extraction summary | None | Full report with verbose mode | Full report |
+| agents.md spec compliance | Partial | Improved | Full |
 
 ---
 
@@ -351,3 +352,5 @@ scripts/
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-01-14 | 1.0 | Initial roadmap created |
+| 2026-01-14 | 1.1 | Completed P0 and P1: Added extraction summary, documentation/platform/IDE/agent extractors |
+| 2026-01-14 | 1.2 | Completed P2-P4: Deep config parsing, CI extraction, git history analysis, boundaries, code examples |
