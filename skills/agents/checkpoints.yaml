@@ -90,9 +90,9 @@ mechanical:
   - id: AG-12
     type: regex
     target: AGENTS.md
-    pattern: "(DO NOT|NEVER|ALWAYS|IMPORTANT|WARNING)"
+    pattern: "^#+ (Critical|Constraints|Critical Constraints|Important|Caveats|Warnings)"
     severity: info
-    desc: "AGENTS.md should highlight critical agent constraints"
+    desc: "AGENTS.md should have Critical/Constraints section for important warnings"
 
 llm_reviews:
   # === ACCURACY VERIFICATION ===
