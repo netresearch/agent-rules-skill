@@ -27,11 +27,11 @@
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (prefer file-scoped)
-- Typecheck a file: `npx tsc --noEmit {{FILE_PATH}}`
+## Build & tests
+- Typecheck (project-wide): `npx tsc --noEmit`
 - Lint a file: `npx eslint {{FILE_PATH}}`
 - Format a file: `npx prettier --write {{FILE_PATH}}`
-- Test a file: `npm test {{FILE_PATH}}`
+- Test related: `npm test -- --findRelatedTests {{FILE_PATH}}`
 - Build: {{BUILD_CMD}}
 - Dev server: {{DEV_CMD}}
 <!-- AGENTS-GENERATED:END commands -->

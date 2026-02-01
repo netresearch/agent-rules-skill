@@ -27,7 +27,7 @@
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (prefer file-scoped)
+## Build & tests (file-scoped supported)
 - Typecheck a file: `vendor/bin/phpstan analyze {{FILE_PATH}} --level={{PHPSTAN_LEVEL}}`
 - Format a file: `vendor/bin/php-cs-fixer fix {{FILE_PATH}}`
 - Lint a file: `php -l {{FILE_PATH}}`

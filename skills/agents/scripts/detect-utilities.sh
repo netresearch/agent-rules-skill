@@ -109,14 +109,14 @@ while IFS= read -r dir; do
 
         "php")
             # List PHP utility classes
-            find "$dir" -name "*.php" -type f 2>/dev/null | while read -r file; do
+            while read -r file; do
                 class=$(grep -oE "class [A-Z][a-zA-Z0-9_]+" "$file" 2>/dev/null | head -1 | sed 's/class //')
                 [ -n "$class" ] && {
                     purpose=$(infer_purpose "$class")
                     relpath="${file#./}"
-                    echo "| $purpose | \`$class\` | \`$relpath\` |"
+                    output="$output| $purpose | \`$class\` | \`$relpath\` |\n"
                 }
-            done | head -10
+            done < <(find "$dir" -name "*.php" -type f 2>/dev/null | head -20)
             ;;
     esac
 done < <(find_util_dirs)
@@ -129,5 +129,5 @@ for util_file in "utils.ts" "utils.js" "helpers.ts" "helpers.js" "utils.py" "hel
     done
 done
 
-# Output (remove duplicates)
-echo -e "$output" | sort -u | head -15
+# Output (remove empty lines, duplicates)
+echo -e "$output" | sed '/^$/d' | sort -u | head -15

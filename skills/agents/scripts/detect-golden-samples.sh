@@ -157,5 +157,5 @@ while IFS= read -r file; do
     output="$output| Test | \`$file\` | test structure |\n"
 done < <(find_test_examples)
 
-# Output (remove trailing newline and duplicates)
-echo -e "$output" | sort -u | head -10
+# Output (remove empty lines, duplicates)
+echo -e "$output" | sed '/^$/d' | sort -u | head -10

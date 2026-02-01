@@ -89,5 +89,5 @@ case "$LANGUAGE" in
         ;;
 esac
 
-# Output (remove duplicates, limit to 10)
-echo -e "$output" | sort -u | head -10
+# Output (remove empty lines, duplicates, limit to 10)
+echo -e "$output" | sed '/^$/d' | sort -u | head -10

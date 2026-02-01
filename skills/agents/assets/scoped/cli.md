@@ -27,7 +27,7 @@ Command-line interface tools and entry points.
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (prefer file-scoped)
+## Build & tests
 - Build CLI: {{BUILD_CMD}}
 - Run CLI: {{RUN_CMD}}
 - Test: {{TEST_CMD}}

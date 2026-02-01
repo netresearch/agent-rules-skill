@@ -141,9 +141,9 @@ mechanical:
   - id: AG-20
     type: regex_not
     target: AGENTS.md
-    pattern: "\\(not configured\\)"
-    severity: warning
-    desc: "AGENTS.md should not have '(not configured)' placeholders - fill or remove sections"
+    pattern: "\\{\\{[A-Z_]+\\}\\}"
+    severity: error
+    desc: "AGENTS.md has unresolved template placeholders - regenerate or fix template"
 
   # === IMPORTANT CONTEXT ===
   - id: AG-12

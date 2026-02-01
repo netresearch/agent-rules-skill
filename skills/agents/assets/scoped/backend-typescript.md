@@ -27,11 +27,11 @@
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (prefer file-scoped)
-- Typecheck a file: `{{TYPECHECK_CMD}}`
+## Build & tests
+- Typecheck (project-wide): `{{TYPECHECK_CMD}}`
 - Format a file: `{{FORMAT_CMD}} {{FILE_PATH}}`
 - Lint a file: `{{LINT_CMD}} {{FILE_PATH}}`
-- Test a file: `{{TEST_CMD}} {{FILE_PATH}}`
+- Test related: `{{TEST_CMD}} {{FILE_PATH}}`
 - Build: {{BUILD_CMD}}
 - Dev server: {{DEV_CMD}}
 <!-- AGENTS-GENERATED:END commands -->

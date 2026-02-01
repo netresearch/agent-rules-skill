@@ -62,10 +62,8 @@ SKIPPED=0
 # JSON results storage
 declare -A COMMAND_RESULTS
 
-# Initialize JSON output directory
-if [ "$SMOKE_TEST" = true ]; then
-    mkdir -p "$(dirname "$OUTPUT_JSON")"
-fi
+# Initialize JSON output directory (always needed for results)
+mkdir -p "$(dirname "$OUTPUT_JSON")"
 
 # Check if a command is safe to execute
 # Returns 0 if safe, 1 if dangerous

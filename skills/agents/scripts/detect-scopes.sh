@@ -150,17 +150,17 @@ case "$LANGUAGE" in
             [ "$count" -ge 3 ] && add_scope "app" "frontend-typescript" "$count"
         }
 
-        [ -d "server" ] || [ -d "backend" ] && {
+        if [ -d "server" ] || [ -d "backend" ]; then
             dir=$([ -d "server" ] && echo "server" || echo "backend")
             count=$(count_source_files "$dir" "*.ts")
             [ "$count" -ge "$MIN_FILES" ] && add_scope "$dir" "backend-typescript" "$count"
-        }
+        fi
 
-        [ -d "__tests__" ] || [ -d "tests" ] && {
+        if [ -d "__tests__" ] || [ -d "tests" ]; then
             dir=$([ -d "__tests__" ] && echo "__tests__" || echo "tests")
             count=$(count_source_files "$dir" "*.test.ts")
             [ "$count" -ge 3 ] && add_scope "$dir" "testing" "$count"
-        }
+        fi
         ;;
 
     "python")

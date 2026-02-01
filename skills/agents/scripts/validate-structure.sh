@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Validate AGENTS.md structure compliance and optionally check freshness
-set -euo pipefail
+# Note: -e intentionally omitted - we accumulate errors and report at end
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

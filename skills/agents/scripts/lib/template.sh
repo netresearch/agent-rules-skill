@@ -19,11 +19,14 @@ render_template() {
     done
 
     # Handle remaining unfilled placeholders
-    # Replace table rows containing only placeholders with empty
+    # Delete table rows containing unresolved placeholders
     content=$(echo "$content" | sed '/^|.*{{[A-Z_]*}}.*|$/d')
 
-    # Replace remaining inline placeholders with "(not configured)"
-    content=$(echo "$content" | sed 's/{{[A-Z_][A-Z0-9_]*}}/(not configured)/g')
+    # Delete bullet points with only unresolved placeholders
+    content=$(echo "$content" | sed '/^[[:space:]]*[-*][[:space:]]*{{[A-Z_][A-Z0-9_]*}}[[:space:]]*$/d')
+
+    # Remove any remaining inline placeholders (better than "(not configured)" noise)
+    content=$(echo "$content" | sed 's/{{[A-Z_][A-Z0-9_]*}}//g')
 
     # Clean up multiple consecutive empty lines
     content=$(echo "$content" | cat -s)

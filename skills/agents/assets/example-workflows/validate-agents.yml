@@ -60,9 +60,10 @@ jobs:
 
       - name: Check for stale content
         run: |
-          # Warn if "(not configured)" markers exist
-          if grep -q "(not configured)" AGENTS.md; then
-            echo "WARNING: Found '(not configured)' - some sections need attention"
+          # Error if unresolved template placeholders exist
+          if grep -qE '\{\{[A-Z_]+\}\}' AGENTS.md; then
+            echo "ERROR: Found unresolved template placeholders - regenerate AGENTS.md"
+            exit 1
           fi
 
           # Check freshness (optional - customize days threshold)

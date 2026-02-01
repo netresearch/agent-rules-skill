@@ -26,11 +26,12 @@
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (prefer file-scoped)
-- Typecheck a file: `go build -v {{FILE_PATH}}`
+## Build & tests
+- Vet (static analysis): `go vet ./...`
 - Format a file: `gofmt -w {{FILE_PATH}}`
-- Lint a file: `golangci-lint run {{FILE_PATH}}`
-- Test a file: `go test -v -race -short {{FILE_PATH}}`
+- Lint: `golangci-lint run ./...`
+- Test a package: `go test -v -race ./path/to/pkg/...`
+- Test specific: `go test -v -race -run TestName ./...`
 - Build: {{BUILD_CMD}}
 <!-- AGENTS-GENERATED:END commands -->
 

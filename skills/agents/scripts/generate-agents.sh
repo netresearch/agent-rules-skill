@@ -342,7 +342,10 @@ else
     set_if_present() {
         local key="$1"
         local value="$2"
-        [ -n "$value" ] && vars[$key]="$value"
+        if [ -n "$value" ] && [ "$value" != "null" ]; then
+            vars[$key]="$value"
+        fi
+        return 0
     }
     set_if_present INSTALL_CMD "$(echo "$COMMANDS" | jq -r '.install // empty')"
     set_if_present TYPECHECK_CMD "$(echo "$COMMANDS" | jq -r '.typecheck // empty')"
@@ -726,7 +729,10 @@ else
         set_scope_if_present() {
             local key="$1"
             local value="$2"
-            [ -n "$value" ] && [ "$value" != "null" ] && scope_vars[$key]="$value"
+            if [ -n "$value" ] && [ "$value" != "null" ]; then
+                scope_vars[$key]="$value"
+            fi
+            return 0
         }
 
         # Generate scope-specific file map
@@ -896,14 +902,14 @@ else
                 [ -f "go.mod" ] && grep -q "github.com/urfave/cli" go.mod 2>/dev/null && CLI_FRAMEWORK="urfave/cli"
                 scope_vars[CLI_FRAMEWORK]="$CLI_FRAMEWORK"
                 scope_vars[BUILD_OUTPUT_PATH]="./bin/"
-                local build_cmd="$(echo "$COMMANDS" | jq -r '.build // empty')"
+                build_cmd="$(echo "$COMMANDS" | jq -r '.build // empty')"
                 [ -n "$build_cmd" ] && scope_vars[SETUP_INSTRUCTIONS]="- Build: $build_cmd"
                 set_scope_if_present BUILD_CMD "$build_cmd"
                 scope_vars[RUN_CMD]="./bin/$(basename "$PROJECT_DIR")"
                 set_scope_if_present TEST_CMD "$(echo "$COMMANDS" | jq -r '.test // empty')"
                 set_scope_if_present LINT_CMD "$(echo "$COMMANDS" | jq -r '.lint // empty')"
                 # Detect language for CLI scope
-                local cli_ext="go"
+                cli_ext="go"
                 [ -f "package.json" ] && cli_ext="ts"
                 [ -f "setup.py" ] || [ -f "pyproject.toml" ] && cli_ext="py"
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "$cli_ext")
@@ -913,7 +919,7 @@ else
             "testing")
                 set_scope_if_present TEST_CMD "$(echo "$COMMANDS" | jq -r '.test // empty')"
                 # Detect test file extension
-                local test_ext="php"
+                test_ext="php"
                 [ -f "go.mod" ] && test_ext="go"
                 [ -f "package.json" ] && test_ext="ts"
                 [ -f "pyproject.toml" ] && test_ext="py"
@@ -928,7 +934,7 @@ else
 
             "examples")
                 # Detect example file extension
-                local ex_ext="go"
+                ex_ext="go"
                 [ -f "package.json" ] && ex_ext="ts"
                 [ -f "pyproject.toml" ] && ex_ext="py"
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "$ex_ext")

@@ -27,7 +27,7 @@
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (prefer file-scoped)
+## Build & tests (file-scoped supported)
 - Typecheck a file: `{{TYPECHECK_CMD}} {{FILE_PATH}}`
 - Format a file: `{{FORMAT_CMD}} {{FILE_PATH}}`
 - Lint a file: `{{LINT_CMD}} {{FILE_PATH}}`
