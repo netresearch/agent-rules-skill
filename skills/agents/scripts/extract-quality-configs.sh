@@ -148,8 +148,8 @@ parse_eslint() {
         return
     fi
 
-    local extends=()
-    local plugins=()
+    local extends=""
+    local plugins=""
 
     # For JSON config files
     if [[ "$config_file" == *.json ]] || [[ "$config_file" == .eslintrc ]]; then
