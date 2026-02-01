@@ -1664,6 +1664,116 @@ else
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "$cli_ext")
                 ;;
 
+            "backend-python")
+                scope_vars[PYTHON_VERSION]="$VERSION"
+                BUILD_TOOL=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                scope_vars[PACKAGE_MANAGER]="$BUILD_TOOL"
+                scope_vars[ENV_VARS]="See .env or .env.example"
+
+                # Extract commands from detected commands
+                scope_vars[INSTALL_CMD]=$(echo "$COMMANDS" | jq -r '.install // empty')
+                scope_vars[LINT_CMD]=$(echo "$COMMANDS" | jq -r '.lint // empty')
+                scope_vars[FORMAT_CMD]=$(echo "$COMMANDS" | jq -r '.format // empty')
+                scope_vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test // empty')
+                scope_vars[TYPECHECK_CMD]=$(echo "$COMMANDS" | jq -r '.typecheck // empty')
+                scope_vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build // empty')
+
+                # Set defaults based on build tool
+                case "$BUILD_TOOL" in
+                    "poetry")
+                        [ -z "${scope_vars[INSTALL_CMD]}" ] && scope_vars[INSTALL_CMD]="poetry install"
+                        [ -z "${scope_vars[LINT_CMD]}" ] && scope_vars[LINT_CMD]="poetry run ruff check ."
+                        [ -z "${scope_vars[FORMAT_CMD]}" ] && scope_vars[FORMAT_CMD]="poetry run ruff format ."
+                        [ -z "${scope_vars[TEST_CMD]}" ] && scope_vars[TEST_CMD]="poetry run pytest"
+                        scope_vars[VENV_CMD]="poetry shell"
+                        ;;
+                    "pip"|"uv")
+                        [ -z "${scope_vars[INSTALL_CMD]}" ] && scope_vars[INSTALL_CMD]="pip install -e ."
+                        [ -z "${scope_vars[LINT_CMD]}" ] && scope_vars[LINT_CMD]="ruff check ."
+                        [ -z "${scope_vars[FORMAT_CMD]}" ] && scope_vars[FORMAT_CMD]="ruff format ."
+                        [ -z "${scope_vars[TEST_CMD]}" ] && scope_vars[TEST_CMD]="pytest"
+                        scope_vars[VENV_CMD]="python -m venv .venv && source .venv/bin/activate"
+                        ;;
+                    *)
+                        scope_vars[VENV_CMD]="python -m venv .venv && source .venv/bin/activate"
+                        ;;
+                esac
+
+                # Detect framework for conventions
+                FRAMEWORK=$(echo "$PROJECT_INFO" | jq -r '.framework')
+                case "$FRAMEWORK" in
+                    "django")
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Follow Django conventions (apps, models, views)
+- Use Django ORM, avoid raw SQL"
+                        scope_vars[FRAMEWORK_DOCS]="https://docs.djangoproject.com"
+                        ;;
+                    "fastapi")
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Use Pydantic models for validation
+- Async handlers where appropriate"
+                        scope_vars[FRAMEWORK_DOCS]="https://fastapi.tiangolo.com"
+                        ;;
+                    "flask")
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Use Blueprints for modular design
+- Flask-SQLAlchemy for database"
+                        scope_vars[FRAMEWORK_DOCS]="https://flask.palletsprojects.com"
+                        ;;
+                    *)
+                        scope_vars[FRAMEWORK_CONVENTIONS]=""
+                        scope_vars[FRAMEWORK_DOCS]=""
+                        ;;
+                esac
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
+            "backend-typescript")
+                scope_vars[NODE_VERSION]="$VERSION"
+                BUILD_TOOL=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                scope_vars[PACKAGE_MANAGER]="$BUILD_TOOL"
+                scope_vars[ENV_VARS]="See .env or .env.example"
+
+                # Extract commands from detected commands
+                scope_vars[INSTALL_CMD]="$BUILD_TOOL install"
+                scope_vars[LINT_CMD]=$(echo "$COMMANDS" | jq -r '.lint // empty')
+                scope_vars[FORMAT_CMD]=$(echo "$COMMANDS" | jq -r '.format // empty')
+                scope_vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test // empty')
+                scope_vars[TYPECHECK_CMD]=$(echo "$COMMANDS" | jq -r '.typecheck // empty')
+                scope_vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build // empty')
+                scope_vars[DEV_CMD]=$(echo "$COMMANDS" | jq -r '.dev // empty')
+
+                # Set defaults based on package manager
+                [ -z "${scope_vars[LINT_CMD]}" ] && scope_vars[LINT_CMD]="$BUILD_TOOL run lint"
+                [ -z "${scope_vars[FORMAT_CMD]}" ] && scope_vars[FORMAT_CMD]="$BUILD_TOOL run format"
+                [ -z "${scope_vars[TEST_CMD]}" ] && scope_vars[TEST_CMD]="$BUILD_TOOL test"
+                [ -z "${scope_vars[TYPECHECK_CMD]}" ] && scope_vars[TYPECHECK_CMD]="$BUILD_TOOL run typecheck"
+                [ -z "${scope_vars[BUILD_CMD]}" ] && scope_vars[BUILD_CMD]="$BUILD_TOOL run build"
+                [ -z "${scope_vars[DEV_CMD]}" ] && scope_vars[DEV_CMD]="$BUILD_TOOL run dev"
+
+                # Detect framework
+                FRAMEWORK=$(echo "$PROJECT_INFO" | jq -r '.framework')
+                case "$FRAMEWORK" in
+                    "express")
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Use middleware pattern
+- Async error handling with express-async-handler"
+                        scope_vars[FRAMEWORK_DOCS]="https://expressjs.com"
+                        ;;
+                    "nestjs")
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Use decorators and modules
+- Dependency injection via constructors"
+                        scope_vars[FRAMEWORK_DOCS]="https://docs.nestjs.com"
+                        ;;
+                    "fastify")
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Use schema validation
+- Plugin architecture"
+                        scope_vars[FRAMEWORK_DOCS]="https://www.fastify.io/docs"
+                        ;;
+                    *)
+                        scope_vars[FRAMEWORK_CONVENTIONS]=""
+                        scope_vars[FRAMEWORK_DOCS]=""
+                        ;;
+                esac
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
             "testing")
                 set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
                 set_scope_if_present TEST_SINGLE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_single // empty')"
