@@ -188,10 +188,26 @@ case "$LANGUAGE" in
 esac
 
 # Check for web subdirectories (cross-language)
-if [ -d "internal/web" ]; then
-    count=$(find internal/web -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) | wc -l)
-    [ "$count" -ge "$MIN_FILES" ] && add_scope "internal/web" "frontend-typescript" "$count"
-fi
+# IMPORTANT: Only create frontend-typescript scopes if Node toolchain exists
+# Either: package.json in scope dir, package.json at root, or lockfile at root
+has_node_toolchain() {
+    local scope_dir="$1"
+    [ -f "$scope_dir/package.json" ] || \
+    [ -f "package.json" ] || \
+    [ -f "pnpm-lock.yaml" ] || \
+    [ -f "yarn.lock" ] || \
+    [ -f "bun.lockb" ] || \
+    [ -f "package-lock.json" ]
+}
+
+for web_dir in internal/web web frontend client ui; do
+    if [ -d "$web_dir" ]; then
+        count=$(find "$web_dir" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) 2>/dev/null | wc -l)
+        if [ "$count" -ge "$MIN_FILES" ] && has_node_toolchain "$web_dir"; then
+            add_scope "$web_dir" "frontend-typescript" "$count"
+        fi
+    fi
+done
 
 # Output JSON
 if [ ${#scopes[@]} -eq 0 ]; then

@@ -19,11 +19,10 @@
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
-- Install: `npm install` or `yarn install`
-- Node version: {{NODE_VERSION}}
-- Framework: {{FRAMEWORK}}
-- Package manager: {{PACKAGE_MANAGER}}
-- Environment variables: {{ENV_VARS}}
+{{NODE_VERSION_LINE}}
+{{FRAMEWORK_LINE}}
+{{PACKAGE_MANAGER_LINE}}
+{{ENV_VARS_LINE}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
@@ -61,10 +60,10 @@
 
 <!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
-- [ ] Tests pass: `npm test`
-- [ ] TypeScript compiles: `npx tsc --noEmit`
-- [ ] Lint clean: `npm run lint`
-- [ ] Formatted: `npm run format`
+{{TEST_CHECKLIST_LINE}}
+{{TYPECHECK_CHECKLIST_LINE}}
+{{LINT_CHECKLIST_LINE}}
+{{FORMAT_CHECKLIST_LINE}}
 - [ ] Accessibility: keyboard navigation works, ARIA labels present
 - [ ] Responsive: tested on mobile, tablet, desktop
 - [ ] Performance: no unnecessary re-renders
@@ -78,7 +77,7 @@
 
 <!-- AGENTS-GENERATED:START help -->
 ## When stuck
-- Check {{FRAMEWORK}} documentation: {{FRAMEWORK_DOCS}}
+{{FRAMEWORK_DOCS_LINE}}
 - Review TypeScript handbook: https://www.typescriptlang.org/docs/
 - Check root AGENTS.md for project-wide conventions
 - Review existing components for patterns

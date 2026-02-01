@@ -19,20 +19,20 @@
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
-- Install: `{{INSTALL_CMD}}`
-- Python version: {{PYTHON_VERSION}}
-- Package manager: {{PACKAGE_MANAGER}}
-- Virtual env: `{{VENV_CMD}}`
-- Environment variables: {{ENV_VARS}}
+{{INSTALL_LINE}}
+{{PYTHON_VERSION_LINE}}
+{{PACKAGE_MANAGER_LINE}}
+{{VENV_LINE}}
+{{ENV_VARS_LINE}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (file-scoped supported)
-- Typecheck a file: `{{TYPECHECK_CMD}} {{FILE_PATH}}`
-- Format a file: `{{FORMAT_CMD}} {{FILE_PATH}}`
-- Lint a file: `{{LINT_CMD}} {{FILE_PATH}}`
-- Test a file: `{{TEST_CMD}} {{FILE_PATH}}`
-- Build: {{BUILD_CMD}}
+## Build & tests
+{{TYPECHECK_LINE}}
+{{FORMAT_LINE}}
+{{LINT_LINE}}
+{{TEST_LINE}}
+{{BUILD_LINE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->
@@ -58,10 +58,10 @@
 
 <!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
-- [ ] Tests pass: `{{TEST_CMD}}`
-- [ ] Type check clean: `{{TYPECHECK_CMD}}`
-- [ ] Lint clean: `{{LINT_CMD}}`
-- [ ] Formatted: `{{FORMAT_CMD}}`
+{{TEST_CHECKLIST_LINE}}
+{{TYPECHECK_CHECKLIST_LINE}}
+{{LINT_CHECKLIST_LINE}}
+{{FORMAT_CHECKLIST_LINE}}
 - [ ] Public functions have docstrings
 <!-- AGENTS-GENERATED:END checklist -->
 

@@ -19,21 +19,21 @@
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
-- Install: `{{INSTALL_CMD}}`
-- Node version: {{NODE_VERSION}}
-- Package manager: {{PACKAGE_MANAGER}}
-- Runtime: {{RUNTIME}}
-- Environment variables: {{ENV_VARS}}
+{{INSTALL_LINE}}
+{{NODE_VERSION_LINE}}
+{{PACKAGE_MANAGER_LINE}}
+{{RUNTIME_LINE}}
+{{ENV_VARS_LINE}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
-- Typecheck (project-wide): `{{TYPECHECK_CMD}}`
-- Format a file: `{{FORMAT_CMD}} {{FILE_PATH}}`
-- Lint a file: `{{LINT_CMD}} {{FILE_PATH}}`
-- Test related: `{{TEST_CMD}} {{FILE_PATH}}`
-- Build: {{BUILD_CMD}}
-- Dev server: {{DEV_CMD}}
+{{TYPECHECK_LINE}}
+{{FORMAT_LINE}}
+{{LINT_LINE}}
+{{TEST_LINE}}
+{{BUILD_LINE}}
+{{DEV_LINE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->
@@ -61,10 +61,10 @@
 
 <!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
-- [ ] Tests pass: `{{TEST_CMD}}`
-- [ ] Type check clean: `{{TYPECHECK_CMD}}`
-- [ ] Lint clean: `{{LINT_CMD}}`
-- [ ] Formatted: `{{FORMAT_CMD}}`
+{{TEST_CHECKLIST_LINE}}
+{{TYPECHECK_CHECKLIST_LINE}}
+{{LINT_CHECKLIST_LINE}}
+{{FORMAT_CHECKLIST_LINE}}
 - [ ] No `any` types without justification
 - [ ] API endpoints have validation
 - [ ] Error responses don't leak internals

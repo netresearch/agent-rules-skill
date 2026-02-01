@@ -8,7 +8,9 @@ cd "$PROJECT_DIR"
 # Initialize variables
 LANGUAGE="unknown"
 VERSION="unknown"
-BUILD_TOOL="unknown"
+BUILD_TOOL="unknown"      # Deprecated: use package_manager or task_runner
+PACKAGE_MANAGER="unknown" # Package manager: npm/yarn/pnpm/bun, composer, poetry/uv/pip, go
+TASK_RUNNER="none"        # Task runner: make/just/mage/bazel, or none
 FRAMEWORK="none"
 PROJECT_TYPE="unknown"
 QUALITY_TOOLS=()
@@ -24,6 +26,7 @@ detect_language() {
         LANGUAGE="go"
         VERSION=$(grep '^go ' go.mod | awk '{print $2}' || echo "unknown")
         BUILD_TOOL="go"
+        PACKAGE_MANAGER="go"
         TEST_FRAMEWORK="testing"
 
         # Detect Go project type
@@ -83,6 +86,7 @@ detect_language() {
             LANGUAGE="php"
             VERSION=$(jq -r '.require.php // "unknown"' composer.json 2>/dev/null || echo "unknown")
             BUILD_TOOL="composer"
+            PACKAGE_MANAGER="composer"
         else
             # composer.json exists but this isn't a PHP project
             # Continue to check other languages
@@ -136,31 +140,29 @@ detect_language() {
         LANGUAGE="typescript"
         VERSION=$(jq -r '.engines.node // "unknown"' package.json 2>/dev/null || echo "unknown")
 
+        # Detect package manager from lockfile (default npm)
+        PACKAGE_MANAGER="npm"
+        [ -f "yarn.lock" ] && PACKAGE_MANAGER="yarn"
+        [ -f "pnpm-lock.yaml" ] && PACKAGE_MANAGER="pnpm"
+        [ -f "bun.lockb" ] && PACKAGE_MANAGER="bun"
+        BUILD_TOOL="$PACKAGE_MANAGER"
+
         # Detect JS/TS framework
         if jq -e '.dependencies."next"' package.json &>/dev/null; then
             PROJECT_TYPE="typescript-nextjs"
             FRAMEWORK="next.js"
-            BUILD_TOOL="npm"
         elif jq -e '.dependencies."react"' package.json &>/dev/null; then
             PROJECT_TYPE="typescript-react"
             FRAMEWORK="react"
-            BUILD_TOOL="npm"
         elif jq -e '.dependencies."vue"' package.json &>/dev/null; then
             PROJECT_TYPE="typescript-vue"
             FRAMEWORK="vue"
-            BUILD_TOOL="npm"
         elif jq -e '.dependencies."express"' package.json &>/dev/null; then
             PROJECT_TYPE="typescript-node"
             FRAMEWORK="express"
-            BUILD_TOOL="npm"
         else
             PROJECT_TYPE="typescript-library"
-            BUILD_TOOL="npm"
         fi
-
-        # Check for yarn/pnpm
-        [ -f "yarn.lock" ] && BUILD_TOOL="yarn" || true
-        [ -f "pnpm-lock.yaml" ] && BUILD_TOOL="pnpm" || true
 
         # Detect quality tools
         jq -e '.devDependencies."eslint"' package.json &>/dev/null && QUALITY_TOOLS+=("eslint") || true
@@ -181,14 +183,17 @@ detect_language() {
         LANGUAGE="python"
         VERSION=$(grep 'requires-python' pyproject.toml | cut -d'"' -f2 2>/dev/null || echo "unknown")
 
-        # Detect Python build tool
+        # Detect Python package manager
         if grep -q '\[tool.poetry\]' pyproject.toml 2>/dev/null; then
-            BUILD_TOOL="poetry"
+            PACKAGE_MANAGER="poetry"
+        elif grep -q '\[tool.uv\]' pyproject.toml 2>/dev/null || [ -f "uv.lock" ]; then
+            PACKAGE_MANAGER="uv"
         elif grep -q '\[tool.hatch\]' pyproject.toml 2>/dev/null; then
-            BUILD_TOOL="hatch"
+            PACKAGE_MANAGER="hatch"
         else
-            BUILD_TOOL="pip"
+            PACKAGE_MANAGER="pip"
         fi
+        BUILD_TOOL="$PACKAGE_MANAGER"
 
         # Detect framework
         if grep -q 'django' pyproject.toml 2>/dev/null; then
@@ -221,15 +226,20 @@ detect_language() {
             LANGUAGE="bash"
             PROJECT_TYPE="bash-scripts"
             BUILD_TOOL="bash"
+            PACKAGE_MANAGER="none"
             # Check for shellcheck
             [ -f ".shellcheckrc" ] && QUALITY_TOOLS+=("shellcheck") || true
         fi
     fi
 }
 
-# Detect if Makefile exists
+# Detect task runner (does NOT override package_manager)
 if [ -f "Makefile" ]; then
-    BUILD_TOOL="make"
+    TASK_RUNNER="make"
+elif [ -f "justfile" ] || [ -f "Justfile" ]; then
+    TASK_RUNNER="just"
+elif [ -f "Taskfile.yml" ] || [ -f "Taskfile.yaml" ]; then
+    TASK_RUNNER="task"
 fi
 
 # Detect Docker (check both old and new compose naming)
@@ -293,6 +303,8 @@ jq -n \
     --arg lang "$LANGUAGE" \
     --arg ver "$VERSION" \
     --arg build "$BUILD_TOOL" \
+    --arg pkg_mgr "$PACKAGE_MANAGER" \
+    --arg task_runner "$TASK_RUNNER" \
     --arg framework "$FRAMEWORK" \
     --argjson docker "$HAS_DOCKER" \
     --argjson tools "$TOOLS_JSON" \
@@ -305,6 +317,8 @@ jq -n \
         language: $lang,
         version: $ver,
         build_tool: $build,
+        package_manager: $pkg_mgr,
+        task_runner: $task_runner,
         framework: $framework,
         has_docker: $docker,
         quality_tools: $tools,

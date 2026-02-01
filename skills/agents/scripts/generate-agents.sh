@@ -110,6 +110,49 @@ error() {
     exit 1
 }
 
+# Detect Node.js package manager for a scope directory
+# Walks up from scope dir to find package.json with lockfile
+detect_node_package_manager() {
+    local scope_dir="$1"
+    local search_dir="$scope_dir"
+
+    # Walk up to find package.json
+    while [ "$search_dir" != "." ] && [ "$search_dir" != "/" ]; do
+        if [ -f "$search_dir/package.json" ]; then
+            # Found package.json, check for lockfiles
+            [ -f "$search_dir/pnpm-lock.yaml" ] && echo "pnpm" && return
+            [ -f "$search_dir/yarn.lock" ] && echo "yarn" && return
+            [ -f "$search_dir/bun.lockb" ] && echo "bun" && return
+            [ -f "$search_dir/package-lock.json" ] && echo "npm" && return
+            # No lockfile, default to npm
+            echo "npm"
+            return
+        fi
+        search_dir=$(dirname "$search_dir")
+    done
+
+    # Check root as last resort
+    if [ -f "package.json" ]; then
+        [ -f "pnpm-lock.yaml" ] && echo "pnpm" && return
+        [ -f "yarn.lock" ] && echo "yarn" && return
+        [ -f "bun.lockb" ] && echo "bun" && return
+        echo "npm"
+        return
+    fi
+
+    # Fallback: use from PROJECT_INFO if available
+    if [ -n "${PROJECT_INFO:-}" ]; then
+        local pkg_mgr
+        pkg_mgr=$(echo "$PROJECT_INFO" | jq -r '.package_manager // "unknown"')
+        if [ "$pkg_mgr" != "unknown" ] && [ "$pkg_mgr" != "go" ] && [ "$pkg_mgr" != "composer" ]; then
+            echo "$pkg_mgr"
+            return
+        fi
+    fi
+
+    echo "npm"  # Ultimate fallback
+}
+
 # Byte budget enforcement (OpenAI Codex default: 32 KiB for combined instructions)
 BYTE_BUDGET="${BYTE_BUDGET:-32768}"
 
@@ -989,7 +1032,7 @@ else
 
             "backend-python")
                 scope_vars[PYTHON_VERSION]="$VERSION"
-                scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.package_manager')
                 scope_vars[ENV_VARS]="See .env or .env.example"
                 # Populate all command variables from scope-local extraction
                 set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
@@ -1000,13 +1043,47 @@ else
                 set_scope_if_present TEST_SINGLE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_single // empty')"
                 set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
                 set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
+
+                # Build whole-line placeholders for setup section
+                [ -n "${scope_vars[INSTALL_CMD]:-}" ] && \
+                    scope_vars[INSTALL_LINE]="- Install: \`${scope_vars[INSTALL_CMD]}\`"
+                [ -n "${scope_vars[PYTHON_VERSION]:-}" ] && [ "${scope_vars[PYTHON_VERSION]}" != "unknown" ] && \
+                    scope_vars[PYTHON_VERSION_LINE]="- Python version: ${scope_vars[PYTHON_VERSION]}"
+                [ -n "${scope_vars[PACKAGE_MANAGER]:-}" ] && [ "${scope_vars[PACKAGE_MANAGER]}" != "unknown" ] && \
+                    scope_vars[PACKAGE_MANAGER_LINE]="- Package manager: ${scope_vars[PACKAGE_MANAGER]}"
+                [ -n "${scope_vars[ENV_VARS]:-}" ] && \
+                    scope_vars[ENV_VARS_LINE]="- Environment variables: ${scope_vars[ENV_VARS]}"
+
+                # Build whole-line placeholders for commands section
+                [ -n "${scope_vars[TYPECHECK_CMD]:-}" ] && \
+                    scope_vars[TYPECHECK_LINE]="- Typecheck: \`${scope_vars[TYPECHECK_CMD]}\`"
+                [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
+                    scope_vars[FORMAT_LINE]="- Format: \`${scope_vars[FORMAT_CMD]}\`"
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[LINT_LINE]="- Lint: \`${scope_vars[LINT_CMD]}\`"
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_LINE]="- Test: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[BUILD_CMD]:-}" ] && \
+                    scope_vars[BUILD_LINE]="- Build: \`${scope_vars[BUILD_CMD]}\`"
+
+                # Build checklist lines
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_CHECKLIST_LINE]="- [ ] Tests pass: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[TYPECHECK_CMD]:-}" ] && \
+                    scope_vars[TYPECHECK_CHECKLIST_LINE]="- [ ] Type check clean: \`${scope_vars[TYPECHECK_CMD]}\`"
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[LINT_CHECKLIST_LINE]="- [ ] Lint clean: \`${scope_vars[LINT_CMD]}\`"
+                [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
+                    scope_vars[FORMAT_CHECKLIST_LINE]="- [ ] Formatted: \`${scope_vars[FORMAT_CMD]}\`"
+
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "py")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "py")
                 ;;
 
             "backend-typescript")
                 scope_vars[NODE_VERSION]="$VERSION"
-                scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                # For cross-language scopes, detect package manager locally
+                scope_vars[PACKAGE_MANAGER]=$(detect_node_package_manager "$SCOPE_PATH")
                 scope_vars[ENV_VARS]="See .env or .env.example"
                 # Populate all command variables from scope-local extraction
                 set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
@@ -1017,6 +1094,41 @@ else
                 set_scope_if_present TEST_SINGLE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_single // empty')"
                 set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
                 set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
+
+                # Build whole-line placeholders for setup section
+                [ -n "${scope_vars[INSTALL_CMD]:-}" ] && \
+                    scope_vars[INSTALL_LINE]="- Install: \`${scope_vars[INSTALL_CMD]}\`"
+                [ -n "${scope_vars[NODE_VERSION]:-}" ] && [ "${scope_vars[NODE_VERSION]}" != "unknown" ] && \
+                    scope_vars[NODE_VERSION_LINE]="- Node version: ${scope_vars[NODE_VERSION]}"
+                [ -n "${scope_vars[PACKAGE_MANAGER]:-}" ] && [ "${scope_vars[PACKAGE_MANAGER]}" != "unknown" ] && \
+                    scope_vars[PACKAGE_MANAGER_LINE]="- Package manager: ${scope_vars[PACKAGE_MANAGER]}"
+                [ -n "${scope_vars[ENV_VARS]:-}" ] && \
+                    scope_vars[ENV_VARS_LINE]="- Environment variables: ${scope_vars[ENV_VARS]}"
+
+                # Build whole-line placeholders for commands section
+                [ -n "${scope_vars[TYPECHECK_CMD]:-}" ] && \
+                    scope_vars[TYPECHECK_LINE]="- Typecheck (project-wide): \`${scope_vars[TYPECHECK_CMD]}\`"
+                [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
+                    scope_vars[FORMAT_LINE]="- Format: \`${scope_vars[FORMAT_CMD]}\`"
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[LINT_LINE]="- Lint: \`${scope_vars[LINT_CMD]}\`"
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_LINE]="- Test: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[BUILD_CMD]:-}" ] && \
+                    scope_vars[BUILD_LINE]="- Build: \`${scope_vars[BUILD_CMD]}\`"
+                [ -n "${scope_vars[DEV_CMD]:-}" ] && \
+                    scope_vars[DEV_LINE]="- Dev server: \`${scope_vars[DEV_CMD]}\`"
+
+                # Build checklist lines
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_CHECKLIST_LINE]="- [ ] Tests pass: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[TYPECHECK_CMD]:-}" ] && \
+                    scope_vars[TYPECHECK_CHECKLIST_LINE]="- [ ] Type check clean: \`${scope_vars[TYPECHECK_CMD]}\`"
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[LINT_CHECKLIST_LINE]="- [ ] Lint clean: \`${scope_vars[LINT_CMD]}\`"
+                [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
+                    scope_vars[FORMAT_CHECKLIST_LINE]="- [ ] Formatted: \`${scope_vars[FORMAT_CMD]}\`"
+
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
                 ;;
@@ -1025,7 +1137,8 @@ else
                 scope_vars[NODE_VERSION]="$VERSION"
                 FRAMEWORK=$(echo "$PROJECT_INFO" | jq -r '.framework')
                 scope_vars[FRAMEWORK]="$FRAMEWORK"
-                scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                # For cross-language scopes, detect package manager locally
+                scope_vars[PACKAGE_MANAGER]=$(detect_node_package_manager "$SCOPE_PATH")
                 scope_vars[ENV_VARS]="See .env.example"
                 # Populate all command variables from scope-local extraction
                 set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
@@ -1042,22 +1155,47 @@ else
                         scope_vars[FRAMEWORK_CONVENTIONS]="- Use functional components with hooks
 - Avoid class components"
                         scope_vars[FRAMEWORK_DOCS]="https://react.dev"
+                        scope_vars[FRAMEWORK_DOCS_LINE]="- Check React documentation: https://react.dev"
                         ;;
                     "next.js")
                         scope_vars[FRAMEWORK_CONVENTIONS]="- Use App Router (app/)
 - Server Components by default"
                         scope_vars[FRAMEWORK_DOCS]="https://nextjs.org/docs"
+                        scope_vars[FRAMEWORK_DOCS_LINE]="- Check Next.js documentation: https://nextjs.org/docs"
                         ;;
                     "vue")
                         scope_vars[FRAMEWORK_CONVENTIONS]="- Use Composition API
 - Avoid Options API for new code"
                         scope_vars[FRAMEWORK_DOCS]="https://vuejs.org/guide"
+                        scope_vars[FRAMEWORK_DOCS_LINE]="- Check Vue documentation: https://vuejs.org/guide"
                         ;;
                     *)
                         scope_vars[FRAMEWORK_CONVENTIONS]=""
                         scope_vars[FRAMEWORK_DOCS]=""
+                        scope_vars[FRAMEWORK_DOCS_LINE]=""
                         ;;
                 esac
+
+                # Build whole-line placeholders (disappear cleanly when empty)
+                [ -n "${scope_vars[NODE_VERSION]:-}" ] && [ "${scope_vars[NODE_VERSION]}" != "unknown" ] && \
+                    scope_vars[NODE_VERSION_LINE]="- Node version: ${scope_vars[NODE_VERSION]}"
+                [ -n "${scope_vars[FRAMEWORK]:-}" ] && [ "${scope_vars[FRAMEWORK]}" != "none" ] && \
+                    scope_vars[FRAMEWORK_LINE]="- Framework: ${scope_vars[FRAMEWORK]}"
+                [ -n "${scope_vars[PACKAGE_MANAGER]:-}" ] && [ "${scope_vars[PACKAGE_MANAGER]}" != "unknown" ] && \
+                    scope_vars[PACKAGE_MANAGER_LINE]="- Package manager: ${scope_vars[PACKAGE_MANAGER]}"
+                [ -n "${scope_vars[ENV_VARS]:-}" ] && \
+                    scope_vars[ENV_VARS_LINE]="- Environment variables: ${scope_vars[ENV_VARS]}"
+
+                # Build checklist lines (only when command exists)
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_CHECKLIST_LINE]="- [ ] Tests pass: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[TYPECHECK_CMD]:-}" ] && \
+                    scope_vars[TYPECHECK_CHECKLIST_LINE]="- [ ] TypeScript compiles: \`${scope_vars[TYPECHECK_CMD]}\`"
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[LINT_CHECKLIST_LINE]="- [ ] Lint clean: \`${scope_vars[LINT_CMD]}\`"
+                [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
+                    scope_vars[FORMAT_CHECKLIST_LINE]="- [ ] Formatted: \`${scope_vars[FORMAT_CMD]}\`"
+
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
                 ;;
