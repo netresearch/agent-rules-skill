@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 # Verify that commands documented in AGENTS.md actually work
 # This prevents "command rot" - documented commands that no longer exist
+# Requires: Bash 4.0+ (for associative arrays)
 set -euo pipefail
+
+# Check Bash version - we need 4.0+ for associative arrays (declare -A)
+if ((BASH_VERSINFO[0] < 4)); then
+    echo "Error: Bash 4.0+ required (found ${BASH_VERSION})." >&2
+    echo "On macOS: brew install bash" >&2
+    exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${1:-.}"
@@ -64,7 +72,7 @@ fi
 is_safe_command() {
     local cmd="$1"
 
-    # Dangerous patterns to reject
+    # Dangerous literal patterns to reject (glob matching)
     local -a dangerous_patterns=(
         'rm -rf'
         'rm -fr'
@@ -75,9 +83,9 @@ is_safe_command() {
         'dd if='
         'mkfs'
         ':(){:|:&};:'  # Fork bomb
-        'wget .* | sh'
-        'curl .* | sh'
-        'curl .* | bash'
+        '| sh'         # Any pipe to sh (catches wget/curl piped execution)
+        '| bash'       # Any pipe to bash
+        '| zsh'        # Any pipe to zsh
     )
 
     for pattern in "${dangerous_patterns[@]}"; do
@@ -86,12 +94,22 @@ is_safe_command() {
         fi
     done
 
-    # Also reject if it contains dangerous-looking operations
+    # Also reject if it contains dangerous-looking operations (regex matching)
     if [[ "$cmd" =~ (rm[[:space:]]+-[a-zA-Z]*[rf]|sudo|chmod[[:space:]]+-R|chown[[:space:]]+-R) ]]; then
         return 1
     fi
 
     return 0
+}
+
+# Portable milliseconds timestamp (works on both GNU and BSD date)
+get_time_ms() {
+    # Try GNU date with nanoseconds first, fall back to seconds * 1000
+    if date +%s%3N 2>/dev/null | grep -qE '^[0-9]+$'; then
+        date +%s%3N
+    else
+        echo $(( $(date +%s) * 1000 ))
+    fi
 }
 
 # Run a command with timeout and measure duration
@@ -106,7 +124,7 @@ smoke_test_command() {
         return 1
     fi
 
-    start_time=$(date +%s%3N)
+    start_time=$(get_time_ms)
 
     # Run with timeout, capture exit code
     if timeout "${TIMEOUT}s" bash -c "$cmd" > /dev/null 2>&1; then
@@ -115,7 +133,7 @@ smoke_test_command() {
         exit_code=$?
     fi
 
-    end_time=$(date +%s%3N)
+    end_time=$(get_time_ms)
     duration_ms=$((end_time - start_time))
 
     # Store result
@@ -135,7 +153,8 @@ smoke_test_command() {
 # Write results to JSON file
 write_json_results() {
     local timestamp
-    timestamp=$(date -Iseconds)
+    # Portable ISO 8601 timestamp (works on both GNU and BSD date)
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     {
         echo "{"
