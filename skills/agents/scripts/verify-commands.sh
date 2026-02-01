@@ -59,10 +59,52 @@ if [ "$SMOKE_TEST" = true ]; then
     mkdir -p "$(dirname "$OUTPUT_JSON")"
 fi
 
+# Check if a command is safe to execute
+# Returns 0 if safe, 1 if dangerous
+is_safe_command() {
+    local cmd="$1"
+
+    # Dangerous patterns to reject
+    local -a dangerous_patterns=(
+        'rm -rf'
+        'rm -fr'
+        'sudo '
+        'chmod -R'
+        'chown -R'
+        '> /'
+        'dd if='
+        'mkfs'
+        ':(){:|:&};:'  # Fork bomb
+        'wget .* | sh'
+        'curl .* | sh'
+        'curl .* | bash'
+    )
+
+    for pattern in "${dangerous_patterns[@]}"; do
+        if [[ "$cmd" == *"$pattern"* ]]; then
+            return 1
+        fi
+    done
+
+    # Also reject if it contains dangerous-looking operations
+    if [[ "$cmd" =~ (rm[[:space:]]+-[a-zA-Z]*[rf]|sudo|chmod[[:space:]]+-R|chown[[:space:]]+-R) ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
 # Run a command with timeout and measure duration
 smoke_test_command() {
     local cmd="$1"
     local start_time end_time duration_ms exit_code
+
+    # Safety check - skip dangerous commands
+    if ! is_safe_command "$cmd"; then
+        warn "Skipping potentially dangerous command: $cmd"
+        COMMAND_RESULTS["$cmd"]='{"exists": true, "runs": false, "skipped": true, "reason": "safety"}'
+        return 1
+    fi
 
     start_time=$(date +%s%3N)
 
@@ -140,7 +182,8 @@ extract_commands() {
         grep -v '^~' || true
 
     # Extract from inline code that looks like commands
-    grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |php |vendor/bin/)[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/`//g' || true
+    # Includes: npm, yarn, pnpm, bun, make, go, composer, cargo, python, pip, poetry, uv, deno, gradle, php, vendor/bin
+    grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |python |pip |poetry |uv |deno |gradle |php |vendor/bin/)[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/`//g' || true
 }
 
 # Verify a single command exists (not that it succeeds, just that it's callable)
@@ -296,6 +339,174 @@ verify_command() {
             fi
             ;;
 
+        pnpm)
+            # pnpm - same logic as npm/yarn
+            local script="${cmd#* }"
+            script="${script#run }"
+            script="${script%% *}"
+            if [ -f "package.json" ]; then
+                local script_exists=false
+                if jq -e ".scripts[\"$script\"]" package.json > /dev/null 2>&1; then
+                    script_exists=true
+                elif [[ "$script" =~ ^(install|test|build|start|run)$ ]]; then
+                    script_exists=true
+                fi
+
+                if [ "$script_exists" = true ]; then
+                    success "pnpm script exists: $script"
+                    COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                    ((PASSED++))
+                else
+                    warn "pnpm script not found: $script"
+                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                    ((SKIPPED++))
+                fi
+            else
+                warn "No package.json found for: $cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        bun)
+            # bun - same logic as npm/yarn/pnpm
+            local script="${cmd#* }"
+            script="${script#run }"
+            script="${script%% *}"
+            if [ -f "package.json" ]; then
+                local script_exists=false
+                if jq -e ".scripts[\"$script\"]" package.json > /dev/null 2>&1; then
+                    script_exists=true
+                elif [[ "$script" =~ ^(install|test|build|start|run)$ ]]; then
+                    script_exists=true
+                fi
+
+                if [ "$script_exists" = true ]; then
+                    success "bun script exists: $script"
+                    COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                    ((PASSED++))
+                else
+                    warn "bun script not found: $script"
+                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                    ((SKIPPED++))
+                fi
+            else
+                warn "No package.json found for: $cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        python|python3|pip|pip3)
+            # Python commands
+            if command -v "$base_cmd" > /dev/null 2>&1; then
+                success "Python command available: $base_cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED++))
+            else
+                warn "Python command not found: $base_cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        poetry)
+            # Poetry package manager
+            if command -v poetry > /dev/null 2>&1; then
+                local subcmd="${cmd#poetry }"
+                subcmd="${subcmd%% *}"
+                if [[ "$subcmd" =~ ^(install|add|remove|update|build|publish|run|shell)$ ]]; then
+                    success "poetry command: $subcmd"
+                    COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                    ((PASSED++))
+                else
+                    # Check if it's a custom script
+                    if [ -f "pyproject.toml" ] && grep -q "\[tool.poetry.scripts\]" pyproject.toml 2>/dev/null; then
+                        success "poetry command available"
+                        COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                        ((PASSED++))
+                    else
+                        warn "poetry script not found: $subcmd"
+                        COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                        ((SKIPPED++))
+                    fi
+                fi
+            else
+                warn "poetry not installed"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        uv)
+            # uv package manager
+            if command -v uv > /dev/null 2>&1; then
+                success "uv command available"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED++))
+            else
+                warn "uv not installed"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        pytest)
+            # pytest test runner
+            if command -v pytest > /dev/null 2>&1; then
+                success "pytest available"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED++))
+            else
+                warn "pytest not installed"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        cargo)
+            # Rust cargo
+            if command -v cargo > /dev/null 2>&1; then
+                success "cargo command available"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED++))
+            else
+                warn "cargo not installed"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        deno)
+            # Deno runtime
+            if command -v deno > /dev/null 2>&1; then
+                success "deno command available"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED++))
+            else
+                warn "deno not installed"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
+        gradle|gradlew|./gradlew)
+            # Gradle build tool
+            if [ -f "gradlew" ] || [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+                success "gradle project detected"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED++))
+            elif command -v gradle > /dev/null 2>&1; then
+                success "gradle command available"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED++))
+            else
+                warn "gradle not found"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED++))
+            fi
+            ;;
+
         go)
             # Go commands are generally available if go is installed
             if command -v go > /dev/null 2>&1; then
@@ -425,7 +636,8 @@ else
     if [ "$DRY_RUN" = false ] && [ -w "$AGENTS_FILE" ]; then
         TODAY=$(date +%Y-%m-%d)
         if grep -q "Last verified:" "$AGENTS_FILE"; then
-            sed -i "s/Last verified: .*/Last verified: $TODAY -->/" "$AGENTS_FILE"
+            # Portable sed -i: use backup extension then remove backup
+            sed -i.bak "s/Last verified: .*/Last verified: $TODAY -->/" "$AGENTS_FILE" && rm -f "$AGENTS_FILE.bak"
             echo "Updated 'Last verified' timestamp to $TODAY"
         fi
     fi

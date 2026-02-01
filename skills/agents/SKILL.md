@@ -32,6 +32,33 @@ When ensuring multi-repo consistency, use this skill to apply the same standards
 
 When checking if AGENTS.md files are up to date, use the freshness checking scripts to compare file timestamps with git commits.
 
+## Prerequisites
+
+The generator scripts require:
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Bash** | 4.3+ | Required for nameref variables (`local -n`) |
+| **jq** | 1.5+ | JSON processing |
+| **git** | 2.0+ | For git history analysis |
+
+### macOS Users
+
+macOS ships with Bash 3.2 (GPLv2 licensed). Install a newer version:
+
+```bash
+# Install Bash 4.4+ via Homebrew
+brew install bash
+
+# Run scripts with newer bash
+/opt/homebrew/bin/bash scripts/generate-agents.sh /path/to/project
+
+# Or add to PATH (optional)
+export PATH="/opt/homebrew/bin:$PATH"
+```
+
+The scripts will detect incompatible Bash versions and exit with a helpful error message.
+
 ## CRITICAL: Full Verification Required
 
 **NEVER trust existing AGENTS.md content as accurate.** Always verify documented information against the actual codebase:

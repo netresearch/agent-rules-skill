@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # Main AGENTS.md generator script
+# Requires: Bash 4.3+ (for nameref variables)
 set -euo pipefail
+
+# Check Bash version - we need 4.3+ for nameref variables (local -n)
+if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 3))); then
+    echo "Error: Bash 4.3+ required (found ${BASH_VERSION})." >&2
+    echo "On macOS: brew install bash" >&2
+    echo "Then run with: /opt/homebrew/bin/bash $0 $*" >&2
+    exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
@@ -76,6 +85,12 @@ EOF
             ;;
     esac
 done
+
+# Validate PROJECT_DIR exists
+if [[ ! -d "$PROJECT_DIR" ]]; then
+    echo "Error: Project directory not found: $PROJECT_DIR" >&2
+    exit 1
+fi
 
 cd "$PROJECT_DIR"
 
@@ -165,6 +180,16 @@ log "Analyzing git history..."
 GIT_HISTORY=$("$SCRIPT_DIR/analyze-git-history.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
 [ "$VERBOSE" = true ] && echo "$GIT_HISTORY" | jq . >&2
 
+# Helper: Safe jq extraction that filters null values
+# Usage: jq_safe "$json" '.path.to.value'
+jq_safe() {
+    local json="$1"
+    local path="$2"
+    local result
+    result=$(echo "$json" | jq -r "$path // empty | select(. != null and . != \"null\" and . != \"\")")
+    echo "$result"
+}
+
 # Helper: Build quality standards from quality config
 build_quality_standards() {
     local quality_json="$1"
@@ -172,43 +197,43 @@ build_quality_standards() {
 
     # Get detected tools
     local tools
-    tools=$(echo "$quality_json" | jq -r '.detected_tools | if . then join(", ") else "" end')
-    [ -n "$tools" ] && [ "$tools" != "null" ] && standards="$standards- Quality tools: $tools\n"
+    tools=$(echo "$quality_json" | jq -r '.detected_tools | if . and . != null then join(", ") else "" end | select(. != "")')
+    [ -n "$tools" ] && standards="$standards- Quality tools: $tools\n"
 
     # PHPStan level
     local phpstan_level
-    phpstan_level=$(echo "$quality_json" | jq -r '.phpstan.level // empty')
+    phpstan_level=$(jq_safe "$quality_json" '.phpstan.level')
     [ -n "$phpstan_level" ] && standards="$standards- PHPStan level: $phpstan_level (do not lower)\n"
 
     # TypeScript strict mode
     local ts_strict
-    ts_strict=$(echo "$quality_json" | jq -r '.typescript.strict // empty')
+    ts_strict=$(jq_safe "$quality_json" '.typescript.strict')
     [ "$ts_strict" = "true" ] && standards="$standards- TypeScript: strict mode enabled\n"
 
     # Line length settings
     local line_length
-    line_length=$(echo "$quality_json" | jq -r '.golangci_lint.line_length // .prettier.print_width // .black.line_length // .ruff.line_length // empty')
+    line_length=$(jq_safe "$quality_json" '.golangci_lint.line_length // .prettier.print_width // .black.line_length // .ruff.line_length')
     [ -n "$line_length" ] && standards="$standards- Line length: $line_length\n"
 
     # ESLint extends
     local eslint_extends
-    eslint_extends=$(echo "$quality_json" | jq -r '.eslint.extends // empty')
-    [ -n "$eslint_extends" ] && [ "$eslint_extends" != "null" ] && standards="$standards- ESLint: extends $eslint_extends\n"
+    eslint_extends=$(jq_safe "$quality_json" '.eslint.extends')
+    [ -n "$eslint_extends" ] && standards="$standards- ESLint: extends $eslint_extends\n"
 
     # PHP-CS-Fixer ruleset
     local php_cs_ruleset
-    php_cs_ruleset=$(echo "$quality_json" | jq -r '.php_cs_fixer.rule_set // empty')
+    php_cs_ruleset=$(jq_safe "$quality_json" '.php_cs_fixer.rule_set')
     [ -n "$php_cs_ruleset" ] && standards="$standards- PHP-CS-Fixer: $php_cs_ruleset rules\n"
 
     # Mypy strict
     local mypy_strict
-    mypy_strict=$(echo "$quality_json" | jq -r '.mypy.strict // empty')
+    mypy_strict=$(jq_safe "$quality_json" '.mypy.strict')
     [ "$mypy_strict" = "True" ] || [ "$mypy_strict" = "true" ] && standards="$standards- Mypy: strict mode enabled\n"
 
     # Ruff select rules
     local ruff_select
-    ruff_select=$(echo "$quality_json" | jq -r '.ruff.select // empty')
-    [ -n "$ruff_select" ] && [ "$ruff_select" != "null" ] && standards="$standards- Ruff: $ruff_select\n"
+    ruff_select=$(jq_safe "$quality_json" '.ruff.select')
+    [ -n "$ruff_select" ] && standards="$standards- Ruff: $ruff_select\n"
 
     # Default if nothing found
     [ -z "$standards" ] && standards="- Follow project linting and formatting rules\n- Write tests for new functionality\n- Keep functions focused and well-documented\n"
@@ -223,9 +248,11 @@ build_workflow_info() {
 
     # Commit convention
     local convention
-    convention=$(echo "$git_json" | jq -r '.commit_convention.convention // "unknown"')
+    convention=$(echo "$git_json" | jq -r '.commit_convention.convention // "unknown" | select(. != null)')
+    [ -z "$convention" ] && convention="unknown"
     local confidence
-    confidence=$(echo "$git_json" | jq -r '.commit_convention.confidence // 0')
+    confidence=$(echo "$git_json" | jq -r '.commit_convention.confidence // 0 | select(. != null)')
+    [ -z "$confidence" ] && confidence=0
 
     if [ "$convention" != "unknown" ] && [ "$confidence" -gt 30 ]; then
         case "$convention" in
