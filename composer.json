@@ -1,6 +1,5 @@
 {
   "name": "netresearch/agents-skill",
-  "version": "2.4.0",
   "description": "Netresearch AI skill for generating AGENTS.md files following the agents.md convention",
   "type": "ai-agent-skill",
   "license": "GPL-2.0-or-later",
