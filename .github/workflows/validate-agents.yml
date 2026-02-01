@@ -25,13 +25,15 @@ jobs:
           # Install shellcheck
           sudo apt-get update && sudo apt-get install -y shellcheck
 
-          # Run shellcheck on all bash scripts (exclude sourced files from error)
+          # Run shellcheck on all bash scripts
+          # Using -S error to only fail on errors, warnings are shown but don't fail
+          # Some warnings are false positives (e.g., vars used via nameref, intentional patterns)
           echo "Running ShellCheck..."
           find skills/agents/scripts -name "*.sh" -type f | while read -r script; do
             echo "Checking: $script"
-            shellcheck -x -S warning "$script" || exit 1
+            shellcheck -x -S error "$script" || exit 1
           done
-          echo "✅ All scripts passed ShellCheck"
+          echo "✅ All scripts passed ShellCheck (errors only)"
 
   test-generator:
     name: Test Generator

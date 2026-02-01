@@ -7,15 +7,11 @@ cd "$PROJECT_DIR"
 
 # Initialize outputs
 PROJECT_DESCRIPTION=""
-PROJECT_BADGES=()
 ARCHITECTURE_SECTION=""
-CONTRIBUTING_RULES=()
 PR_PROCESS=""
-CODE_STYLE_RULES=()
 SECURITY_POLICY=""
 VULNERABILITY_REPORTING=""
 CHANGELOG_FORMAT=""
-CODE_OF_CONDUCT=""
 
 # Helper to extract section from markdown
 # Usage: extract_section "file" "heading" [max_lines]
