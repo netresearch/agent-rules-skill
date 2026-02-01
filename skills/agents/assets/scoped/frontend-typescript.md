@@ -7,6 +7,16 @@
 {{SCOPE_DESCRIPTION}}
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `npm install` or `yarn install`
@@ -60,44 +70,9 @@
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Proper TypeScript typing
-```typescript
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-function UserCard({ user }: { user: User }): JSX.Element {
-  return <div>{user.name}</div>;
-}
-```
-
-**Bad**: Using `any`
-```typescript
-function UserCard({ user }: { user: any }) {
-  return <div>{user.name}</div>;
-}
-```
-
-**Good**: Accessible button
-```tsx
-<button
-  onClick={handleClick}
-  aria-label="Close dialog"
-  type="button"
->
-  <CloseIcon />
-</button>
-```
-
-**Bad**: Non-semantic click handler
-```tsx
-<div onClick={handleClick}>
-  <CloseIcon />
-</div>
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

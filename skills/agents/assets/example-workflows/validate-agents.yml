@@ -1,0 +1,88 @@
+# Example GitHub Actions workflow for validating AGENTS.md files
+# Copy this to your repository's .github/workflows/ directory
+#
+# This workflow runs on:
+# - Push/PR to any AGENTS.md file
+# - Manual dispatch
+#
+# Customize the validation steps to match your project's setup.
+
+name: Validate AGENTS.md
+
+on:
+  push:
+    paths:
+      - 'AGENTS.md'
+      - '**/AGENTS.md'
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - '**/AGENTS.md'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check AGENTS.md exists
+        run: |
+          if [ ! -f "AGENTS.md" ]; then
+            echo "ERROR: AGENTS.md not found in repository root"
+            exit 1
+          fi
+          echo "AGENTS.md found"
+
+      - name: Validate structure
+        run: |
+          # Check for required sections (customize this list for your needs)
+          required_sections=(
+            "## Overview"
+            "## Commands"
+          )
+
+          for section in "${required_sections[@]}"; do
+            if ! grep -qi "^$section" AGENTS.md; then
+              echo "WARNING: Missing section: $section"
+            fi
+          done
+          echo "Structure validation complete"
+
+      - name: Check for unresolved placeholders
+        run: |
+          # Fail if {{PLACEHOLDER}} patterns exist
+          if grep -E '\{\{[A-Z][A-Z0-9_]*\}\}' AGENTS.md; then
+            echo "ERROR: Found unresolved placeholders"
+            exit 1
+          fi
+          echo "No unresolved placeholders"
+
+      - name: Check for stale content
+        run: |
+          # Warn if "(not configured)" markers exist
+          if grep -q "(not configured)" AGENTS.md; then
+            echo "WARNING: Found '(not configured)' - some sections need attention"
+          fi
+
+          # Check freshness (optional - customize days threshold)
+          if grep -q "Last updated:" AGENTS.md; then
+            last_updated=$(grep "Last updated:" AGENTS.md | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+            if [ -n "$last_updated" ]; then
+              days_old=$(( ($(date +%s) - $(date -d "$last_updated" +%s)) / 86400 ))
+              if [ "$days_old" -gt 90 ]; then
+                echo "WARNING: AGENTS.md is $days_old days old - consider updating"
+              fi
+            fi
+          fi
+          echo "Freshness check complete"
+
+      # Optional: Verify documented commands work
+      # Uncomment and customize for your project
+      # - name: Verify commands
+      #   run: |
+      #     # Example: check that npm scripts exist
+      #     if [ -f "package.json" ]; then
+      #       # Extract commands from AGENTS.md and verify they exist
+      #       echo "Verifying npm commands..."
+      #     fi

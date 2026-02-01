@@ -9,6 +9,16 @@
 TYPO3 extension following [TYPO3 Coding Guidelines](https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/CodingGuidelines/Index.html) and PSR-12.
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `composer install` or via Extension Manager
@@ -101,42 +111,9 @@ Alternative with ddev:
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-
-**Good**: Dependency injection
-```php
-public function __construct(
-    private readonly PostRepository $postRepository,
-    private readonly Context $context,
-) {}
-```
-
-**Bad**: Static instantiation
-```php
-$postRepository = GeneralUtility::makeInstance(PostRepository::class);
-```
-
-**Good**: QueryBuilder with proper escaping
-```php
-$queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_myext_posts');
-$queryBuilder
-    ->select('*')
-    ->from('tx_myext_posts')
-    ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)));
-```
-
-**Bad**: String concatenation in queries
-```php
-$result = $connection->query("SELECT * FROM tx_myext_posts WHERE uid = " . $uid);
-```
-
-**Good**: Fluid with escaping
-```html
-<f:for each="{posts}" as="post">
-    <h2>{post.title}</h2>
-    <f:format.html>{post.bodytext}</f:format.html>
-</f:for>
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START upgrade -->

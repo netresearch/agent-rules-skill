@@ -9,6 +9,16 @@
 Test suites, fixtures, and testing utilities for the project.
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install dev dependencies before running tests
@@ -61,32 +71,9 @@ Test suites, fixtures, and testing utilities for the project.
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Descriptive test name
-```
-test_should_return_validation_error_when_email_format_is_invalid
-test_creates_user_with_valid_input
-```
-
-**Bad**: Vague test name
-```
-test_email
-test_user_creation
-test1
-```
-
-**Good**: Independent tests
-```
-func TestUserCreation(t *testing.T) {
-    user := createTestUser()  // Fresh setup each test
-    // assertions...
-}
-```
-
-**Bad**: Shared state
-```
-var globalUser User  // Shared between tests - order-dependent!
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

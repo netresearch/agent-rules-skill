@@ -9,6 +9,16 @@
 Oro bundle following [Oro Architecture](https://doc.oroinc.com/backend/architecture/) and Symfony best practices.
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `composer install`
@@ -171,53 +181,9 @@ acl:
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-
-**Good**: Config-driven datagrid
-```yaml
-# datagrids.yml
-datagrids:
-    acme-products-grid:
-        source:
-            type: orm
-            query:
-                select: [p.id, p.name, p.price]
-                from:
-                    - { table: Acme\Bundle\ProductBundle\Entity\Product, alias: p }
-```
-
-**Bad**: Hardcoded queries in controller
-```php
-$products = $em->createQuery('SELECT p FROM Product p')->getResult();
-```
-
-**Good**: Proper dependency injection
-```php
-public function __construct(
-    private readonly DoctrineHelper $doctrineHelper,
-    private readonly ConfigManager $configManager,
-) {}
-```
-
-**Bad**: Container access in services
-```php
-$em = $this->container->get('doctrine.orm.entity_manager');
-```
-
-**Good**: Oro form type with data transformer
-```php
-class OrderType extends AbstractType
-{
-    public function buildForm(FormBuilderInterface $builder, array $options): void
-    {
-        $builder
-            ->add('customer', OroEntitySelectOrCreateInlineType::class, [
-                'class' => Customer::class,
-                'required' => true,
-            ]);
-    }
-}
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START messaging -->

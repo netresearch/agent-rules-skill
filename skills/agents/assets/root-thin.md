@@ -6,7 +6,7 @@
 
 **Precedence:** the **closest `AGENTS.md`** to the files you're changing wins. Root holds global defaults only.
 
-## Commands (verified ✓)
+## Commands{{VERIFIED_STATUS}}
 <!-- AGENTS-GENERATED:START commands -->
 | Task | Command | ~Time |
 |------|---------|-------|
@@ -18,7 +18,7 @@
 | Build | {{BUILD_CMD}} | {{BUILD_TIME}} |
 <!-- AGENTS-GENERATED:END commands -->
 
-> If commands fail, run `scripts/verify-commands.sh` or ask user to update.
+> If commands fail, verify against Makefile/package.json/composer.json or ask user to update.
 
 ## File Map
 <!-- AGENTS-GENERATED:START filemap -->

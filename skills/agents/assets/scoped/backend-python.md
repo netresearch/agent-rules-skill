@@ -7,6 +7,16 @@
 {{SCOPE_DESCRIPTION}}
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `{{INSTALL_CMD}}`
@@ -56,35 +66,9 @@
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Type hints and proper error handling
-```python
-def fetch_user(user_id: int) -> User | None:
-    """Fetch user by ID, returns None if not found."""
-    try:
-        return db.query(User).filter_by(id=user_id).first()
-    except DatabaseError as e:
-        logger.error("Failed to fetch user %d: %s", user_id, e)
-        raise
-```
-
-**Bad**: Missing types and bare except
-```python
-def fetch_user(user_id):
-    try:
-        return db.query(User).filter_by(id=user_id).first()
-    except:
-        pass
-```
-
-**Good**: Context managers and pathlib
-```python
-from pathlib import Path
-
-def read_config(path: Path) -> dict:
-    with path.open() as f:
-        return json.load(f)
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

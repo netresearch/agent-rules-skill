@@ -9,6 +9,16 @@
 Project documentation, guides, and reference materials.
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Documentation may use a static site generator (check for config files)
@@ -72,38 +82,9 @@ Project documentation, guides, and reference materials.
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Clear code example
-```python
-# Install the package
-pip install mypackage
-
-# Basic usage
-from mypackage import Client
-client = Client(api_key="your-api-key")
-result = client.process("input")
-```
-
-**Bad**: Incomplete example
-```python
-# Use the client
-client.process()  # Missing context, imports, setup
-```
-
-**Good**: Structured reference
-```markdown
-## Configuration Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `timeout` | int | 30 | Request timeout in seconds |
-| `retries` | int | 3 | Number of retry attempts |
-```
-
-**Bad**: Unstructured reference
-```markdown
-Set timeout to change the timeout. Use retries for retries.
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

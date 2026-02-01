@@ -7,6 +7,16 @@
 {{SCOPE_DESCRIPTION}}
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `composer install`
@@ -58,35 +68,9 @@
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Proper type hints and strict types
-```php
-declare(strict_types=1);
-
-public function calculateTotal(int $quantity, float $price): float
-{
-    return $quantity * $price;
-}
-```
-
-**Bad**: Missing type hints
-```php
-public function calculateTotal($quantity, $price)
-{
-    return $quantity * $price;
-}
-```
-
-**Good**: Prepared statements
-```php
-$stmt = $db->prepare('SELECT * FROM users WHERE id = :id');
-$stmt->execute(['id' => $userId]);
-```
-
-**Bad**: String concatenation
-```php
-$result = $db->query("SELECT * FROM users WHERE id = " . $userId);
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

@@ -338,14 +338,19 @@ else
     vars[VERIFIED_TIMESTAMP]="never"
     vars[LANGUAGE_CONVENTIONS]=$(get_language_conventions "$LANGUAGE" "$VERSION")
 
-    # Command extraction
-    vars[INSTALL_CMD]=$(echo "$COMMANDS" | jq -r '.install // empty')
-    vars[TYPECHECK_CMD]=$(echo "$COMMANDS" | jq -r '.typecheck // empty')
-    vars[LINT_CMD]=$(echo "$COMMANDS" | jq -r '.lint // empty')
-    vars[FORMAT_CMD]=$(echo "$COMMANDS" | jq -r '.format // empty')
-    vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test // empty')
-    vars[TEST_SINGLE_CMD]=$(echo "$COMMANDS" | jq -r '.test_single // empty')
-    vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build // empty')
+    # Command extraction - only set if non-empty (leaves placeholder for row deletion)
+    set_if_present() {
+        local key="$1"
+        local value="$2"
+        [ -n "$value" ] && vars[$key]="$value"
+    }
+    set_if_present INSTALL_CMD "$(echo "$COMMANDS" | jq -r '.install // empty')"
+    set_if_present TYPECHECK_CMD "$(echo "$COMMANDS" | jq -r '.typecheck // empty')"
+    set_if_present LINT_CMD "$(echo "$COMMANDS" | jq -r '.lint // empty')"
+    set_if_present FORMAT_CMD "$(echo "$COMMANDS" | jq -r '.format // empty')"
+    set_if_present TEST_CMD "$(echo "$COMMANDS" | jq -r '.test // empty')"
+    set_if_present TEST_SINGLE_CMD "$(echo "$COMMANDS" | jq -r '.test_single // empty')"
+    set_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
 
     # Time estimates - check verification JSON first, then use heuristics
     VERIFICATION_JSON="$PROJECT_DIR/.agents/command-verification.json"
@@ -374,7 +379,16 @@ else
     # Check if we have verification data
     if [ -f "$VERIFICATION_JSON" ]; then
         verified_at=$(jq -r '.verified_at // empty' "$VERIFICATION_JSON" 2>/dev/null | cut -dT -f1)
-        [ -n "$verified_at" ] && vars[VERIFIED_TIMESTAMP]="$verified_at"
+        if [ -n "$verified_at" ]; then
+            vars[VERIFIED_TIMESTAMP]="$verified_at"
+            vars[VERIFIED_STATUS]=" (verified ✓)"
+        else
+            vars[VERIFIED_TIMESTAMP]="never"
+            vars[VERIFIED_STATUS]=" (unverified - run scripts/verify-commands.sh)"
+        fi
+    else
+        vars[VERIFIED_TIMESTAMP]="never"
+        vars[VERIFIED_STATUS]=" (unverified - run scripts/verify-commands.sh)"
     fi
 
     vars[TYPECHECK_TIME]=$(get_verified_time "typecheck" "~15s")
@@ -708,6 +722,57 @@ else
         scope_vars[FILE_PATH]="<file>"
         scope_vars[HOUSE_RULES]=""
 
+        # Helper to only set var if value is non-empty (leaves placeholder for row deletion)
+        set_scope_if_present() {
+            local key="$1"
+            local value="$2"
+            [ -n "$value" ] && [ "$value" != "null" ] && scope_vars[$key]="$value"
+        }
+
+        # Generate scope-specific file map
+        generate_scope_file_map() {
+            local scope_path="$1"
+            local file_ext="$2"
+            local result=""
+
+            # Find key files (most recently modified, largest, or entry points)
+            local files
+            files=$(find "$scope_path" -maxdepth 2 -name "*.$file_ext" -type f 2>/dev/null | head -5)
+
+            if [ -n "$files" ]; then
+                result="| File | Purpose |\n|------|---------|"
+                while IFS= read -r file; do
+                    local basename=$(basename "$file")
+                    local rel_path="${file#$PROJECT_DIR/}"
+                    # Try to extract purpose from first docblock or comment
+                    local purpose=$(head -20 "$file" 2>/dev/null | grep -E '^\s*(//|#|\*|/\*\*)' | head -1 | sed 's/^[[:space:]]*[/*#]*[[:space:]]*//' | cut -c1-50)
+                    [ -z "$purpose" ] && purpose="(add description)"
+                    result="$result\n| \`$rel_path\` | $purpose |"
+                done <<< "$files"
+            fi
+            echo -e "$result"
+        }
+
+        # Generate scope-specific golden samples
+        generate_scope_golden_samples() {
+            local scope_path="$1"
+            local file_ext="$2"
+            local result=""
+
+            # Look for well-documented files with tests
+            local sample
+            sample=$(find "$scope_path" -maxdepth 2 -name "*.$file_ext" -type f 2>/dev/null | \
+                     xargs -I{} sh -c 'wc -l "{}" | grep -v "^0"' 2>/dev/null | \
+                     sort -rn | head -1 | awk '{print $2}')
+
+            if [ -n "$sample" ] && [ -f "$sample" ]; then
+                local rel_path="${sample#$PROJECT_DIR/}"
+                result="| Pattern | Reference |\n|---------|-----------|"
+                result="$result\n| Standard implementation | \`$rel_path\` |"
+            fi
+            echo -e "$result"
+        }
+
         # Language-specific variables
         case "$SCOPE_TYPE" in
             "backend-go")
@@ -715,7 +780,9 @@ else
                 scope_vars[GO_MINOR_VERSION]=$(echo "$VERSION" | cut -d. -f2)
                 scope_vars[GO_TOOLS]="golangci-lint, gofmt"
                 scope_vars[ENV_VARS]="See .env.example"
-                scope_vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build')
+                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "go")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "go")
                 ;;
 
             "backend-php")
@@ -725,7 +792,7 @@ else
                 scope_vars[PHP_EXTENSIONS]="json, mbstring, xml"
                 scope_vars[ENV_VARS]="See .env.example"
                 scope_vars[PHPSTAN_LEVEL]="10"
-                scope_vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build')
+                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
 
                 if [ "$FRAMEWORK" = "typo3" ]; then
                     scope_vars[FRAMEWORK_CONVENTIONS]="- TYPO3-specific: Use dependency injection, follow TYPO3 CGL"
@@ -734,6 +801,8 @@ else
                     scope_vars[FRAMEWORK_CONVENTIONS]=""
                     scope_vars[FRAMEWORK_DOCS]=""
                 fi
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
 
             "typo3")
@@ -753,6 +822,8 @@ else
                 scope_vars[VENDOR]="$VENDOR"
                 scope_vars[REQUIRED_EXTENSIONS]="See ext_emconf.php"
                 scope_vars[HOUSE_RULES]=""
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
 
             "oro")
@@ -761,6 +832,26 @@ else
                 scope_vars[ORO_VERSION]="$ORO_VERSION"
                 scope_vars[PHPSTAN_LEVEL]="8"
                 scope_vars[HOUSE_RULES]=""
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
+                ;;
+
+            "backend-python")
+                scope_vars[PYTHON_VERSION]="$VERSION"
+                scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                scope_vars[ENV_VARS]="See .env or .env.example"
+                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "py")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "py")
+                ;;
+
+            "backend-typescript")
+                scope_vars[NODE_VERSION]="$VERSION"
+                scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                scope_vars[ENV_VARS]="See .env or .env.example"
+                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
                 ;;
 
             "frontend-typescript")
@@ -769,8 +860,8 @@ else
                 scope_vars[FRAMEWORK]="$FRAMEWORK"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
                 scope_vars[ENV_VARS]="See .env.example"
-                scope_vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build')
-                scope_vars[DEV_CMD]=$(echo "$COMMANDS" | jq -r '.dev')
+                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present DEV_CMD "$(echo "$COMMANDS" | jq -r '.dev // empty')"
                 scope_vars[CSS_APPROACH]="CSS Modules"
 
                 case "$FRAMEWORK" in
@@ -794,6 +885,8 @@ else
                         scope_vars[FRAMEWORK_DOCS]=""
                         ;;
                 esac
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
                 ;;
 
             "cli")
@@ -803,27 +896,48 @@ else
                 [ -f "go.mod" ] && grep -q "github.com/urfave/cli" go.mod 2>/dev/null && CLI_FRAMEWORK="urfave/cli"
                 scope_vars[CLI_FRAMEWORK]="$CLI_FRAMEWORK"
                 scope_vars[BUILD_OUTPUT_PATH]="./bin/"
-                scope_vars[SETUP_INSTRUCTIONS]="- Build: $(echo "$COMMANDS" | jq -r '.build')"
-                scope_vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build')
+                local build_cmd="$(echo "$COMMANDS" | jq -r '.build // empty')"
+                [ -n "$build_cmd" ] && scope_vars[SETUP_INSTRUCTIONS]="- Build: $build_cmd"
+                set_scope_if_present BUILD_CMD "$build_cmd"
                 scope_vars[RUN_CMD]="./bin/$(basename "$PROJECT_DIR")"
-                scope_vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test')
-                scope_vars[LINT_CMD]=$(echo "$COMMANDS" | jq -r '.lint')
+                set_scope_if_present TEST_CMD "$(echo "$COMMANDS" | jq -r '.test // empty')"
+                set_scope_if_present LINT_CMD "$(echo "$COMMANDS" | jq -r '.lint // empty')"
+                # Detect language for CLI scope
+                local cli_ext="go"
+                [ -f "package.json" ] && cli_ext="ts"
+                [ -f "setup.py" ] || [ -f "pyproject.toml" ] && cli_ext="py"
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "$cli_ext")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "$cli_ext")
                 ;;
 
             "testing")
-                scope_vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test')
+                set_scope_if_present TEST_CMD "$(echo "$COMMANDS" | jq -r '.test // empty')"
+                # Detect test file extension
+                local test_ext="php"
+                [ -f "go.mod" ] && test_ext="go"
+                [ -f "package.json" ] && test_ext="ts"
+                [ -f "pyproject.toml" ] && test_ext="py"
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "$test_ext")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "$test_ext")
                 ;;
 
             "documentation")
-                # Documentation scopes use minimal variables
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "md")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "md")
                 ;;
 
             "examples")
-                # Examples scopes use minimal variables
+                # Detect example file extension
+                local ex_ext="go"
+                [ -f "package.json" ] && ex_ext="ts"
+                [ -f "pyproject.toml" ] && ex_ext="py"
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "$ex_ext")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "$ex_ext")
                 ;;
 
             "resources")
-                # Resources scopes use minimal variables
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "*")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=""
                 ;;
         esac
 

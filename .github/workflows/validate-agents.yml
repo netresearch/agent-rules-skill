@@ -1,0 +1,65 @@
+name: Validate AGENTS.md
+
+on:
+  push:
+    paths:
+      - 'AGENTS.md'
+      - '**/AGENTS.md'
+      - 'skills/agents/**'
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - '**/AGENTS.md'
+      - 'skills/agents/**'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate AGENTS.md structure
+        run: |
+          if [ -f "skills/agents/scripts/validate-structure.sh" ]; then
+            bash skills/agents/scripts/validate-structure.sh . --check-freshness
+          else
+            echo "Validation script not found, checking basic structure..."
+            if [ ! -f "AGENTS.md" ]; then
+              echo "ERROR: AGENTS.md not found in repository root"
+              exit 1
+            fi
+            # Basic checks
+            if ! grep -q "^## " AGENTS.md; then
+              echo "ERROR: AGENTS.md missing section headers"
+              exit 1
+            fi
+            echo "Basic structure check passed"
+          fi
+
+      - name: Check for unresolved placeholders
+        run: |
+          # Check for {{PLACEHOLDER}} patterns that indicate incomplete generation
+          if grep -rE '\{\{[A-Z][A-Z0-9_]*\}\}' AGENTS.md **/AGENTS.md 2>/dev/null; then
+            echo "ERROR: Found unresolved placeholders in AGENTS.md files"
+            exit 1
+          fi
+          echo "No unresolved placeholders found"
+
+      - name: Check for '(not configured)' markers
+        run: |
+          # These indicate sections that need filling in
+          if grep -r "(not configured)" AGENTS.md **/AGENTS.md 2>/dev/null; then
+            echo "WARNING: Found '(not configured)' sections that should be filled in"
+            # Exit 0 for warning only, change to exit 1 for strict mode
+            exit 0
+          fi
+          echo "All sections configured"
+
+      - name: Verify commands exist
+        run: |
+          if [ -f "skills/agents/scripts/verify-commands.sh" ]; then
+            bash skills/agents/scripts/verify-commands.sh . || echo "Some commands failed verification"
+          else
+            echo "Command verification script not available"
+          fi

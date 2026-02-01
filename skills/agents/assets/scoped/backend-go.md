@@ -7,6 +7,16 @@
 {{SCOPE_DESCRIPTION}}
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `go mod download`
@@ -56,29 +66,14 @@
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Descriptive error wrapping
-```go
-if err := db.Query(); err != nil {
-    return fmt.Errorf("failed to query users table: %w", err)
-}
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 
-**Bad**: Generic error messages
-```go
-if err := db.Query(); err != nil {
-    return fmt.Errorf("error: %w", err)
-}
-```
-
-**Good**: Proper context usage
-```go
-func (s *Service) FetchData(ctx context.Context, id string) error {
-    ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-    defer cancel()
-    return s.client.Get(ctx, id)
-}
-```
+Key patterns:
+- Error wrapping: `fmt.Errorf("context: %w", err)`
+- Context handling: always pass and respect `context.Context`
+- Naming: `camelCase` unexported, `PascalCase` exported
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

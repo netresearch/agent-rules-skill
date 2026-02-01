@@ -9,6 +9,16 @@
 Example applications, usage patterns, and sample code.
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Examples should be self-contained and runnable
@@ -70,46 +80,9 @@ Example applications, usage patterns, and sample code.
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Self-contained with clear purpose
-```
-examples/
-├── basic-usage/
-│   ├── README.md      # Explains purpose and how to run
-│   ├── main.py        # Complete, runnable example
-│   └── requirements.txt
-└── advanced-config/
-    ├── README.md
-    └── main.py
-```
-
-**Bad**: Incomplete or unclear
-```
-examples/
-├── example1.py        # No README, unclear purpose
-├── test.py            # Naming doesn't explain what it shows
-└── demo.py            # Requires undocumented setup
-```
-
-**Good**: Educational comments
-```python
-# This example shows how to configure retry behavior
-# for handling transient network failures
-
-from mypackage import Client
-
-# Configure with exponential backoff (recommended for production)
-client = Client(
-    retries=3,           # Number of retry attempts
-    backoff_factor=2.0,  # Exponential backoff multiplier
-)
-```
-
-**Bad**: No context
-```python
-from mypackage import Client
-client = Client(retries=3, backoff_factor=2.0)
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

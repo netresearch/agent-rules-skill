@@ -7,6 +7,16 @@
 {{SCOPE_DESCRIPTION}}
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `{{INSTALL_CMD}}`
@@ -61,42 +71,9 @@
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Proper types and async/await
-```typescript
-interface User {
-  id: string;
-  email: string;
-}
-
-async function fetchUser(id: string): Promise<User | null> {
-  const user = await db.users.findUnique({ where: { id } });
-  return user;
-}
-```
-
-**Bad**: Using `any` and missing types
-```typescript
-async function fetchUser(id: any): Promise<any> {
-  const user = await db.users.findUnique({ where: { id } });
-  return user;
-}
-```
-
-**Good**: Input validation with zod
-```typescript
-import { z } from 'zod';
-
-const CreateUserSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
-});
-
-app.post('/users', async (req, res) => {
-  const data = CreateUserSchema.parse(req.body);
-  // data is typed and validated
-});
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

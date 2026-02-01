@@ -9,6 +9,16 @@
 Static resources, assets, templates, and configuration files.
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Resources are typically consumed by other parts of the application
@@ -70,51 +80,9 @@ Static resources, assets, templates, and configuration files.
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Organized structure
-```
-resources/
-├── templates/
-│   ├── email/
-│   │   ├── welcome.html
-│   │   └── password-reset.html
-│   └── reports/
-│       └── monthly-summary.html
-├── images/
-│   ├── logo.svg
-│   └── icons/
-└── locales/
-    ├── en.json
-    └── de.json
-```
-
-**Bad**: Flat and unclear
-```
-resources/
-├── template1.html
-├── template2.html
-├── img1.png
-├── img2.png
-└── strings.json
-```
-
-**Good**: Documented template
-```html
-<!--
-  User Welcome Email Template
-  Variables:
-    - {{user_name}}: User's display name
-    - {{activation_link}}: Account activation URL
-    - {{support_email}}: Support contact email
--->
-<h1>Welcome, {{user_name}}!</h1>
-```
-
-**Bad**: Undocumented template
-```html
-<h1>Welcome, {{name}}!</h1>
-<a href="{{link}}">Click here</a>
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->

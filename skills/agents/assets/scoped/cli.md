@@ -9,6 +9,16 @@
 Command-line interface tools and entry points.
 <!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START filemap -->
+## Key Files
+{{SCOPE_FILE_MAP}}
+<!-- AGENTS-GENERATED:END filemap -->
+
+<!-- AGENTS-GENERATED:START golden-samples -->
+## Golden Samples (follow these patterns)
+{{SCOPE_GOLDEN_SAMPLES}}
+<!-- AGENTS-GENERATED:END golden-samples -->
+
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 {{SETUP_INSTRUCTIONS}}
@@ -57,35 +67,9 @@ Command-line interface tools and entry points.
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->
-## Good vs. bad examples
-**Good**: Proper error handling
-```{{LANGUAGE}}
-if err := runCommand(); err != nil {
-    fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-    os.Exit(1)
-}
-```
-
-**Bad**: Errors to stdout
-```{{LANGUAGE}}
-if err := runCommand(); err != nil {
-    fmt.Println("Error:", err)
-}
-```
-
-**Good**: Clear help text
-```
-Usage: myapp <command> [options]
-
-Commands:
-  init     Initialize a new project
-  build    Build the project
-  deploy   Deploy to production
-
-Options:
-  --config string   Config file path (default: config.yaml)
-  --verbose         Enable verbose output
-```
+## Patterns to Follow
+> **Prefer looking at real code in this repo over generic examples.**
+> See **Golden Samples** section above for files that demonstrate correct patterns.
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->
