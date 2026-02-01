@@ -11,7 +11,6 @@ if ((BASH_VERSINFO[0] < 4)); then
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${1:-.}"
 AGENTS_FILE="$PROJECT_DIR/AGENTS.md"
 VERBOSE="${VERBOSE:-false}"
@@ -351,64 +350,6 @@ verify_command() {
                 fi
             else
                 warn "No composer.json found for: $cmd"
-                COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED+=1))
-            fi
-            ;;
-
-        pnpm)
-            # pnpm - same logic as npm/yarn
-            local script="${cmd#* }"
-            script="${script#run }"
-            script="${script%% *}"
-            if [ -f "package.json" ]; then
-                local script_exists=false
-                if jq -e ".scripts[\"$script\"]" package.json > /dev/null 2>&1; then
-                    script_exists=true
-                elif [[ "$script" =~ ^(install|test|build|start|run)$ ]]; then
-                    script_exists=true
-                fi
-
-                if [ "$script_exists" = true ]; then
-                    success "pnpm script exists: $script"
-                    COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED+=1))
-                else
-                    warn "pnpm script not found: $script"
-                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                    ((SKIPPED+=1))
-                fi
-            else
-                warn "No package.json found for: $cmd"
-                COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED+=1))
-            fi
-            ;;
-
-        bun)
-            # bun - same logic as npm/yarn/pnpm
-            local script="${cmd#* }"
-            script="${script#run }"
-            script="${script%% *}"
-            if [ -f "package.json" ]; then
-                local script_exists=false
-                if jq -e ".scripts[\"$script\"]" package.json > /dev/null 2>&1; then
-                    script_exists=true
-                elif [[ "$script" =~ ^(install|test|build|start|run)$ ]]; then
-                    script_exists=true
-                fi
-
-                if [ "$script_exists" = true ]; then
-                    success "bun script exists: $script"
-                    COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED+=1))
-                else
-                    warn "bun script not found: $script"
-                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                    ((SKIPPED+=1))
-                fi
-            else
-                warn "No package.json found for: $cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
                 ((SKIPPED+=1))
             fi
