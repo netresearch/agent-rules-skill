@@ -155,7 +155,7 @@ mechanical:
 
 llm_reviews:
   # === ACCURACY VERIFICATION ===
-  - id: AG-20
+  - id: AG-25
     domain: repo-health
     prompt: |
       Verify that AGENTS.md accurately describes the actual project:

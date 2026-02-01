@@ -2,16 +2,21 @@
 
 # AGENTS.md — {{SCOPE_NAME}}
 
+<!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
+<!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `{{INSTALL_CMD}}`
 - Node version: {{NODE_VERSION}}
 - Package manager: {{PACKAGE_MANAGER}}
 - Runtime: {{RUNTIME}}
 - Environment variables: {{ENV_VARS}}
+<!-- AGENTS-GENERATED:END setup -->
 
+<!-- AGENTS-GENERATED:START commands -->
 ## Build & tests (prefer file-scoped)
 - Typecheck a file: `{{TYPECHECK_CMD}}`
 - Format a file: `{{FORMAT_CMD}} {{FILE_PATH}}`
@@ -19,7 +24,9 @@
 - Test a file: `{{TEST_CMD}} {{FILE_PATH}}`
 - Build: {{BUILD_CMD}}
 - Dev server: {{DEV_CMD}}
+<!-- AGENTS-GENERATED:END commands -->
 
+<!-- AGENTS-GENERATED:START code-style -->
 ## Code style & conventions
 - Use TypeScript strict mode (`strict: true` in tsconfig)
 - No `any` without explicit justification comment
@@ -29,16 +36,20 @@
 - Prefer `const` over `let`, never use `var`
 - Destructure objects and arrays when appropriate
 {{FRAMEWORK_CONVENTIONS}}
+<!-- AGENTS-GENERATED:END code-style -->
 
+<!-- AGENTS-GENERATED:START security -->
 ## Security & safety
 - Validate all user inputs (use zod or similar)
 - Parameterized queries only (no string concatenation)
-- Never use dynamic code evaluation with user data
+- Never use dynamic code execution with user data
 - Sensitive data: never log or expose in errors
 - Environment: use dotenv, never hardcode secrets
 - CORS: configure explicitly, no wildcard in production
 - Rate limiting: implement for public endpoints
+<!-- AGENTS-GENERATED:END security -->
 
+<!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
 - [ ] Tests pass: `{{TEST_CMD}}`
 - [ ] Type check clean: `{{TYPECHECK_CMD}}`
@@ -47,7 +58,9 @@
 - [ ] No `any` types without justification
 - [ ] API endpoints have validation
 - [ ] Error responses don't leak internals
+<!-- AGENTS-GENERATED:END checklist -->
 
+<!-- AGENTS-GENERATED:START examples -->
 ## Good vs. bad examples
 **Good**: Proper types and async/await
 ```typescript
@@ -84,12 +97,16 @@ app.post('/users', async (req, res) => {
   // data is typed and validated
 });
 ```
+<!-- AGENTS-GENERATED:END examples -->
 
+<!-- AGENTS-GENERATED:START help -->
 ## When stuck
 - Check Node.js docs: https://nodejs.org/docs
 - TypeScript handbook: https://www.typescriptlang.org/docs
 - Review existing patterns in this codebase
 - Check root AGENTS.md for project-wide conventions
+<!-- AGENTS-GENERATED:END help -->
 
-## House Rules (optional)
+## House Rules (project-specific)
+<!-- This section is NOT auto-generated - add your project-specific rules here -->
 {{HOUSE_RULES}}

@@ -53,12 +53,12 @@ WARNINGS=0
 
 error() {
     echo "❌ ERROR: $*"
-    ((ERRORS++)) || true
+    ((ERRORS+=1))
 }
 
 warning() {
     echo "⚠️  WARNING: $*"
-    ((WARNINGS++)) || true
+    ((WARNINGS+=1))
 }
 
 success() {
@@ -108,25 +108,40 @@ check_precedence_statement() {
     fi
 }
 
-# Check if scoped file has all 9 sections
+# Check if scoped file has all required sections (with alternatives)
 check_scoped_sections() {
     local file="$1"
-    local required_sections=(
-        "## Overview"
-        "## Setup & environment"
-        "## Build & tests"
-        "## Code style & conventions"
-        "## Security & safety"
-        "## PR/commit checklist"
-        "## Good vs. bad examples"
-        "## When stuck"
+
+    # Each entry: "Display Name|pattern1|pattern2|..."
+    local section_patterns=(
+        "Overview|## Overview"
+        "Setup|## Setup|## Environment|## Prerequisites|## Getting Started"
+        "Build/Tests|## Build|## Tests|## Running|## Commands"
+        "Code style|## Code style|## Style|## Conventions"
+        "Security|## Security"
+        "Checklist|## PR|## Commit|## Checklist"
+        "Examples|## Good vs|## Examples|## Bad examples"
+        "When stuck|## When stuck|## Help|## Resources|## Troubleshooting"
     )
 
     local missing=()
 
-    for section in "${required_sections[@]}"; do
-        if ! grep -q "^$section" "$file"; then
-            missing+=("$section")
+    for entry in "${section_patterns[@]}"; do
+        local name="${entry%%|*}"
+        local patterns="${entry#*|}"
+        local found=false
+
+        # Try each pattern
+        IFS='|' read -ra pattern_array <<< "$patterns"
+        for pattern in "${pattern_array[@]}"; do
+            if grep -qi "^$pattern" "$file"; then
+                found=true
+                break
+            fi
+        done
+
+        if [ "$found" = false ]; then
+            missing+=("$name")
         fi
     done
 
@@ -228,7 +243,7 @@ if [ "$CHECK_FRESHNESS" = true ]; then
         echo "✅ All files are up to date!"
     else
         # Freshness issues are warnings, not errors
-        ((WARNINGS++)) || true
+        ((WARNINGS+=1))
     fi
 fi
 

@@ -216,7 +216,7 @@ verify_command() {
     # Skip placeholders
     if [[ "$cmd" == *"<"* ]] || [[ "$cmd" == *"{{{"* ]]; then
         log "Skipping placeholder: $cmd"
-        ((SKIPPED++))
+        ((SKIPPED+=1))
         return 0
     fi
 
@@ -254,26 +254,26 @@ verify_command() {
                             local duration="${COMMAND_RESULTS[$cmd]}"
                             duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                             success "$base_cmd script works: $script (~${duration}ms)"
-                            ((PASSED++))
+                            ((PASSED+=1))
                         else
                             warn "$base_cmd script exists but smoke test failed: $script"
                             COMMAND_RESULTS["$cmd"]='{"exists": true, "runs": false}'
-                            ((SKIPPED++))
+                            ((SKIPPED+=1))
                         fi
                     else
                         success "$base_cmd script exists: $script"
                         COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                        ((PASSED++))
+                        ((PASSED+=1))
                     fi
                 else
                     warn "$base_cmd script not found: $script (in $cmd)"
                     COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                    ((SKIPPED++))
+                    ((SKIPPED+=1))
                 fi
             else
                 warn "No package.json found for: $cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -289,26 +289,26 @@ verify_command() {
                             local duration="${COMMAND_RESULTS[$cmd]}"
                             duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                             success "make target works: $target (~${duration}ms)"
-                            ((PASSED++))
+                            ((PASSED+=1))
                         else
                             warn "make target exists but dry-run failed: $target"
                             COMMAND_RESULTS["$cmd"]='{"exists": true, "runs": false}'
-                            ((SKIPPED++))
+                            ((SKIPPED+=1))
                         fi
                     else
                         success "make target exists: $target"
                         COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                        ((PASSED++))
+                        ((PASSED+=1))
                     fi
                 else
                     error "make target not found: $target"
                     COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                    ((FAILED++))
+                    ((FAILED+=1))
                 fi
             else
                 warn "No Makefile found for: $cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -335,26 +335,26 @@ verify_command() {
                             local duration="${COMMAND_RESULTS[$cmd]}"
                             duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                             success "composer script works: $script (~${duration}ms)"
-                            ((PASSED++))
+                            ((PASSED+=1))
                         else
                             warn "composer script exists but smoke test failed: $script"
                             COMMAND_RESULTS["$cmd"]='{"exists": true, "runs": false}'
-                            ((SKIPPED++))
+                            ((SKIPPED+=1))
                         fi
                     else
                         success "composer script exists: $script"
                         COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                        ((PASSED++))
+                        ((PASSED+=1))
                     fi
                 else
                     warn "composer script not found: $script"
                     COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                    ((SKIPPED++))
+                    ((SKIPPED+=1))
                 fi
             else
                 warn "No composer.json found for: $cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -374,16 +374,16 @@ verify_command() {
                 if [ "$script_exists" = true ]; then
                     success "pnpm script exists: $script"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED++))
+                    ((PASSED+=1))
                 else
                     warn "pnpm script not found: $script"
                     COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                    ((SKIPPED++))
+                    ((SKIPPED+=1))
                 fi
             else
                 warn "No package.json found for: $cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -403,16 +403,16 @@ verify_command() {
                 if [ "$script_exists" = true ]; then
                     success "bun script exists: $script"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED++))
+                    ((PASSED+=1))
                 else
                     warn "bun script not found: $script"
                     COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                    ((SKIPPED++))
+                    ((SKIPPED+=1))
                 fi
             else
                 warn "No package.json found for: $cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -421,11 +421,11 @@ verify_command() {
             if command -v "$base_cmd" > /dev/null 2>&1; then
                 success "Python command available: $base_cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                ((PASSED++))
+                ((PASSED+=1))
             else
                 warn "Python command not found: $base_cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -437,23 +437,23 @@ verify_command() {
                 if [[ "$subcmd" =~ ^(install|add|remove|update|build|publish|run|shell)$ ]]; then
                     success "poetry command: $subcmd"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED++))
+                    ((PASSED+=1))
                 else
                     # Check if it's a custom script
                     if [ -f "pyproject.toml" ] && grep -q "\[tool.poetry.scripts\]" pyproject.toml 2>/dev/null; then
                         success "poetry command available"
                         COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                        ((PASSED++))
+                        ((PASSED+=1))
                     else
                         warn "poetry script not found: $subcmd"
                         COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                        ((SKIPPED++))
+                        ((SKIPPED+=1))
                     fi
                 fi
             else
                 warn "poetry not installed"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -462,11 +462,11 @@ verify_command() {
             if command -v uv > /dev/null 2>&1; then
                 success "uv command available"
                 COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                ((PASSED++))
+                ((PASSED+=1))
             else
                 warn "uv not installed"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -475,11 +475,11 @@ verify_command() {
             if command -v pytest > /dev/null 2>&1; then
                 success "pytest available"
                 COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                ((PASSED++))
+                ((PASSED+=1))
             else
                 warn "pytest not installed"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -488,11 +488,11 @@ verify_command() {
             if command -v cargo > /dev/null 2>&1; then
                 success "cargo command available"
                 COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                ((PASSED++))
+                ((PASSED+=1))
             else
                 warn "cargo not installed"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -501,11 +501,11 @@ verify_command() {
             if command -v deno > /dev/null 2>&1; then
                 success "deno command available"
                 COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                ((PASSED++))
+                ((PASSED+=1))
             else
                 warn "deno not installed"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -514,15 +514,15 @@ verify_command() {
             if [ -f "gradlew" ] || [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
                 success "gradle project detected"
                 COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                ((PASSED++))
+                ((PASSED+=1))
             elif command -v gradle > /dev/null 2>&1; then
                 success "gradle command available"
                 COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                ((PASSED++))
+                ((PASSED+=1))
             else
                 warn "gradle not found"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
 
@@ -534,20 +534,20 @@ verify_command() {
                         local duration="${COMMAND_RESULTS[$cmd]}"
                         duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                         success "go command ran successfully (~${duration}ms)"
-                        ((PASSED++))
+                        ((PASSED+=1))
                     else
                         error "go command failed: $cmd"
-                        ((FAILED++))
+                        ((FAILED+=1))
                     fi
                 else
                     success "go command available"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED++))
+                    ((PASSED+=1))
                 fi
             else
                 error "go not installed"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((FAILED++))
+                ((FAILED+=1))
             fi
             ;;
 
@@ -564,20 +564,20 @@ verify_command() {
                         local duration="${COMMAND_RESULTS[$cmd]}"
                         duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                         success "vendor binary works (~${duration}ms)"
-                        ((PASSED++))
+                        ((PASSED+=1))
                     else
                         warn "vendor binary exists but failed: $cmd"
-                        ((SKIPPED++))
+                        ((SKIPPED+=1))
                     fi
                 else
                     success "vendor binary exists: $base_cmd"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED++))
+                    ((PASSED+=1))
                 fi
             else
                 error "vendor binary not found: $base_cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((FAILED++))
+                ((FAILED+=1))
             fi
             ;;
 
@@ -589,20 +589,20 @@ verify_command() {
                         local duration="${COMMAND_RESULTS[$cmd]}"
                         duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                         success "command works (~${duration}ms)"
-                        ((PASSED++))
+                        ((PASSED+=1))
                     else
                         warn "command exists but failed: $cmd"
-                        ((SKIPPED++))
+                        ((SKIPPED+=1))
                     fi
                 else
                     success "command exists: $base_cmd"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
-                    ((PASSED++))
+                    ((PASSED+=1))
                 fi
             else
                 warn "command not in PATH: $base_cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((SKIPPED++))
+                ((SKIPPED+=1))
             fi
             ;;
     esac

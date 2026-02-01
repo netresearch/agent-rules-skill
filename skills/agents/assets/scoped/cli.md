@@ -2,22 +2,29 @@
 
 # AGENTS.md — {{SCOPE_NAME}}
 
+<!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
 
 Command-line interface tools and entry points.
+<!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 {{SETUP_INSTRUCTIONS}}
 - CLI framework: {{CLI_FRAMEWORK}}
 - Build output: {{BUILD_OUTPUT_PATH}}
+<!-- AGENTS-GENERATED:END setup -->
 
+<!-- AGENTS-GENERATED:START commands -->
 ## Build & tests (prefer file-scoped)
 - Build CLI: {{BUILD_CMD}}
 - Run CLI: {{RUN_CMD}}
 - Test: {{TEST_CMD}}
 - Lint: {{LINT_CMD}}
+<!-- AGENTS-GENERATED:END commands -->
 
+<!-- AGENTS-GENERATED:START code-style -->
 ## Code style & conventions
 - Use flag parsing library consistently ({{CLI_FRAMEWORK}})
 - Provide `--help` for all commands and subcommands
@@ -27,14 +34,18 @@ Command-line interface tools and entry points.
 - Errors: write to stderr, not stdout
 - Progress: show for long-running operations
 - Interactive prompts: support non-interactive mode with flags
+<!-- AGENTS-GENERATED:END code-style -->
 
+<!-- AGENTS-GENERATED:START security -->
 ## Security & safety
 - Validate all file paths and prevent directory traversal
 - Never execute user-provided code without explicit confirmation
 - Sensitive data: never log or display in plain text
 - Config files: validate schema and permissions
 - Network operations: timeout and retry with backoff
+<!-- AGENTS-GENERATED:END security -->
 
+<!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
 - [ ] `--help` text is clear and accurate
 - [ ] `--version` displays correct version
@@ -43,7 +54,9 @@ Command-line interface tools and entry points.
 - [ ] Long operations show progress
 - [ ] Works in non-interactive mode
 - [ ] Tests cover main workflows
+<!-- AGENTS-GENERATED:END checklist -->
 
+<!-- AGENTS-GENERATED:START examples -->
 ## Good vs. bad examples
 **Good**: Proper error handling
 ```{{LANGUAGE}}
@@ -73,12 +86,16 @@ Options:
   --config string   Config file path (default: config.yaml)
   --verbose         Enable verbose output
 ```
+<!-- AGENTS-GENERATED:END examples -->
 
+<!-- AGENTS-GENERATED:START help -->
 ## When stuck
 - Review {{CLI_FRAMEWORK}} documentation
 - Check existing commands for patterns
 - Test with `--help` to ensure clarity
 - Check root AGENTS.md for project conventions
+<!-- AGENTS-GENERATED:END help -->
 
-## House Rules (optional)
+## House Rules (project-specific)
+<!-- This section is NOT auto-generated - add your project-specific rules here -->
 {{HOUSE_RULES}}

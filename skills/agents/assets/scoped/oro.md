@@ -2,11 +2,14 @@
 
 # AGENTS.md — {{SCOPE_NAME}}
 
+<!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
 
 Oro bundle following [Oro Architecture](https://doc.oroinc.com/backend/architecture/) and Symfony best practices.
+<!-- AGENTS-GENERATED:END overview -->
 
+<!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Install: `composer install`
 - PHP version: {{PHP_VERSION}}
@@ -15,7 +18,9 @@ Oro bundle following [Oro Architecture](https://doc.oroinc.com/backend/architect
 - Required: `bin/console oro:install` for fresh setup
 - Cache clear: `bin/console cache:clear`
 - Assets: `bin/console oro:assets:install`
+<!-- AGENTS-GENERATED:END setup -->
 
+<!-- AGENTS-GENERATED:START structure -->
 ## Directory structure
 ```
 src/
@@ -44,7 +49,9 @@ src/
         EventListener/          → Event subscribers/listeners
         ImportExport/           → Import/export processors
 ```
+<!-- AGENTS-GENERATED:END structure -->
 
+<!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
 | Task | Command | ~Time |
 |------|---------|-------|
@@ -55,7 +62,9 @@ src/
 | Functional | `vendor/bin/phpunit --testsuite=functional` | ~5min |
 | Behat | `vendor/bin/behat` | ~10min |
 | Full CI | `bin/console oro:test:all` | ~20min |
+<!-- AGENTS-GENERATED:END commands -->
 
+<!-- AGENTS-GENERATED:START code-style -->
 ## Code style & conventions
 - **PSR-12** coding standard
 - Strict types: `declare(strict_types=1);`
@@ -72,7 +81,9 @@ src/
 | Datagrid | `vendor-entity-grid` | `acme-orders-grid` |
 | Workflow | `vendor_entity_flow` | `acme_order_flow` |
 | API resource | `vendor_entity` | `acme_orders` |
+<!-- AGENTS-GENERATED:END code-style -->
 
+<!-- AGENTS-GENERATED:START patterns -->
 ## Oro-specific patterns
 
 ### Datagrids (datagrids.yml)
@@ -133,7 +144,9 @@ acl:
         class: Acme\Bundle\OrderBundle\Entity\Order
         permission: EDIT
 ```
+<!-- AGENTS-GENERATED:END patterns -->
 
+<!-- AGENTS-GENERATED:START security -->
 ## Security & safety
 - **ACL**: Define permissions in `acl.yml`, check with `isGranted()`
 - **CSRF**: Oro handles automatically for forms
@@ -141,7 +154,9 @@ acl:
 - **Input validation**: Use Symfony validators + Oro constraints
 - **Sensitive data**: Use Oro's `ConfigManager` for encrypted values
 - **SQL**: Always use Doctrine ORM/DBAL, never raw queries
+<!-- AGENTS-GENERATED:END security -->
 
+<!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
 - [ ] `bin/console cache:clear` runs without errors
 - [ ] PHPStan passes at configured level
@@ -153,7 +168,9 @@ acl:
 - [ ] ACL permissions defined for new entities
 - [ ] Translation keys added to `messages.en.yml`
 - [ ] API resources documented with NelmioApiDocBundle annotations
+<!-- AGENTS-GENERATED:END checklist -->
 
+<!-- AGENTS-GENERATED:START examples -->
 ## Good vs. bad examples
 
 **Good**: Config-driven datagrid
@@ -201,7 +218,9 @@ class OrderType extends AbstractType
     }
 }
 ```
+<!-- AGENTS-GENERATED:END examples -->
 
+<!-- AGENTS-GENERATED:START messaging -->
 ## Message Queue patterns
 ```php
 // Async processor
@@ -218,7 +237,9 @@ class ProcessOrderProcessor implements MessageProcessorInterface
 // Producer usage
 $this->messageProducer->send(ProcessOrderTopic::NAME, ['orderId' => $order->getId()]);
 ```
+<!-- AGENTS-GENERATED:END messaging -->
 
+<!-- AGENTS-GENERATED:START help -->
 ## When stuck
 - Oro Documentation: https://doc.oroinc.com
 - Backend Architecture: https://doc.oroinc.com/backend/architecture/
@@ -227,6 +248,8 @@ $this->messageProducer->send(ProcessOrderTopic::NAME, ['orderId' => $order->getI
 - API: https://doc.oroinc.com/api/
 - Check existing bundles in `vendor/oro/` for patterns
 - Review root AGENTS.md for project-wide conventions
+<!-- AGENTS-GENERATED:END help -->
 
-## House Rules (optional)
+## House Rules (project-specific)
+<!-- This section is NOT auto-generated - add your project-specific rules here -->
 {{HOUSE_RULES}}

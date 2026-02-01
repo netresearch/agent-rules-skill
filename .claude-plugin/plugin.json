@@ -3,7 +3,7 @@
   "version": "2.5.0",
   "description": "Generate and maintain AGENTS.md files following public convention",
   "repository": "https://github.com/netresearch/agents-skill",
-  "license": "MIT",
+  "license": "GPL-2.0-or-later",
   "author": {
     "name": "Netresearch DTT GmbH",
     "email": "info@netresearch.de"
