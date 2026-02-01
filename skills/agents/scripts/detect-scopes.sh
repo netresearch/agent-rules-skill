@@ -71,9 +71,9 @@ case "$LANGUAGE" in
 
         # Select appropriate backend template
         if [ "$FRAMEWORK" = "typo3" ] || [ "$PROJECT_TYPE" = "php-typo3-extension" ]; then
-            PHP_BACKEND_TYPE="backend-typo3"
+            PHP_BACKEND_TYPE="typo3"
         elif [ "$FRAMEWORK" = "oro" ] || [ "$PROJECT_TYPE" = "php-oro" ] || [ "$PROJECT_TYPE" = "php-oro-bundle" ]; then
-            PHP_BACKEND_TYPE="backend-oro"
+            PHP_BACKEND_TYPE="oro"
         else
             PHP_BACKEND_TYPE="backend-php"
         fi
@@ -114,7 +114,7 @@ case "$LANGUAGE" in
             for bundle_dir in src/*/Bundle/*/; do
                 [ -d "$bundle_dir" ] && {
                     count=$(count_source_files "$bundle_dir" "*.php")
-                    [ "$count" -ge "$MIN_FILES" ] && add_scope "${bundle_dir%/}" "backend-oro" "$count"
+                    [ "$count" -ge "$MIN_FILES" ] && add_scope "${bundle_dir%/}" "oro" "$count"
                 }
             done
         fi

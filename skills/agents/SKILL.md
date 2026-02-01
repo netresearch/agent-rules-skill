@@ -386,8 +386,8 @@ When generating scoped AGENTS.md files, the scripts use language-specific templa
 
 - `assets/scoped/backend-go.md` - Go backend patterns (packages, error handling, testing)
 - `assets/scoped/backend-php.md` - PHP backend patterns (PSR, DI, security)
-- `assets/scoped/backend-typo3.md` - TYPO3 extension patterns (TCA, Extbase, Fluid, TYPO3 CGL)
-- `assets/scoped/backend-oro.md` - Oro bundle patterns (datagrids, workflows, ACL, message queue)
+- `assets/scoped/typo3.md` - TYPO3 extension patterns (TCA, Extbase, Fluid, TYPO3 CGL)
+- `assets/scoped/oro.md` - Oro bundle patterns (datagrids, workflows, ACL, message queue)
 - `assets/scoped/cli.md` - CLI patterns (flags, output, error codes)
 - `assets/scoped/frontend-typescript.md` - TypeScript frontend patterns (components, state, testing)
 
