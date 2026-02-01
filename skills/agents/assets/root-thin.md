@@ -1,20 +1,52 @@
-<!-- Managed by agent: keep sections and order; edit content, not structure. Last updated: {{TIMESTAMP}} -->
+<!-- FOR AI AGENTS - Human readability is a side effect, not a goal -->
+<!-- Managed by agent: keep sections and order; edit content, not structure -->
+<!-- Last updated: {{TIMESTAMP}} | Last verified: {{VERIFIED_TIMESTAMP}} -->
 
-# AGENTS.md (root)
+# AGENTS.md
 
-This file explains repo-wide conventions and where to find scoped rules.
 **Precedence:** the **closest `AGENTS.md`** to the files you're changing wins. Root holds global defaults only.
 
-## Global rules
-- Keep diffs small; add tests for new code paths
-{{LANGUAGE_CONVENTIONS}}
+## Commands (verified ✓)
+| Task | Command | ~Time |
+|------|---------|-------|
+| Typecheck | {{TYPECHECK_CMD}} | {{TYPECHECK_TIME}} |
+| Lint | {{LINT_CMD}} | {{LINT_TIME}} |
+| Format | {{FORMAT_CMD}} | {{FORMAT_TIME}} |
+| Test (single) | {{TEST_SINGLE_CMD}} | ~2s |
+| Test (all) | {{TEST_CMD}} | {{TEST_TIME}} |
+| Build | {{BUILD_CMD}} | {{BUILD_TIME}} |
+
+> If commands fail, run `scripts/verify-agents-md.sh` or ask user to update.
+
+## File Map
+```
+{{FILE_MAP}}
+```
+
+## Golden Samples (follow these patterns)
+| For | Reference | Key patterns |
+|-----|-----------|--------------|
+{{GOLDEN_SAMPLES}}
+
+## Utilities (check before creating new)
+| Need | Use | Location |
+|------|-----|----------|
+{{UTILITIES_LIST}}
+
+## Heuristics (quick decisions)
+| When | Do |
+|------|-----|
+{{HEURISTICS}}
+| Adding dependency | Ask first - we minimize deps |
+| Unsure about pattern | Check Golden Samples above |
 
 ## Boundaries
 
 ### Always Do
 - Run pre-commit checks before committing
 - Add tests for new code paths
-- Use conventional commit format (if established)
+- Use conventional commit format: `type(scope): subject`
+{{LANGUAGE_CONVENTIONS}}
 
 ### Ask First
 - Adding new dependencies
@@ -30,17 +62,17 @@ This file explains repo-wide conventions and where to find scoped rules.
 - Delete migration files or schema changes
 {{LANGUAGE_SPECIFIC_NEVER}}
 
-## Minimal pre-commit checks
-- Typecheck: {{TYPECHECK_CMD}}
-- Lint/format: {{LINT_CMD}}{{FORMAT_CMD}}
-- Tests: {{TEST_CMD}}
+## Codebase State
+{{CODEBASE_STATE}}
+
+## Terminology
+| Term | Means |
+|------|-------|
+{{TERMINOLOGY}}
 
 ## Index of scoped AGENTS.md
 {{SCOPE_INDEX}}
 
-## Code examples
-{{CODE_EXAMPLES}}
-
 ## When instructions conflict
-- The nearest `AGENTS.md` wins. Explicit user prompts override files.
+The nearest `AGENTS.md` wins. Explicit user prompts override files.
 {{LANGUAGE_SPECIFIC_CONFLICT_RESOLUTION}}

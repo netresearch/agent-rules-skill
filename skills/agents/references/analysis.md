@@ -1,5 +1,7 @@
 # AGENTS.md Analysis Across 6 Netresearch Projects
 
+> **Reference:** This analysis aligns with the [official agents.md specification](https://agents.md/) and [GitHub best practices from 2,500+ repositories](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/).
+
 ## Executive Summary
 
 **Total AGENTS.md Files Found**: 21 files across 6 projects

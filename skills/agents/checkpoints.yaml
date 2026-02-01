@@ -12,20 +12,21 @@ mechanical:
     severity: error
     desc: "AGENTS.md must exist in repository root"
 
-  # === REQUIRED SECTIONS ===
+  # === RECOMMENDED SECTIONS ===
+  # Note: The agents.md spec has NO required fields - these are best practices
   - id: AG-02
     type: regex
     target: AGENTS.md
-    pattern: "^#+ Overview"
-    severity: error
-    desc: "AGENTS.md must have Overview section"
+    pattern: "^#+ (Overview|Project|About)"
+    severity: warning
+    desc: "AGENTS.md should have an Overview/Project section (recommended but not required)"
 
   - id: AG-03
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Setup|Getting Started|Prerequisites)"
-    severity: error
-    desc: "AGENTS.md must have Setup/Getting Started section"
+    pattern: "^#+ (Setup|Getting Started|Prerequisites|Dev Environment)"
+    severity: warning
+    desc: "AGENTS.md should have Setup/Dev Environment section (recommended but not required)"
 
   - id: AG-04
     type: regex
@@ -85,6 +86,49 @@ mechanical:
     pattern: "(composer|npm|make|ddev|docker)"
     severity: warning
     desc: "AGENTS.md should document build/run commands"
+
+  # === AGENT-OPTIMIZED SECTIONS ===
+  - id: AG-13
+    type: regex
+    target: AGENTS.md
+    pattern: "^#+ (Commands|Commands \\(verified)"
+    severity: warning
+    desc: "AGENTS.md should have Commands section with verification status"
+
+  - id: AG-14
+    type: regex
+    target: AGENTS.md
+    pattern: "^#+ File Map"
+    severity: info
+    desc: "AGENTS.md should have File Map for navigation efficiency"
+
+  - id: AG-15
+    type: regex
+    target: AGENTS.md
+    pattern: "^#+ (Golden Samples|Canonical Patterns)"
+    severity: info
+    desc: "AGENTS.md should have Golden Samples to reduce pattern guessing"
+
+  - id: AG-16
+    type: regex
+    target: AGENTS.md
+    pattern: "^#+ (Utilities|Shared Utilities|Don't Reinvent)"
+    severity: info
+    desc: "AGENTS.md should list utilities to prevent duplicate code"
+
+  - id: AG-17
+    type: regex
+    target: AGENTS.md
+    pattern: "^#+ (Heuristics|Quick Decisions|Decision Rules)"
+    severity: info
+    desc: "AGENTS.md should have Heuristics for autonomous decisions"
+
+  - id: AG-18
+    type: regex
+    target: AGENTS.md
+    pattern: "Last verified.*20[0-9]{2}"
+    severity: info
+    desc: "AGENTS.md should have 'Last verified' timestamp for trust scoring"
 
   # === IMPORTANT CONTEXT ===
   - id: AG-12

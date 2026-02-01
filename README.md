@@ -2,19 +2,21 @@
 
 Netresearch AI skill for generating and maintaining AGENTS.md files following the [agents.md specification](https://agents.md/).
 
-> **What is AGENTS.md?** A simple, open format for guiding coding agents — adopted by 60,000+ open-source projects. Think of it as a README for AI agents. See the [official specification](https://agents.md/) and [best practices from 2,500+ repositories](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/).
+> **What is AGENTS.md?** A context file written **for AI coding agents**, not humans. Human readability is a side effect, not a goal. Adopted by 60,000+ open-source projects. See the [official specification](https://agents.md/) and [best practices from 2,500+ repositories](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/).
 
-## 🔌 Compatibility
+## Standards Compliance
 
-This is an **Agent Skill** following the [open standard](https://agentskills.io) originally developed by Anthropic and released for cross-platform use.
+This skill implements two complementary standards:
+
+1. **[agents.md](https://agents.md/)** - The file format this skill generates. A simple Markdown convention for guiding AI coding agents, supported by Claude Code, GitHub Copilot, Cursor, and 60,000+ open-source projects.
+
+2. **[Agent Skills](https://agentskills.io)** - How this skill is packaged and distributed. A portable format for procedural knowledge that works across AI agents.
 
 **Supported Platforms:**
 - ✅ Claude Code (Anthropic)
 - ✅ Cursor
 - ✅ GitHub Copilot
 - ✅ Other skills-compatible AI agents
-
-> Skills are portable packages of procedural knowledge that work across any AI agent supporting the Agent Skills specification.
 
 
 ## Features
