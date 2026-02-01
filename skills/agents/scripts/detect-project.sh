@@ -47,48 +47,92 @@ detect_language() {
         command -v gofmt &>/dev/null && QUALITY_TOOLS+=("gofmt") || true
 
     elif [ -f "composer.json" ]; then
-        LANGUAGE="php"
-        VERSION=$(jq -r '.require.php // "unknown"' composer.json 2>/dev/null || echo "unknown")
-        BUILD_TOOL="composer"
+        # Check if this is actually a PHP project:
+        # 1. Has PHP version requirement, OR
+        # 2. Has PHP source files, OR
+        # 3. Has PHP framework dependencies
+        local has_php_requirement=false
+        local has_php_files=false
+        local has_php_deps=false
 
-        # Detect PHP framework
-        # TYPO3 extension detection (ext_emconf.php is definitive)
-        if [ -f "ext_emconf.php" ]; then
-            PROJECT_TYPE="php-typo3-extension"
-            FRAMEWORK="typo3"
-            # Try to get TYPO3 version from composer.json or ext_emconf.php
-            TYPO3_VERSION=$(jq -r '.require."typo3/cms-core" // .["require-dev"]."typo3/cms-core" // "unknown"' composer.json 2>/dev/null || echo "unknown")
-        elif jq -e '.require."typo3/cms-core"' composer.json &>/dev/null; then
-            PROJECT_TYPE="php-typo3"
-            FRAMEWORK="typo3"
-            TYPO3_VERSION=$(jq -r '.require."typo3/cms-core"' composer.json 2>/dev/null || echo "unknown")
-        # Oro detection (OroCommerce, OroPlatform, OroCRM)
-        elif jq -e '.require."oro/platform"' composer.json &>/dev/null || \
-             jq -e '.require."oro/commerce"' composer.json &>/dev/null || \
-             jq -e '.require."oro/crm"' composer.json &>/dev/null; then
-            PROJECT_TYPE="php-oro"
-            FRAMEWORK="oro"
-            ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "unknown"' composer.json 2>/dev/null || echo "unknown")
-        elif [ -f "config/oro/bundles.yml" ] || [ -f "src/*/Bundle/*/Resources/config/oro/workflows.yml" ]; then
-            PROJECT_TYPE="php-oro-bundle"
-            FRAMEWORK="oro"
-        elif jq -e '.require."laravel/framework"' composer.json &>/dev/null; then
-            PROJECT_TYPE="php-laravel"
-            FRAMEWORK="laravel"
-        elif jq -e '.require."symfony/symfony"' composer.json &>/dev/null || \
-             jq -e '.require."symfony/framework-bundle"' composer.json &>/dev/null; then
-            PROJECT_TYPE="php-symfony"
-            FRAMEWORK="symfony"
-        else
-            PROJECT_TYPE="php-library"
+        # Check for PHP version requirement
+        if jq -e '.require.php // .["require-dev"].php' composer.json &>/dev/null; then
+            has_php_requirement=true
         fi
 
-        # Detect PHP quality tools
-        jq -e '.require."phpstan/phpstan" // .["require-dev"]."phpstan/phpstan"' composer.json &>/dev/null && QUALITY_TOOLS+=("phpstan") || true
-        jq -e '.require."friendsofphp/php-cs-fixer" // .["require-dev"]."friendsofphp/php-cs-fixer"' composer.json &>/dev/null && QUALITY_TOOLS+=("php-cs-fixer") || true
-        { [ -f "phpunit.xml" ] || [ -f "phpunit.xml.dist" ]; } && TEST_FRAMEWORK="phpunit" || true
+        # Check for PHP source files (common locations)
+        if [ -d "src" ] && find src -name "*.php" -type f 2>/dev/null | head -1 | grep -q .; then
+            has_php_files=true
+        elif [ -d "Classes" ] && find Classes -name "*.php" -type f 2>/dev/null | head -1 | grep -q .; then
+            has_php_files=true
+        elif [ -d "lib" ] && find lib -name "*.php" -type f 2>/dev/null | head -1 | grep -q .; then
+            has_php_files=true
+        elif [ -f "ext_emconf.php" ]; then
+            has_php_files=true
+        elif find . -maxdepth 2 -name "*.php" -type f 2>/dev/null | head -1 | grep -q .; then
+            has_php_files=true
+        fi
 
-    elif [ -f "package.json" ]; then
+        # Check for PHP framework dependencies
+        if jq -e '.require."typo3/cms-core" // .require."laravel/framework" // .require."symfony/framework-bundle" // .require."oro/platform"' composer.json &>/dev/null; then
+            has_php_deps=true
+        fi
+
+        # Only treat as PHP if we have evidence it's a PHP project
+        if [ "$has_php_requirement" = true ] || [ "$has_php_files" = true ] || [ "$has_php_deps" = true ]; then
+            LANGUAGE="php"
+            VERSION=$(jq -r '.require.php // "unknown"' composer.json 2>/dev/null || echo "unknown")
+            BUILD_TOOL="composer"
+        else
+            # composer.json exists but this isn't a PHP project
+            # Continue to check other languages
+            :
+        fi
+
+        # Detect PHP framework (only if we determined this is PHP)
+        if [ "$LANGUAGE" = "php" ]; then
+            # TYPO3 extension detection (ext_emconf.php is definitive)
+            if [ -f "ext_emconf.php" ]; then
+                PROJECT_TYPE="php-typo3-extension"
+                FRAMEWORK="typo3"
+                # Try to get TYPO3 version from composer.json or ext_emconf.php
+                TYPO3_VERSION=$(jq -r '.require."typo3/cms-core" // .["require-dev"]."typo3/cms-core" // "unknown"' composer.json 2>/dev/null || echo "unknown")
+            elif jq -e '.require."typo3/cms-core"' composer.json &>/dev/null; then
+                PROJECT_TYPE="php-typo3"
+                FRAMEWORK="typo3"
+                TYPO3_VERSION=$(jq -r '.require."typo3/cms-core"' composer.json 2>/dev/null || echo "unknown")
+            # Oro detection (OroCommerce, OroPlatform, OroCRM)
+            elif jq -e '.require."oro/platform"' composer.json &>/dev/null || \
+                 jq -e '.require."oro/commerce"' composer.json &>/dev/null || \
+                 jq -e '.require."oro/crm"' composer.json &>/dev/null; then
+                PROJECT_TYPE="php-oro"
+                FRAMEWORK="oro"
+                ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "unknown"' composer.json 2>/dev/null || echo "unknown")
+            elif [ -f "config/oro/bundles.yml" ] || [ -f "src/*/Bundle/*/Resources/config/oro/workflows.yml" ]; then
+                PROJECT_TYPE="php-oro-bundle"
+                FRAMEWORK="oro"
+            elif jq -e '.require."laravel/framework"' composer.json &>/dev/null; then
+                PROJECT_TYPE="php-laravel"
+                FRAMEWORK="laravel"
+            elif jq -e '.require."symfony/symfony"' composer.json &>/dev/null || \
+                 jq -e '.require."symfony/framework-bundle"' composer.json &>/dev/null; then
+                PROJECT_TYPE="php-symfony"
+                FRAMEWORK="symfony"
+            else
+                PROJECT_TYPE="php-library"
+            fi
+
+            # Detect PHP quality tools
+            jq -e '.require."phpstan/phpstan" // .["require-dev"]."phpstan/phpstan"' composer.json &>/dev/null && QUALITY_TOOLS+=("phpstan") || true
+            jq -e '.require."friendsofphp/php-cs-fixer" // .["require-dev"]."friendsofphp/php-cs-fixer"' composer.json &>/dev/null && QUALITY_TOOLS+=("php-cs-fixer") || true
+            { [ -f "phpunit.xml" ] || [ -f "phpunit.xml.dist" ]; } && TEST_FRAMEWORK="phpunit" || true
+        fi
+        # If composer.json exists but it's not a PHP project, fall through to other checks
+
+    fi
+
+    # Check for package.json (might also exist alongside composer.json)
+    if [ "$LANGUAGE" = "unknown" ] && [ -f "package.json" ]; then
         LANGUAGE="typescript"
         VERSION=$(jq -r '.engines.node // "unknown"' package.json 2>/dev/null || echo "unknown")
 
@@ -130,7 +174,10 @@ detect_language() {
             TEST_FRAMEWORK="vitest"
         fi || true
 
-    elif [ -f "pyproject.toml" ]; then
+    fi
+
+    # Check for pyproject.toml
+    if [ "$LANGUAGE" = "unknown" ] && [ -f "pyproject.toml" ]; then
         LANGUAGE="python"
         VERSION=$(grep 'requires-python' pyproject.toml | cut -d'"' -f2 2>/dev/null || echo "unknown")
 
@@ -164,6 +211,19 @@ detect_language() {
         grep -q 'black' pyproject.toml 2>/dev/null && QUALITY_TOOLS+=("black")
         grep -q 'mypy' pyproject.toml 2>/dev/null && QUALITY_TOOLS+=("mypy")
         grep -q 'pytest' pyproject.toml 2>/dev/null && TEST_FRAMEWORK="pytest"
+    fi
+
+    # Fallback: Check for bash/shell projects
+    if [ "$LANGUAGE" = "unknown" ]; then
+        local sh_count
+        sh_count=$(find . -maxdepth 5 -name "*.sh" -type f 2>/dev/null | wc -l)
+        if [ "$sh_count" -gt 3 ]; then
+            LANGUAGE="bash"
+            PROJECT_TYPE="bash-scripts"
+            BUILD_TOOL="bash"
+            # Check for shellcheck
+            [ -f ".shellcheckrc" ] && QUALITY_TOOLS+=("shellcheck") || true
+        fi
     fi
 }
 
