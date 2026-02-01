@@ -92,6 +92,8 @@ if [[ ! -d "$PROJECT_DIR" ]]; then
     exit 1
 fi
 
+# Convert to absolute path before cd (so subsequent script calls work)
+PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 cd "$PROJECT_DIR"
 
 # Initialize summary tracking
