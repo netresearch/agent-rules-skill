@@ -108,6 +108,88 @@ error() {
     exit 1
 }
 
+# Byte budget enforcement (OpenAI Codex default: 32 KiB for combined instructions)
+BYTE_BUDGET="${BYTE_BUDGET:-32768}"
+
+enforce_byte_budget() {
+    local file="$1"
+    local budget="$2"
+
+    [ ! -f "$file" ] && return 0
+
+    local size
+    size=$(wc -c < "$file")
+
+    if [ "$size" -le "$budget" ]; then
+        log "File size: $size bytes (within $budget budget)"
+        return 0
+    fi
+
+    log "File exceeds byte budget ($size > $budget), pruning..."
+
+    local content
+    content=$(cat "$file")
+    local pruned=false
+
+    # Strategy 1: Reduce golden samples to 5
+    if echo "$content" | grep -q "AGENTS-GENERATED:START golden-samples"; then
+        local sample_count
+        sample_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START golden-samples/,/AGENTS-GENERATED:END golden-samples/p' | grep -c "^|" || echo 0)
+        if [ "$sample_count" -gt 6 ]; then  # header + 5 rows
+            content=$(echo "$content" | awk '
+                /AGENTS-GENERATED:START golden-samples/ { in_section=1; count=0; print; next }
+                /AGENTS-GENERATED:END golden-samples/ { in_section=0; print; next }
+                in_section && /^\|/ { count++; if (count <= 6) print; next }
+                { print }
+            ')
+            pruned=true
+            log "  - Reduced golden samples to 5"
+        fi
+    fi
+
+    # Strategy 2: Reduce heuristics to 5
+    if echo "$content" | grep -q "AGENTS-GENERATED:START heuristics"; then
+        local heuristic_count
+        heuristic_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START heuristics/,/AGENTS-GENERATED:END heuristics/p' | grep -c "^|" || echo 0)
+        if [ "$heuristic_count" -gt 6 ]; then
+            content=$(echo "$content" | awk '
+                /AGENTS-GENERATED:START heuristics/ { in_section=1; count=0; print; next }
+                /AGENTS-GENERATED:END heuristics/ { in_section=0; print; next }
+                in_section && /^\|/ { count++; if (count <= 6) print; next }
+                { print }
+            ')
+            pruned=true
+            log "  - Reduced heuristics to 5"
+        fi
+    fi
+
+    # Strategy 3: Reduce utilities to 5
+    if echo "$content" | grep -q "AGENTS-GENERATED:START utilities"; then
+        local utility_count
+        utility_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START utilities/,/AGENTS-GENERATED:END utilities/p' | grep -c "^|" || echo 0)
+        if [ "$utility_count" -gt 6 ]; then
+            content=$(echo "$content" | awk '
+                /AGENTS-GENERATED:START utilities/ { in_section=1; count=0; print; next }
+                /AGENTS-GENERATED:END utilities/ { in_section=0; print; next }
+                in_section && /^\|/ { count++; if (count <= 6) print; next }
+                { print }
+            ')
+            pruned=true
+            log "  - Reduced utilities to 5"
+        fi
+    fi
+
+    # Write pruned content
+    if [ "$pruned" = true ]; then
+        echo "$content" > "$file"
+        local new_size
+        new_size=$(wc -c < "$file")
+        echo "⚠️  Pruned due to size budget ($size → $new_size bytes)"
+    fi
+
+    return 0
+}
+
 # Detect project
 log "Detecting project type..."
 PROJECT_INFO=$("$SCRIPT_DIR/detect-project.sh" "$PROJECT_DIR")
@@ -174,6 +256,48 @@ QUALITY_CONFIG=$("$SCRIPT_DIR/extract-quality-configs.sh" "$PROJECT_DIR" 2>/dev/
 log "Extracting CI commands..."
 CI_INFO=$("$SCRIPT_DIR/extract-ci-commands.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
 [ "$VERBOSE" = true ] && echo "$CI_INFO" | jq . >&2
+
+# Determine command source confidence
+# Priority: CI > Makefile > package.json/composer.json > fallback defaults
+get_command_source() {
+    local ci_system
+    ci_system=$(echo "$CI_INFO" | jq -r '.ci_system // "none"')
+
+    if [ "$ci_system" != "none" ] && [ "$ci_system" != "null" ]; then
+        local ci_commands
+        ci_commands=$(echo "$CI_INFO" | jq -r '.github_actions.run_commands // .gitlab_ci.script_commands // [] | length')
+        if [ "$ci_commands" -gt 0 ]; then
+            echo "CI ($ci_system)"
+            return 0
+        fi
+    fi
+
+    if [ -f "Makefile" ]; then
+        echo "Makefile"
+        return 0
+    fi
+
+    case "$LANGUAGE" in
+        "typescript"|"javascript")
+            [ -f "package.json" ] && echo "package.json" && return 0
+            ;;
+        "php")
+            [ -f "composer.json" ] && echo "composer.json" && return 0
+            ;;
+        "python")
+            [ -f "pyproject.toml" ] && echo "pyproject.toml" && return 0
+            [ -f "setup.py" ] && echo "setup.py" && return 0
+            ;;
+        "go")
+            [ -f "go.mod" ] && echo "go.mod" && return 0
+            ;;
+    esac
+
+    echo "defaults"
+}
+
+COMMAND_SOURCE=$(get_command_source)
+log "Command source: $COMMAND_SOURCE"
 
 # Analyze git history for conventions
 log "Analyzing git history..."
@@ -336,6 +460,7 @@ else
     declare -A vars
     vars[TIMESTAMP]=$(get_timestamp)
     vars[VERIFIED_TIMESTAMP]="never"
+    vars[COMMAND_SOURCE]="$COMMAND_SOURCE"
     vars[LANGUAGE_CONVENTIONS]=$(get_language_conventions "$LANGUAGE" "$VERSION")
 
     # Command extraction - only set if non-empty (leaves placeholder for row deletion)
@@ -658,6 +783,9 @@ print(f\"Processing {item}\")  # Use logging module
     # Render template (smart mode respects --update flag)
     render_template_smart "$TEMPLATE" "$ROOT_FILE" vars "$UPDATE_ONLY"
 
+    # Enforce byte budget for agent instruction limits
+    enforce_byte_budget "$ROOT_FILE" "$BYTE_BUDGET"
+
     if [ "$UPDATE_ONLY" = true ]; then
         echo "✅ Updated: $ROOT_FILE"
     else
@@ -716,6 +844,15 @@ else
             log "No template for scope type: $SCOPE_TYPE, skipping $SCOPE_PATH"
             continue
         fi
+
+        # Try to extract commands from scope directory (for monorepos)
+        SCOPE_COMMANDS=""
+        if [ -f "$SCOPE_PATH/package.json" ] || [ -f "$SCOPE_PATH/composer.json" ] || [ -f "$SCOPE_PATH/pyproject.toml" ] || [ -f "$SCOPE_PATH/go.mod" ]; then
+            SCOPE_COMMANDS=$("$SCRIPT_DIR/extract-commands.sh" "$SCOPE_PATH" 2>/dev/null || echo '')
+            log "Found scope-local config in $SCOPE_PATH"
+        fi
+        # Fall back to root commands if scope has no local config
+        [ -z "$SCOPE_COMMANDS" ] && SCOPE_COMMANDS="$COMMANDS"
 
         # Prepare scoped template variables
         declare -A scope_vars
@@ -786,7 +923,7 @@ else
                 scope_vars[GO_MINOR_VERSION]=$(echo "$VERSION" | cut -d. -f2)
                 scope_vars[GO_TOOLS]="golangci-lint, gofmt"
                 scope_vars[ENV_VARS]="See .env.example"
-                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "go")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "go")
                 ;;
@@ -798,7 +935,7 @@ else
                 scope_vars[PHP_EXTENSIONS]="json, mbstring, xml"
                 scope_vars[ENV_VARS]="See .env.example"
                 scope_vars[PHPSTAN_LEVEL]="10"
-                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
 
                 if [ "$FRAMEWORK" = "typo3" ]; then
                     scope_vars[FRAMEWORK_CONVENTIONS]="- TYPO3-specific: Use dependency injection, follow TYPO3 CGL"
@@ -846,7 +983,7 @@ else
                 scope_vars[PYTHON_VERSION]="$VERSION"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
                 scope_vars[ENV_VARS]="See .env or .env.example"
-                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "py")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "py")
                 ;;
@@ -855,7 +992,7 @@ else
                 scope_vars[NODE_VERSION]="$VERSION"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
                 scope_vars[ENV_VARS]="See .env or .env.example"
-                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
                 ;;
@@ -866,8 +1003,8 @@ else
                 scope_vars[FRAMEWORK]="$FRAMEWORK"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
                 scope_vars[ENV_VARS]="See .env.example"
-                set_scope_if_present BUILD_CMD "$(echo "$COMMANDS" | jq -r '.build // empty')"
-                set_scope_if_present DEV_CMD "$(echo "$COMMANDS" | jq -r '.dev // empty')"
+                set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
                 scope_vars[CSS_APPROACH]="CSS Modules"
 
                 case "$FRAMEWORK" in
@@ -902,12 +1039,12 @@ else
                 [ -f "go.mod" ] && grep -q "github.com/urfave/cli" go.mod 2>/dev/null && CLI_FRAMEWORK="urfave/cli"
                 scope_vars[CLI_FRAMEWORK]="$CLI_FRAMEWORK"
                 scope_vars[BUILD_OUTPUT_PATH]="./bin/"
-                build_cmd="$(echo "$COMMANDS" | jq -r '.build // empty')"
+                build_cmd="$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
                 [ -n "$build_cmd" ] && scope_vars[SETUP_INSTRUCTIONS]="- Build: $build_cmd"
                 set_scope_if_present BUILD_CMD "$build_cmd"
                 scope_vars[RUN_CMD]="./bin/$(basename "$PROJECT_DIR")"
-                set_scope_if_present TEST_CMD "$(echo "$COMMANDS" | jq -r '.test // empty')"
-                set_scope_if_present LINT_CMD "$(echo "$COMMANDS" | jq -r '.lint // empty')"
+                set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
+                set_scope_if_present LINT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.lint // empty')"
                 # Detect language for CLI scope
                 cli_ext="go"
                 [ -f "package.json" ] && cli_ext="ts"
@@ -917,7 +1054,7 @@ else
                 ;;
 
             "testing")
-                set_scope_if_present TEST_CMD "$(echo "$COMMANDS" | jq -r '.test // empty')"
+                set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
                 # Detect test file extension
                 test_ext="php"
                 [ -f "go.mod" ] && test_ext="go"

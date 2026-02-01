@@ -55,7 +55,14 @@
 6. Address review feedback
 7. Merge when approved
 
+## Agent Work Loop
+1. **Before coding**: Read nearest `AGENTS.md` + check Golden Samples for the area you're touching
+2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
+3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
+
 ## Pre-commit Checks
+> Source: {{COMMAND_SOURCE}} — CI-sourced commands are most reliable
+
 <!-- AGENTS-GENERATED:START precommit-checks -->
 **Always run before committing:**
 - Typecheck: {{TYPECHECK_CMD}}

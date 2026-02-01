@@ -7,6 +7,8 @@
 **Precedence:** the **closest `AGENTS.md`** to the files you're changing wins. Root holds global defaults only.
 
 ## Commands{{VERIFIED_STATUS}}
+> Source: {{COMMAND_SOURCE}} — CI-sourced commands are most reliable
+
 <!-- AGENTS-GENERATED:START commands -->
 | Task | Command | ~Time |
 |------|---------|-------|
@@ -19,6 +21,11 @@
 <!-- AGENTS-GENERATED:END commands -->
 
 > If commands fail, verify against Makefile/package.json/composer.json or ask user to update.
+
+## Workflow
+1. **Before coding**: Read nearest `AGENTS.md` + check Golden Samples for the area you're touching
+2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
+3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
 
 ## File Map
 <!-- AGENTS-GENERATED:START filemap -->
