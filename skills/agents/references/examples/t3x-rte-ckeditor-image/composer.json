@@ -1,0 +1,8 @@
+{
+    "name": "example/t3x-rte-ckeditor-image",
+    "type": "typo3-cms-extension",
+    "require": {
+        "php": "^8.1",
+        "typo3/cms-core": "^12.4 || ^13.0"
+    }
+}

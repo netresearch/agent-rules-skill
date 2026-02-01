@@ -14,7 +14,72 @@ on:
   workflow_dispatch:
 
 jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck on all scripts
+        run: |
+          # Install shellcheck
+          sudo apt-get update && sudo apt-get install -y shellcheck
+
+          # Run shellcheck on all bash scripts (exclude sourced files from error)
+          echo "Running ShellCheck..."
+          find skills/agents/scripts -name "*.sh" -type f | while read -r script; do
+            echo "Checking: $script"
+            shellcheck -x -S warning "$script" || exit 1
+          done
+          echo "✅ All scripts passed ShellCheck"
+
+  test-generator:
+    name: Test Generator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Test generator on fixture repos
+        run: |
+          # Test against example fixture repos
+          for fixture in skills/agents/references/examples/*/; do
+            echo "Testing generator on: $fixture"
+
+            # Run generator (dry-run first to check for errors)
+            if ! bash skills/agents/scripts/generate-agents.sh "$fixture" --dry-run; then
+              echo "ERROR: Generator failed dry-run on $fixture"
+              exit 1
+            fi
+
+            # Run actual generation
+            if ! bash skills/agents/scripts/generate-agents.sh "$fixture" --force; then
+              echo "ERROR: Generator failed on $fixture"
+              exit 1
+            fi
+
+            # Verify output exists and has content
+            if [ ! -f "$fixture/AGENTS.md" ]; then
+              echo "ERROR: AGENTS.md not created in $fixture"
+              exit 1
+            fi
+
+            size=$(wc -c < "$fixture/AGENTS.md")
+            if [ "$size" -lt 100 ]; then
+              echo "ERROR: AGENTS.md in $fixture is too small ($size bytes)"
+              exit 1
+            fi
+
+            echo "✅ $fixture passed (generated $size bytes)"
+          done
+
+          echo "✅ All fixture tests passed"
+
   validate:
+    name: Validate Structure
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,16 +110,6 @@ jobs:
             exit 1
           fi
           echo "No unresolved placeholders found"
-
-      - name: Check for '(not configured)' markers
-        run: |
-          # These indicate sections that need filling in
-          if grep -r "(not configured)" AGENTS.md **/AGENTS.md 2>/dev/null; then
-            echo "WARNING: Found '(not configured)' sections that should be filled in"
-            # Exit 0 for warning only, change to exit 1 for strict mode
-            exit 0
-          fi
-          echo "All sections configured"
 
       - name: Verify commands exist
         run: |
