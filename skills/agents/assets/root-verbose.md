@@ -1,6 +1,8 @@
-<!-- Managed by agent: keep sections and order; edit content, not structure. Last updated: {{TIMESTAMP}} -->
+<!-- FOR AI AGENTS - Human readability is a side effect, not a goal -->
+<!-- Managed by agent: keep sections and order; edit content, not structure -->
+<!-- Last updated: {{TIMESTAMP}} | Last verified: {{VERIFIED_TIMESTAMP}} -->
 
-# AGENTS.md (root)
+# AGENTS.md
 
 **Precedence:** The **closest AGENTS.md** to changed files wins. Root holds global defaults only.
 

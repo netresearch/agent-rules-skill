@@ -5,7 +5,22 @@ description: "Agent Skill: Generate and maintain AGENTS.md files following the p
 
 # AGENTS.md Generator Skill
 
-Generate and maintain AGENTS.md files following the public agents.md convention.
+Generate and maintain AGENTS.md files following the [public agents.md convention](https://agents.md/).
+
+> **AGENTS.md is FOR AGENTS, not humans.** Human readability is a convenient side effect, not a design goal. Every section, format choice, and word exists to maximize AI coding agent efficiency. If something helps humans but wastes agent tokens, remove it.
+
+> **Spec Compliance:** This skill follows the official agents.md specification which has **no required fields** - all sections are recommendations based on [best practices from 2,500+ repositories](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/).
+
+## Language Choice
+
+**Default to English** - AI coding agents perform best with English instructions because:
+- Programming keywords, libraries, and error messages are English
+- Zero "semantic friction" between instruction and code (`Create user` → `createUser`)
+- Most token-efficient encoding for technical instructions
+
+**Exception: Match your code's naming language.** If your codebase uses non-English naming conventions (e.g., German class names like `Rechnungssteller`, French variables like `id_client`), write AGENTS.md in that language to prevent "naming hallucinations" where agents mix languages.
+
+> **Rule:** The language of AGENTS.md must match the language used for domain naming in the code.
 
 ## When to Use This Skill
 
@@ -114,9 +129,36 @@ ls tests/*.py tests/**/*.py
 - **WRONG:** Using extracted command output without running it
 - **RIGHT:** Extract → Compare → Fix discrepancies → Validate
 
+## Agent-Optimized Design
+
+This skill generates AGENTS.md files optimized for AI coding agent efficiency based on:
+- [Research showing 16.58% token reduction with good AGENTS.md](https://arxiv.org/html/2601.20404)
+- [GitHub best practices from 2,500+ repositories](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/)
+- Multi-agent collaborative design (Claude + Gemini discussion)
+
+### Key Design Principles
+
+1. **Structured over Prose** - Tables and maps parse faster than paragraphs
+2. **Verified Commands** - Commands that don't work waste 500+ tokens debugging
+3. **Pointer Principle** - Point to files, don't duplicate content
+4. **Time Estimates** - Help agents choose appropriate test scope
+5. **Golden Samples** - One example file beats pages of explanation
+6. **Heuristics Tables** - Eliminate decision ambiguity
+
+### Token-Saving Sections
+
+| Section | Saves | How |
+|---------|-------|-----|
+| Commands (verified) | 500+ tokens | No debugging broken commands |
+| File Map | 3-5 search cycles | Direct navigation |
+| Golden Samples | Full rewrites | Correct patterns first time |
+| Utilities List | Duplicate code | Reuse existing helpers |
+| Heuristics | User correction cycles | Autonomous decisions |
+| Codebase State | Breaking changes | Avoid legacy/migration code |
+
 ## Capabilities
 
-- **Thin root files** (~30 lines) with precedence rules and global defaults
+- **Thin root files** (~50 lines) with precedence rules and agent-optimized tables
 - **Scoped files** for subsystems (backend/, frontend/, internal/, cmd/)
 - **Auto-extracted commands** from Makefile, package.json, composer.json, go.mod
 - **Language-specific templates** for Go, PHP, TypeScript, Python, hybrid projects
@@ -258,6 +300,27 @@ Options:
 
 **This verification step is MANDATORY when updating existing AGENTS.md files.**
 
+### Verifying Commands Work
+
+To prevent "command rot" (documented commands that no longer work):
+
+```bash
+scripts/verify-commands.sh /path/to/project
+```
+
+This script:
+- Extracts commands from AGENTS.md tables and code blocks
+- Verifies npm/yarn scripts exist in package.json
+- Verifies make targets exist in Makefile
+- Verifies composer scripts exist in composer.json
+- Updates "Last verified" timestamp on success
+
+Options:
+- `VERBOSE=true` - Show detailed output
+- `DRY_RUN=true` - Don't update timestamp
+
+**Why this matters:** Research shows broken commands waste 500+ tokens as agents debug non-existent commands. Verified commands enable confident execution.
+
 ## Using Reference Documentation
 
 ### AGENTS.md Analysis
@@ -311,24 +374,37 @@ When generating scoped AGENTS.md files, the scripts use language-specific templa
 
 ### Root File
 
-Root AGENTS.md (~30 lines) contains:
-- Precedence statement
-- Global rules
-- Pre-commit checks
-- Scope index
+Root AGENTS.md (~50-80 lines) contains agent-optimized sections:
+
+| Section | Purpose | Format |
+|---------|---------|--------|
+| **Commands (verified)** | Executable commands with time estimates | Table with ~Time column |
+| **File Map** | Directory purposes for navigation | `dir/ → purpose` format |
+| **Golden Samples** | Canonical patterns to follow | Table: For / Reference / Key patterns |
+| **Utilities List** | Existing helpers to reuse | Table: Need / Use / Location |
+| **Heuristics** | Quick decision rules | Table: When / Do |
+| **Boundaries** | Always/Ask/Never rules | Three-tier list |
+| **Codebase State** | Migrations, tech debt, known issues | Bullet list |
+| **Terminology** | Domain-specific terms | Table: Term / Means |
+| **Scope Index** | Links to scoped files | List with descriptions |
 
 ### Scoped Files
 
-Scoped AGENTS.md files contain 9 sections:
-1. Overview
-2. Setup
-3. Build/tests
-4. Code style
-5. Security
-6. PR checklist
-7. Examples
-8. When stuck
-9. House Rules
+Scoped AGENTS.md files cover six core areas (per [GitHub best practices](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/)):
+1. **Commands** - Executable build, test, lint commands
+2. **Testing** - Test conventions and execution
+3. **Project Structure** - Architecture and key files
+4. **Code Style** - Formatting and conventions
+5. **Git Workflow** - Commit/PR guidelines
+6. **Boundaries** - Always do / Ask first / Never do
+
+Additional recommended sections:
+- Overview
+- Setup/Prerequisites
+- Security
+- Good vs Bad examples
+- When stuck
+- House Rules (for scoped overrides)
 
 ## Directory Coverage
 
