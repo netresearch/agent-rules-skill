@@ -65,6 +65,10 @@ success() {
     echo "✅ $*"
 }
 
+info() {
+    echo "ℹ️  $*"
+}
+
 # Check if file has managed header
 check_managed_header() {
     local file="$1"
@@ -166,6 +170,12 @@ check_scope_links() {
     local links=$(sed -n '/## Index of scoped AGENTS.md/,/^##/p' "$root_file" | grep -o '\./[^)]*AGENTS.md' || true)
 
     if [ -z "$links" ]; then
+        # Empty scope index with AGENTS-GENERATED markers is valid (placeholder)
+        if grep -q "<!-- AGENTS-GENERATED:START scope-index -->" "$root_file" && \
+           grep -q "<!-- AGENTS-GENERATED:END scope-index -->" "$root_file"; then
+            info "Scope index is empty (placeholder)"
+            return 0
+        fi
         warning "Scope index present but no links found"
         return 1
     fi
@@ -208,8 +218,13 @@ else
     echo ""
 fi
 
-# Check scoped AGENTS.md files
-SCOPED_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" -not -path "$ROOT_FILE" 2>/dev/null || true)
+# Check scoped AGENTS.md files (exclude reference examples)
+SCOPED_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
+    -not -path "$ROOT_FILE" \
+    -not -path "*/references/examples/*" \
+    -not -path "*/examples/*" \
+    -not -path "*/.git/*" \
+    2>/dev/null || true)
 
 if [ -n "$SCOPED_FILES" ]; then
     echo "=== Scoped AGENTS.md Files ==="
