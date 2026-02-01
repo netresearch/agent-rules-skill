@@ -130,6 +130,21 @@ mechanical:
     severity: info
     desc: "AGENTS.md should have 'Last verified' timestamp for trust scoring"
 
+  # === OUTPUT QUALITY ===
+  - id: AG-19
+    type: regex_not
+    target: AGENTS.md
+    pattern: "\\{\\{[A-Z][A-Z0-9_]*\\}\\}"
+    severity: error
+    desc: "AGENTS.md must not contain unresolved placeholders like {{PLACEHOLDER}}"
+
+  - id: AG-20
+    type: regex_not
+    target: AGENTS.md
+    pattern: "\\(not configured\\)"
+    severity: warning
+    desc: "AGENTS.md should not have '(not configured)' placeholders - fill or remove sections"
+
   # === IMPORTANT CONTEXT ===
   - id: AG-12
     type: regex

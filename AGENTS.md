@@ -1,6 +1,6 @@
 <!-- FOR AI AGENTS - Human readability is a side effect, not a goal -->
 <!-- Managed by agent: keep sections and order; edit content, not structure -->
-<!-- Last updated: {{TIMESTAMP}} | Last verified: {{VERIFIED_TIMESTAMP}} -->
+<!-- Last updated: 2026-02-01 | Last verified: never -->
 
 # AGENTS.md
 
@@ -10,12 +10,12 @@
 <!-- AGENTS-GENERATED:START commands -->
 | Task | Command | ~Time |
 |------|---------|-------|
-| Typecheck | {{TYPECHECK_CMD}} | {{TYPECHECK_TIME}} |
-| Lint | {{LINT_CMD}} | {{LINT_TIME}} |
-| Format | {{FORMAT_CMD}} | {{FORMAT_TIME}} |
-| Test (single) | {{TEST_SINGLE_CMD}} | ~2s |
-| Test (all) | {{TEST_CMD}} | {{TEST_TIME}} |
-| Build | {{BUILD_CMD}} | {{BUILD_TIME}} |
+| Typecheck |  | ~15s |
+| Lint | vendor/bin/php-cs-fixer fix --dry-run | ~10s |
+| Format | vendor/bin/php-cs-fixer fix | ~5s |
+| Test (single) | vendor/bin/phpunit | ~2s |
+| Test (all) | vendor/bin/phpunit | ~30s |
+| Build |  | ~30s |
 <!-- AGENTS-GENERATED:END commands -->
 
 > If commands fail, run `scripts/verify-commands.sh` or ask user to update.
@@ -23,7 +23,10 @@
 ## File Map
 <!-- AGENTS-GENERATED:START filemap -->
 ```
-{{FILE_MAP}}
+skills/          → project files
+docs/            → documentation
+claudedocs/      → documentation
+LICENSE/         → project files
 ```
 <!-- AGENTS-GENERATED:END filemap -->
 
@@ -31,21 +34,23 @@
 <!-- AGENTS-GENERATED:START golden-samples -->
 | For | Reference | Key patterns |
 |-----|-----------|--------------|
-{{GOLDEN_SAMPLES}}
+
 <!-- AGENTS-GENERATED:END golden-samples -->
 
 ## Utilities (check before creating new)
 <!-- AGENTS-GENERATED:START utilities -->
 | Need | Use | Location |
 |------|-----|----------|
-{{UTILITIES_LIST}}
+
 <!-- AGENTS-GENERATED:END utilities -->
 
 ## Heuristics (quick decisions)
 <!-- AGENTS-GENERATED:START heuristics -->
 | When | Do |
 |------|-----|
-{{HEURISTICS}}
+| Adding class | Follow PSR-4 in `Classes/` or `src/` |
+| Committing | Use Conventional Commits (feat:, fix:, docs:, etc.) |
+
 | Adding dependency | Ask first - we minimize deps |
 | Unsure about pattern | Check Golden Samples above |
 <!-- AGENTS-GENERATED:END heuristics -->
@@ -56,7 +61,7 @@
 - Run pre-commit checks before committing
 - Add tests for new code paths
 - Use conventional commit format: `type(scope): subject`
-{{LANGUAGE_CONVENTIONS}}
+- Follow PSR-12 coding standards and PHP unknown features
 
 ### Ask First
 - Adding new dependencies
@@ -70,23 +75,23 @@
 - Modify vendor/, node_modules/, or generated files
 - Push directly to main/master branch
 - Delete migration files or schema changes
-{{LANGUAGE_SPECIFIC_NEVER}}
+- Commit composer.lock without composer.json changes
+- Modify core framework files
 
 ## Codebase State
 <!-- AGENTS-GENERATED:START codebase-state -->
-{{CODEBASE_STATE}}
+- No known migrations or tech debt documented
 <!-- AGENTS-GENERATED:END codebase-state -->
 
 ## Terminology
 | Term | Means |
 |------|-------|
-{{TERMINOLOGY}}
 
 ## Index of scoped AGENTS.md
 <!-- AGENTS-GENERATED:START scope-index -->
-{{SCOPE_INDEX}}
+- (No scoped AGENTS.md files yet)
 <!-- AGENTS-GENERATED:END scope-index -->
 
 ## When instructions conflict
 The nearest `AGENTS.md` wins. Explicit user prompts override files.
-{{LANGUAGE_SPECIFIC_CONFLICT_RESOLUTION}}
+- For PHP-specific patterns, follow PSR standards

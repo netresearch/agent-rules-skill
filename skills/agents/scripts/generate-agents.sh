@@ -17,6 +17,7 @@ DRY_RUN=false
 UPDATE_ONLY=false
 FORCE=false
 VERBOSE=false
+CLAUDE_SHIM=false
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -41,6 +42,10 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        --claude-shim)
+            CLAUDE_SHIM=true
+            shift
+            ;;
         --help|-h)
             cat <<EOF
 Usage: generate-agents.sh [PROJECT_DIR] [OPTIONS]
@@ -52,6 +57,7 @@ Options:
   --dry-run               Preview what will be created
   --update                Update existing files only
   --force                 Force regeneration of existing files
+  --claude-shim           Generate CLAUDE.md that imports AGENTS.md
   --verbose, -v           Verbose output
   --help, -h              Show this help message
 
@@ -60,6 +66,7 @@ Examples:
   generate-agents.sh . --dry-run          # Preview changes
   generate-agents.sh . --style=verbose    # Use verbose root template
   generate-agents.sh . --update           # Update existing files
+  generate-agents.sh . --claude-shim      # Also generate CLAUDE.md shim
 EOF
             exit 0
             ;;
@@ -127,6 +134,160 @@ log "Extracting AI agent configs..."
 AGENT_INFO=$("$SCRIPT_DIR/extract-agent-configs.sh" "$PROJECT_DIR")
 [ "$VERBOSE" = true ] && echo "$AGENT_INFO" | jq . >&2
 
+# Generate file map
+log "Generating file map..."
+FILE_MAP=$("$SCRIPT_DIR/generate-file-map.sh" "$PROJECT_DIR" 2>/dev/null || echo "")
+
+# Detect golden samples
+log "Detecting golden samples..."
+GOLDEN_SAMPLES=$("$SCRIPT_DIR/detect-golden-samples.sh" "$PROJECT_DIR" 2>/dev/null || echo "")
+
+# Detect utilities
+log "Detecting utilities..."
+UTILITIES_LIST=$("$SCRIPT_DIR/detect-utilities.sh" "$PROJECT_DIR" 2>/dev/null || echo "")
+
+# Detect heuristics
+log "Detecting heuristics..."
+HEURISTICS=$("$SCRIPT_DIR/detect-heuristics.sh" "$PROJECT_DIR" 2>/dev/null || echo "")
+
+# Extract quality configs (detailed linter/formatter settings)
+log "Extracting quality configs..."
+QUALITY_CONFIG=$("$SCRIPT_DIR/extract-quality-configs.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
+[ "$VERBOSE" = true ] && echo "$QUALITY_CONFIG" | jq . >&2
+
+# Extract CI commands
+log "Extracting CI commands..."
+CI_INFO=$("$SCRIPT_DIR/extract-ci-commands.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
+[ "$VERBOSE" = true ] && echo "$CI_INFO" | jq . >&2
+
+# Analyze git history for conventions
+log "Analyzing git history..."
+GIT_HISTORY=$("$SCRIPT_DIR/analyze-git-history.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
+[ "$VERBOSE" = true ] && echo "$GIT_HISTORY" | jq . >&2
+
+# Helper: Build quality standards from quality config
+build_quality_standards() {
+    local quality_json="$1"
+    local standards=""
+
+    # Get detected tools
+    local tools
+    tools=$(echo "$quality_json" | jq -r '.detected_tools | if . then join(", ") else "" end')
+    [ -n "$tools" ] && [ "$tools" != "null" ] && standards="$standards- Quality tools: $tools\n"
+
+    # PHPStan level
+    local phpstan_level
+    phpstan_level=$(echo "$quality_json" | jq -r '.phpstan.level // empty')
+    [ -n "$phpstan_level" ] && standards="$standards- PHPStan level: $phpstan_level (do not lower)\n"
+
+    # TypeScript strict mode
+    local ts_strict
+    ts_strict=$(echo "$quality_json" | jq -r '.typescript.strict // empty')
+    [ "$ts_strict" = "true" ] && standards="$standards- TypeScript: strict mode enabled\n"
+
+    # Line length settings
+    local line_length
+    line_length=$(echo "$quality_json" | jq -r '.golangci_lint.line_length // .prettier.print_width // .black.line_length // .ruff.line_length // empty')
+    [ -n "$line_length" ] && standards="$standards- Line length: $line_length\n"
+
+    # ESLint extends
+    local eslint_extends
+    eslint_extends=$(echo "$quality_json" | jq -r '.eslint.extends // empty')
+    [ -n "$eslint_extends" ] && [ "$eslint_extends" != "null" ] && standards="$standards- ESLint: extends $eslint_extends\n"
+
+    # PHP-CS-Fixer ruleset
+    local php_cs_ruleset
+    php_cs_ruleset=$(echo "$quality_json" | jq -r '.php_cs_fixer.rule_set // empty')
+    [ -n "$php_cs_ruleset" ] && standards="$standards- PHP-CS-Fixer: $php_cs_ruleset rules\n"
+
+    # Mypy strict
+    local mypy_strict
+    mypy_strict=$(echo "$quality_json" | jq -r '.mypy.strict // empty')
+    [ "$mypy_strict" = "True" ] || [ "$mypy_strict" = "true" ] && standards="$standards- Mypy: strict mode enabled\n"
+
+    # Ruff select rules
+    local ruff_select
+    ruff_select=$(echo "$quality_json" | jq -r '.ruff.select // empty')
+    [ -n "$ruff_select" ] && [ "$ruff_select" != "null" ] && standards="$standards- Ruff: $ruff_select\n"
+
+    # Default if nothing found
+    [ -z "$standards" ] && standards="- Follow project linting and formatting rules\n- Write tests for new functionality\n- Keep functions focused and well-documented\n"
+
+    echo -e "$standards"
+}
+
+# Helper: Build workflow section from git history
+build_workflow_info() {
+    local git_json="$1"
+    local workflow=""
+
+    # Commit convention
+    local convention
+    convention=$(echo "$git_json" | jq -r '.commit_convention.convention // "unknown"')
+    local confidence
+    confidence=$(echo "$git_json" | jq -r '.commit_convention.confidence // 0')
+
+    if [ "$convention" != "unknown" ] && [ "$confidence" -gt 30 ]; then
+        case "$convention" in
+            "conventional-commits")
+                workflow="$workflow- Commits: Use Conventional Commits (feat:, fix:, docs:, etc.)\n"
+                ;;
+            "tag-prefix")
+                workflow="$workflow- Commits: Use [TAG] prefix style\n"
+                ;;
+            "emoji")
+                workflow="$workflow- Commits: Use emoji prefixes\n"
+                ;;
+            "ticket-reference")
+                workflow="$workflow- Commits: Include ticket references (JIRA-123, #123)\n"
+                ;;
+        esac
+    fi
+
+    # Merge strategy
+    local merge_strategy
+    merge_strategy=$(echo "$git_json" | jq -r '.merge_strategy.strategy // "unknown"')
+    case "$merge_strategy" in
+        "squash-and-merge")
+            workflow="$workflow- PRs: Squash and merge\n"
+            ;;
+        "merge-commits")
+            workflow="$workflow- PRs: Create merge commits\n"
+            ;;
+    esac
+
+    # Branch naming
+    local branch_pattern
+    branch_pattern=$(echo "$git_json" | jq -r '.branch_naming.pattern // "unknown"')
+    local uses_feature
+    uses_feature=$(echo "$git_json" | jq -r '.branch_naming.uses_feature_branches // false')
+
+    if [ "$uses_feature" = "true" ]; then
+        workflow="$workflow- Branches: feature/, fix/, hotfix/ prefixes\n"
+    elif [ "$branch_pattern" = "ticket-based" ]; then
+        workflow="$workflow- Branches: Include ticket reference in name\n"
+    fi
+
+    # Release pattern
+    local release_pattern
+    release_pattern=$(echo "$git_json" | jq -r '.releases.pattern // "unknown"')
+    local uses_v
+    uses_v=$(echo "$git_json" | jq -r '.releases.uses_v_prefix // false')
+
+    if [ "$release_pattern" = "semver" ]; then
+        [ "$uses_v" = "true" ] && workflow="$workflow- Releases: Semantic versioning (vX.Y.Z)\n" || workflow="$workflow- Releases: Semantic versioning (X.Y.Z)\n"
+    elif [ "$release_pattern" = "calver" ]; then
+        workflow="$workflow- Releases: Calendar versioning (YYYY.MM.DD)\n"
+    fi
+
+    # Default branch
+    local default_branch
+    default_branch=$(echo "$git_json" | jq -r '.default_branch // "main"')
+    [ -n "$default_branch" ] && [ "$default_branch" != "null" ] && workflow="$workflow- Default branch: $default_branch\n"
+
+    echo -e "$workflow"
+}
+
 # Generate root AGENTS.md
 ROOT_FILE="$PROJECT_DIR/AGENTS.md"
 
@@ -147,11 +308,108 @@ else
     # Prepare template variables
     declare -A vars
     vars[TIMESTAMP]=$(get_timestamp)
+    vars[VERIFIED_TIMESTAMP]="never"
     vars[LANGUAGE_CONVENTIONS]=$(get_language_conventions "$LANGUAGE" "$VERSION")
-    vars[TYPECHECK_CMD]=$(echo "$COMMANDS" | jq -r '.typecheck')
-    vars[LINT_CMD]=$(echo "$COMMANDS" | jq -r '.lint')
-    vars[FORMAT_CMD]=$(echo "$COMMANDS" | jq -r '.format' | sed 's/^/ (file scope): /')
-    vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test')
+
+    # Command extraction
+    vars[INSTALL_CMD]=$(echo "$COMMANDS" | jq -r '.install // empty')
+    vars[TYPECHECK_CMD]=$(echo "$COMMANDS" | jq -r '.typecheck // empty')
+    vars[LINT_CMD]=$(echo "$COMMANDS" | jq -r '.lint // empty')
+    vars[FORMAT_CMD]=$(echo "$COMMANDS" | jq -r '.format // empty')
+    vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test // empty')
+    vars[TEST_SINGLE_CMD]=$(echo "$COMMANDS" | jq -r '.test_single // empty')
+    vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build // empty')
+
+    # Time estimates - check verification JSON first, then use heuristics
+    VERIFICATION_JSON="$PROJECT_DIR/.agents/command-verification.json"
+    get_verified_time() {
+        local pattern="$1"
+        local default="$2"
+        if [ -f "$VERIFICATION_JSON" ]; then
+            local duration_ms
+            # Try to find command in verification JSON using regex pattern
+            duration_ms=$(jq -r --arg pattern "$pattern" '.commands | to_entries[] | select(.key | test($pattern; "i")) | .value.duration_ms // empty' "$VERIFICATION_JSON" 2>/dev/null | head -1)
+            if [ -n "$duration_ms" ] && [ "$duration_ms" != "null" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
+                # Convert ms to human-readable
+                if [ "$duration_ms" -lt 1000 ]; then
+                    echo "~${duration_ms}ms"
+                elif [ "$duration_ms" -lt 60000 ]; then
+                    echo "~$((duration_ms / 1000))s"
+                else
+                    echo "~$((duration_ms / 60000))m"
+                fi
+                return
+            fi
+        fi
+        echo "$default"
+    }
+
+    # Check if we have verification data
+    if [ -f "$VERIFICATION_JSON" ]; then
+        verified_at=$(jq -r '.verified_at // empty' "$VERIFICATION_JSON" 2>/dev/null | cut -dT -f1)
+        [ -n "$verified_at" ] && vars[VERIFIED_TIMESTAMP]="$verified_at"
+    fi
+
+    vars[TYPECHECK_TIME]=$(get_verified_time "typecheck" "~15s")
+    vars[LINT_TIME]=$(get_verified_time "lint|cs-fixer|eslint" "~10s")
+    vars[FORMAT_TIME]=$(get_verified_time "format|prettier|black|cs-fixer fix$" "~5s")
+    vars[TEST_TIME]=$(get_verified_time "test|phpunit|jest|pytest" "~30s")
+    vars[BUILD_TIME]=$(get_verified_time "build" "~30s")
+
+    # File map
+    vars[FILE_MAP]="$FILE_MAP"
+
+    # Golden samples, utilities, and heuristics from detection scripts
+    vars[GOLDEN_SAMPLES]="$GOLDEN_SAMPLES"
+    vars[UTILITIES_LIST]="$UTILITIES_LIST"
+
+    # Add workflow conventions from git analysis to heuristics
+    workflow_info=$(build_workflow_info "$GIT_HISTORY")
+    workflow_heuristics=""
+    # Convert workflow info to heuristic table rows
+    if echo "$workflow_info" | grep -q "Commits:"; then
+        commit_convention=$(echo "$workflow_info" | grep "Commits:" | sed 's/- Commits: //')
+        workflow_heuristics="${workflow_heuristics}| Committing | $commit_convention |
+"
+    fi
+    if echo "$workflow_info" | grep -q "PRs:"; then
+        pr_strategy=$(echo "$workflow_info" | grep "PRs:" | sed 's/- PRs: //')
+        workflow_heuristics="${workflow_heuristics}| Merging PRs | $pr_strategy |
+"
+    fi
+    if echo "$workflow_info" | grep -q "Branches:"; then
+        branch_convention=$(echo "$workflow_info" | grep "Branches:" | sed 's/- Branches: //')
+        workflow_heuristics="${workflow_heuristics}| Creating branches | Use $branch_convention |
+"
+    fi
+
+    # Combine detected heuristics with workflow heuristics
+    # Ensure proper newlines between sections
+    combined_heuristics=""
+    if [ -n "$HEURISTICS" ]; then
+        # Trim and ensure newline at end
+        combined_heuristics=$(echo "$HEURISTICS" | sed '/^[[:space:]]*$/d')
+        combined_heuristics="${combined_heuristics}
+"
+    fi
+    if [ -n "$workflow_heuristics" ]; then
+        combined_heuristics="${combined_heuristics}${workflow_heuristics}"
+    fi
+    vars[HEURISTICS]="$combined_heuristics"
+
+    # Codebase state - detect migrations, deprecations
+    codebase_state=""
+    [ -d "migrations" ] || [ -d "db/migrate" ] && codebase_state="$codebase_state\n- Database migrations present in migrations/"
+    [ -d "prisma/migrations" ] && codebase_state="$codebase_state\n- Prisma migrations present"
+    grep -rq "DEPRECATED\|@deprecated" --include="*.ts" --include="*.go" --include="*.php" --include="*.py" . 2>/dev/null && \
+        codebase_state="$codebase_state\n- Contains deprecated code (grep for @deprecated)"
+    [ -z "$codebase_state" ] && codebase_state="- No known migrations or tech debt documented"
+    vars[CODEBASE_STATE]=$(echo -e "$codebase_state")
+
+    # Terminology - leave empty for now, needs manual curation
+    vars[TERMINOLOGY]=""
+
+    # Scope index
     vars[SCOPE_INDEX]=$(build_scope_index "$SCOPES_INFO")
 
     # Verbose template additional vars
@@ -171,14 +429,15 @@ else
         vars[PROJECT_TYPE]="$PROJECT_TYPE"
         vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build')
 
-        # Extract quality standards from contributing guidelines
+        # Extract quality standards from contributing guidelines AND quality config
         contributing_rules=$(echo "$DOCS_INFO" | jq -r '.contributing.code_style // empty')
+        quality_standards=$(build_quality_standards "$QUALITY_CONFIG")
         if [ -n "$contributing_rules" ] && [ "$contributing_rules" != "null" ]; then
-            vars[QUALITY_STANDARDS]="$contributing_rules"
+            # Combine contributing rules with detected quality config
+            vars[QUALITY_STANDARDS]="$contributing_rules
+$quality_standards"
         else
-            vars[QUALITY_STANDARDS]="- Follow project linting and formatting rules
-- Write tests for new functionality
-- Keep functions focused and well-documented"
+            vars[QUALITY_STANDARDS]="$quality_standards"
         fi
 
         # Extract security guidelines
@@ -191,8 +450,28 @@ else
         fi
 
         vars[TEST_COVERAGE]="40"
-        vars[TEST_FAST_CMD]=$(echo "$COMMANDS" | jq -r '.test')
-        vars[TEST_FULL_CMD]=$(echo "$COMMANDS" | jq -r '.test')
+
+        # Try to get test commands from CI info or fall back to detected commands
+        test_cmd=$(echo "$COMMANDS" | jq -r '.test')
+        ci_system=$(echo "$CI_INFO" | jq -r '.ci_system // "none"')
+
+        # Look for specific test commands in CI
+        ci_test_cmd=""
+        case "$ci_system" in
+            "github-actions")
+                ci_test_cmd=$(echo "$CI_INFO" | jq -r '.github_actions.run_commands[]? | select(. | test("test|phpunit|jest|pytest|go test"; "i"))' 2>/dev/null | head -1)
+                ;;
+            "gitlab-ci")
+                ci_test_cmd=$(echo "$CI_INFO" | jq -r '.gitlab_ci.script_commands[]? | select(. | test("test|phpunit|jest|pytest|go test"; "i"))' 2>/dev/null | head -1)
+                ;;
+        esac
+
+        vars[TEST_FAST_CMD]="${test_cmd:-make test}"
+        if [ -n "$ci_test_cmd" ]; then
+            vars[TEST_FULL_CMD]="$ci_test_cmd"
+        else
+            vars[TEST_FULL_CMD]="${test_cmd:-make test}"
+        fi
 
         # Check if docs exist
         [ -d "./docs" ] && vars[ARCHITECTURE_DOC]="./docs/architecture.md" || vars[ARCHITECTURE_DOC]="(not available)"
@@ -332,10 +611,35 @@ print(f\"Processing {item}\")  # Use logging module
             ;;
     esac
 
-    # Render template
-    render_template "$TEMPLATE" "$ROOT_FILE" vars
+    # Render template (smart mode respects --update flag)
+    render_template_smart "$TEMPLATE" "$ROOT_FILE" vars "$UPDATE_ONLY"
 
-    echo "✅ Created: $ROOT_FILE"
+    if [ "$UPDATE_ONLY" = true ]; then
+        echo "✅ Updated: $ROOT_FILE"
+    else
+        echo "✅ Created: $ROOT_FILE"
+    fi
+fi
+
+# Generate CLAUDE.md shim if requested
+if [ "$CLAUDE_SHIM" = true ]; then
+    CLAUDE_FILE="$PROJECT_DIR/CLAUDE.md"
+    if [ -f "$CLAUDE_FILE" ] && [ "$FORCE" = false ]; then
+        log "CLAUDE.md already exists, skipping (use --force to regenerate)"
+    elif [ "$DRY_RUN" = true ]; then
+        echo "[DRY-RUN] Would create: $CLAUDE_FILE"
+    else
+        cat > "$CLAUDE_FILE" << 'CLAUDESHIM'
+<!-- Auto-generated shim for Claude Code compatibility -->
+<!-- Source of truth: AGENTS.md -->
+<!-- Re-generate with: generate-agents.sh --claude-shim -->
+
+@import AGENTS.md
+
+<!-- Add Claude-specific overrides below if needed -->
+CLAUDESHIM
+        echo "✅ Created: $CLAUDE_FILE (shim importing AGENTS.md)"
+    fi
 fi
 
 # Generate scoped AGENTS.md files
@@ -469,10 +773,14 @@ else
                 ;;
         esac
 
-        # Render template
-        render_template "$SCOPE_TEMPLATE" "$SCOPE_FILE" scope_vars
+        # Render template (smart mode respects --update flag)
+        render_template_smart "$SCOPE_TEMPLATE" "$SCOPE_FILE" scope_vars "$UPDATE_ONLY"
 
-        echo "✅ Created: $SCOPE_FILE"
+        if [ "$UPDATE_ONLY" = true ]; then
+            echo "✅ Updated: $SCOPE_FILE"
+        else
+            echo "✅ Created: $SCOPE_FILE"
+        fi
 
     done < <(echo "$SCOPES_INFO" | jq -c '.scopes[]')
 fi

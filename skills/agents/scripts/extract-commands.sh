@@ -11,12 +11,53 @@ LANGUAGE=$(echo "$PROJECT_INFO" | jq -r '.language')
 BUILD_TOOL=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
 
 # Initialize command variables
+INSTALL_CMD=""
 TYPECHECK_CMD=""
 LINT_CMD=""
 FORMAT_CMD=""
 TEST_CMD=""
+TEST_SINGLE_CMD=""
 BUILD_CMD=""
 DEV_CMD=""
+
+# Detect package manager for Node.js projects
+PACKAGE_MANAGER="npm"
+detect_package_manager() {
+    if [ -f "pnpm-lock.yaml" ]; then
+        PACKAGE_MANAGER="pnpm"
+    elif [ -f "yarn.lock" ]; then
+        PACKAGE_MANAGER="yarn"
+    elif [ -f "bun.lockb" ]; then
+        PACKAGE_MANAGER="bun"
+    elif [ -f "package.json" ]; then
+        # Check packageManager field
+        local pm_field
+        pm_field=$(jq -r '.packageManager // empty' package.json 2>/dev/null | cut -d@ -f1)
+        if [ -n "$pm_field" ]; then
+            PACKAGE_MANAGER="$pm_field"
+        fi
+    fi
+}
+
+# Get the run command for package manager
+get_pm_run() {
+    case "$PACKAGE_MANAGER" in
+        pnpm) echo "pnpm" ;;
+        yarn) echo "yarn" ;;
+        bun) echo "bun run" ;;
+        *) echo "npm run" ;;
+    esac
+}
+
+# Get the npx-equivalent for package manager
+get_pm_dlx() {
+    case "$PACKAGE_MANAGER" in
+        pnpm) echo "pnpm dlx" ;;
+        yarn) echo "yarn dlx" ;;
+        bun) echo "bunx" ;;
+        *) echo "npx" ;;
+    esac
+}
 
 # Extract from Makefile
 extract_from_makefile() {
@@ -44,6 +85,16 @@ extract_from_makefile() {
 extract_from_package_json() {
     [ ! -f "package.json" ] && return 0
 
+    # Detect package manager first
+    detect_package_manager
+
+    local pm_run pm_dlx
+    pm_run=$(get_pm_run)
+    pm_dlx=$(get_pm_dlx)
+
+    # Set install command based on package manager
+    INSTALL_CMD="$PACKAGE_MANAGER install"
+
     local has_typecheck has_lint has_format has_test has_build has_dev
     has_typecheck=$(jq -r '.scripts.typecheck // .scripts["type-check"] // empty' package.json 2>/dev/null)
     has_lint=$(jq -r '.scripts.lint // empty' package.json 2>/dev/null)
@@ -53,33 +104,41 @@ extract_from_package_json() {
     has_dev=$(jq -r '.scripts.dev // .scripts.start // empty' package.json 2>/dev/null)
 
     if [ -n "$has_typecheck" ]; then
-        TYPECHECK_CMD="npm run typecheck"
+        TYPECHECK_CMD="$pm_run typecheck"
     else
-        TYPECHECK_CMD="npx tsc --noEmit"
+        TYPECHECK_CMD="$pm_dlx tsc --noEmit"
     fi
 
     if [ -n "$has_lint" ]; then
-        LINT_CMD="npm run lint"
+        LINT_CMD="$pm_run lint"
     else
-        LINT_CMD="npx eslint ."
+        LINT_CMD="$pm_dlx eslint ."
     fi
 
     if [ -n "$has_format" ]; then
-        FORMAT_CMD="npm run format"
+        FORMAT_CMD="$pm_run format"
     else
-        FORMAT_CMD="npx prettier --write ."
+        FORMAT_CMD="$pm_dlx prettier --write ."
     fi
 
     if [ -n "$has_test" ]; then
-        TEST_CMD="npm test"
+        TEST_CMD="$PACKAGE_MANAGER test"
+        # Single file test command
+        if grep -q 'vitest' package.json 2>/dev/null; then
+            TEST_SINGLE_CMD="$pm_dlx vitest run"
+        elif grep -q 'jest' package.json 2>/dev/null; then
+            TEST_SINGLE_CMD="$pm_dlx jest"
+        else
+            TEST_SINGLE_CMD="$PACKAGE_MANAGER test --"
+        fi
     fi
 
     if [ -n "$has_build" ]; then
-        BUILD_CMD="npm run build"
+        BUILD_CMD="$pm_run build"
     fi
 
     if [ -n "$has_dev" ]; then
-        DEV_CMD="npm run dev"
+        DEV_CMD="$pm_run dev"
     fi
 }
 
@@ -144,6 +203,7 @@ extract_from_pyproject() {
 set_language_defaults() {
     case "$LANGUAGE" in
         "go")
+            : "${INSTALL_CMD:=go mod download}"
             : "${TYPECHECK_CMD:=go build -v ./...}"
             if [ -z "$LINT_CMD" ]; then
                 if [ -f ".golangci.yml" ] || [ -f ".golangci.yaml" ]; then
@@ -152,10 +212,12 @@ set_language_defaults() {
             fi
             : "${FORMAT_CMD:=gofmt -w .}"
             : "${TEST_CMD:=go test -v -race -short ./...}"
+            : "${TEST_SINGLE_CMD:=go test -v -race}"
             : "${BUILD_CMD:=go build -v ./...}"
             ;;
 
         "php")
+            : "${INSTALL_CMD:=composer install}"
             if [ -z "$TYPECHECK_CMD" ]; then
                 if [ -f "phpstan.neon" ] || [ -f "Build/phpstan.neon" ]; then
                     TYPECHECK_CMD="vendor/bin/phpstan analyze"
@@ -164,26 +226,44 @@ set_language_defaults() {
             : "${LINT_CMD:=vendor/bin/php-cs-fixer fix --dry-run}"
             : "${FORMAT_CMD:=vendor/bin/php-cs-fixer fix}"
             : "${TEST_CMD:=vendor/bin/phpunit}"
+            : "${TEST_SINGLE_CMD:=vendor/bin/phpunit}"
             ;;
 
         "typescript")
-            : "${TYPECHECK_CMD:=npx tsc --noEmit}"
-            : "${LINT_CMD:=npx eslint .}"
-            : "${FORMAT_CMD:=npx prettier --write .}"
+            local pm_dlx
+            pm_dlx=$(get_pm_dlx)
+            : "${INSTALL_CMD:=$PACKAGE_MANAGER install}"
+            : "${TYPECHECK_CMD:=$pm_dlx tsc --noEmit}"
+            : "${LINT_CMD:=$pm_dlx eslint .}"
+            : "${FORMAT_CMD:=$pm_dlx prettier --write .}"
             if [ -z "$TEST_CMD" ]; then
                 if [ -f "jest.config.js" ] || [ -f "jest.config.ts" ]; then
-                    TEST_CMD="npm test"
+                    TEST_CMD="$PACKAGE_MANAGER test"
+                    TEST_SINGLE_CMD="$pm_dlx jest"
                 elif grep -q 'vitest' package.json 2>/dev/null; then
-                    TEST_CMD="npx vitest"
+                    TEST_CMD="$pm_dlx vitest run"
+                    TEST_SINGLE_CMD="$pm_dlx vitest run"
                 fi
             fi
             ;;
 
         "python")
+            if [ -f "pyproject.toml" ]; then
+                if grep -q '\[tool.poetry\]' pyproject.toml 2>/dev/null; then
+                    INSTALL_CMD="poetry install"
+                elif grep -q '\[tool.uv\]' pyproject.toml 2>/dev/null; then
+                    INSTALL_CMD="uv sync"
+                else
+                    INSTALL_CMD="pip install -e ."
+                fi
+            else
+                INSTALL_CMD="pip install -r requirements.txt"
+            fi
             : "${LINT_CMD:=ruff check .}"
             : "${FORMAT_CMD:=ruff format .}"
             : "${TYPECHECK_CMD:=mypy .}"
             : "${TEST_CMD:=pytest}"
+            : "${TEST_SINGLE_CMD:=pytest}"
             ;;
     esac
 }
@@ -197,17 +277,23 @@ set_language_defaults
 
 # Output JSON
 jq -n \
+    --arg install "$INSTALL_CMD" \
     --arg typecheck "$TYPECHECK_CMD" \
     --arg lint "$LINT_CMD" \
     --arg format "$FORMAT_CMD" \
     --arg test "$TEST_CMD" \
+    --arg test_single "$TEST_SINGLE_CMD" \
     --arg build "$BUILD_CMD" \
     --arg dev "$DEV_CMD" \
+    --arg package_manager "$PACKAGE_MANAGER" \
     '{
+        install: $install,
         typecheck: $typecheck,
         lint: $lint,
         format: $format,
         test: $test,
+        test_single: $test_single,
         build: $build,
-        dev: $dev
+        dev: $dev,
+        package_manager: $package_manager
     }'

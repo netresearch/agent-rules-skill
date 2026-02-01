@@ -7,10 +7,12 @@
 **Precedence:** The **closest AGENTS.md** to changed files wins. Root holds global defaults only.
 
 ## Project Overview
+<!-- AGENTS-GENERATED:START project-overview -->
 {{PROJECT_DESCRIPTION}}
 
 **Tech Stack**: {{LANGUAGE}} {{VERSION}}, {{BUILD_TOOL}}, {{FRAMEWORK}}
 **Type**: {{PROJECT_TYPE}}
+<!-- AGENTS-GENERATED:END project-overview -->
 
 ## Global Rules
 - Keep PRs small (~≤300 net LOC)
@@ -54,15 +56,19 @@
 7. Merge when approved
 
 ## Pre-commit Checks
+<!-- AGENTS-GENERATED:START precommit-checks -->
 **Always run before committing:**
 - Typecheck: {{TYPECHECK_CMD}}
 - Lint: {{LINT_CMD}}
 - Format: {{FORMAT_CMD}}
 - Tests: {{TEST_CMD}}
 - Build: {{BUILD_CMD}}
+<!-- AGENTS-GENERATED:END precommit-checks -->
 
 ## Code Quality Standards
+<!-- AGENTS-GENERATED:START quality-standards -->
 {{QUALITY_STANDARDS}}
+<!-- AGENTS-GENERATED:END quality-standards -->
 
 ## Security & Safety
 - Never commit secrets, credentials, or PII
@@ -72,13 +78,17 @@
 {{SECURITY_SPECIFIC}}
 
 ## Testing Requirements
+<!-- AGENTS-GENERATED:START testing -->
 - Write tests for new features
 - Maintain {{TEST_COVERAGE}}% minimum coverage
 - Run fast tests locally: {{TEST_FAST_CMD}}
 - Run full suite in CI: {{TEST_FULL_CMD}}
+<!-- AGENTS-GENERATED:END testing -->
 
 ## Index of Scoped AGENTS.md
+<!-- AGENTS-GENERATED:START scope-index -->
 {{SCOPE_INDEX}}
+<!-- AGENTS-GENERATED:END scope-index -->
 
 ## When Instructions Conflict
 Nearest AGENTS.md wins. User prompts override files.
@@ -93,6 +103,8 @@ Nearest AGENTS.md wins. User prompts override files.
 {{BAD_EXAMPLE}}
 
 ## Documentation
+<!-- AGENTS-GENERATED:START documentation -->
 - Architecture: {{ARCHITECTURE_DOC}}
 - API docs: {{API_DOC}}
 - Contributing: {{CONTRIBUTING_DOC}}
+<!-- AGENTS-GENERATED:END documentation -->
