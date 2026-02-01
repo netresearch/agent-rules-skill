@@ -1,6 +1,6 @@
 <!-- FOR AI AGENTS - Human readability is a side effect, not a goal -->
 <!-- Managed by agent: keep sections and order; edit content, not structure -->
-<!-- Last updated: 2026-02-01 | Last verified: 2026-02-01 -->
+<!-- Last updated: 2026-02-01 | Last verified: 2026-02-01 | v2.4.0 -->
 
 # AGENTS.md
 
@@ -27,7 +27,7 @@
 skills/agents/           → Main skill directory
   SKILL.md               → Skill definition and documentation
   scripts/               → 19 Bash scripts for generation/validation
-  assets/                → Templates (2 root, 10 scoped)
+  assets/                → Templates (2 root, 12 scoped incl. TYPO3/Oro)
   references/            → Analysis, examples, coverage docs
 .github/workflows/       → Release automation
 .claude-plugin/          → Claude Code plugin manifest

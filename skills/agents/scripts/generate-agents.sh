@@ -736,6 +736,33 @@ else
                 fi
                 ;;
 
+            "backend-typo3")
+                scope_vars[PHP_VERSION]="$VERSION"
+                TYPO3_VERSION=$(jq -r '.require."typo3/cms-core" // .["require-dev"]."typo3/cms-core" // "^12.4 || ^13.4"' composer.json 2>/dev/null || echo "^12.4 || ^13.4")
+                scope_vars[TYPO3_VERSION]="$TYPO3_VERSION"
+                scope_vars[PHPSTAN_LEVEL]="10"
+
+                # Extract extension key and vendor from composer.json
+                EXT_KEY=$(jq -r '.extra."typo3/cms"."extension-key" // empty' composer.json 2>/dev/null || echo "")
+                if [ -z "$EXT_KEY" ]; then
+                    EXT_KEY=$(basename "$PROJECT_DIR" | tr '-' '_')
+                fi
+                scope_vars[EXT_KEY]="$EXT_KEY"
+
+                VENDOR=$(jq -r '.name // empty' composer.json 2>/dev/null | cut -d'/' -f1 || echo "Vendor")
+                scope_vars[VENDOR]="$VENDOR"
+                scope_vars[REQUIRED_EXTENSIONS]="See ext_emconf.php"
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
+            "backend-oro")
+                scope_vars[PHP_VERSION]="$VERSION"
+                ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "^6.0"' composer.json 2>/dev/null || echo "^6.0")
+                scope_vars[ORO_VERSION]="$ORO_VERSION"
+                scope_vars[PHPSTAN_LEVEL]="8"
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
             "frontend-typescript")
                 scope_vars[NODE_VERSION]="$VERSION"
                 FRAMEWORK=$(echo "$PROJECT_INFO" | jq -r '.framework')

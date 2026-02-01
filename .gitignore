@@ -15,6 +15,10 @@ Thumbs.db
 .cache/
 claudedocs/
 
+# Git worktree (bare repo setup)
+.bare/
+main/
+
 # Test output
 test-output/
 *.test.md

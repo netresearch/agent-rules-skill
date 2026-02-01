@@ -65,15 +65,28 @@ case "$LANGUAGE" in
         ;;
 
     "php")
+        # Determine PHP backend type based on framework
+        FRAMEWORK=$(echo "$PROJECT_INFO" | jq -r '.framework')
+        PROJECT_TYPE=$(echo "$PROJECT_INFO" | jq -r '.type')
+
+        # Select appropriate backend template
+        if [ "$FRAMEWORK" = "typo3" ] || [ "$PROJECT_TYPE" = "php-typo3-extension" ]; then
+            PHP_BACKEND_TYPE="backend-typo3"
+        elif [ "$FRAMEWORK" = "oro" ] || [ "$PROJECT_TYPE" = "php-oro" ] || [ "$PROJECT_TYPE" = "php-oro-bundle" ]; then
+            PHP_BACKEND_TYPE="backend-oro"
+        else
+            PHP_BACKEND_TYPE="backend-php"
+        fi
+
         # Check common PHP directories
         [ -d "Classes" ] && {
             count=$(count_source_files "Classes" "*.php")
-            [ "$count" -ge "$MIN_FILES" ] && add_scope "Classes" "backend-php" "$count"
+            [ "$count" -ge "$MIN_FILES" ] && add_scope "Classes" "$PHP_BACKEND_TYPE" "$count"
         }
 
         [ -d "src" ] && {
             count=$(count_source_files "src" "*.php")
-            [ "$count" -ge "$MIN_FILES" ] && add_scope "src" "backend-php" "$count"
+            [ "$count" -ge "$MIN_FILES" ] && add_scope "src" "$PHP_BACKEND_TYPE" "$count"
         }
 
         [ -d "Tests" ] && {
@@ -95,6 +108,16 @@ case "$LANGUAGE" in
             count=$(find Resources -type f | wc -l)
             [ "$count" -ge 5 ] && add_scope "Resources" "resources" "$count"
         }
+
+        # Oro-specific: check for Bundle directories
+        if [ "$FRAMEWORK" = "oro" ]; then
+            for bundle_dir in src/*/Bundle/*/; do
+                [ -d "$bundle_dir" ] && {
+                    count=$(count_source_files "$bundle_dir" "*.php")
+                    [ "$count" -ge "$MIN_FILES" ] && add_scope "${bundle_dir%/}" "backend-oro" "$count"
+                }
+            done
+        fi
         ;;
 
     "typescript")

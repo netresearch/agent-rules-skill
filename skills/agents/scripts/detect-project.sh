@@ -52,14 +52,31 @@ detect_language() {
         BUILD_TOOL="composer"
 
         # Detect PHP framework
-        if jq -e '.require."typo3/cms-core"' composer.json &>/dev/null; then
+        # TYPO3 extension detection (ext_emconf.php is definitive)
+        if [ -f "ext_emconf.php" ]; then
+            PROJECT_TYPE="php-typo3-extension"
+            FRAMEWORK="typo3"
+            # Try to get TYPO3 version from composer.json or ext_emconf.php
+            TYPO3_VERSION=$(jq -r '.require."typo3/cms-core" // .["require-dev"]."typo3/cms-core" // "unknown"' composer.json 2>/dev/null || echo "unknown")
+        elif jq -e '.require."typo3/cms-core"' composer.json &>/dev/null; then
             PROJECT_TYPE="php-typo3"
             FRAMEWORK="typo3"
             TYPO3_VERSION=$(jq -r '.require."typo3/cms-core"' composer.json 2>/dev/null || echo "unknown")
+        # Oro detection (OroCommerce, OroPlatform, OroCRM)
+        elif jq -e '.require."oro/platform"' composer.json &>/dev/null || \
+             jq -e '.require."oro/commerce"' composer.json &>/dev/null || \
+             jq -e '.require."oro/crm"' composer.json &>/dev/null; then
+            PROJECT_TYPE="php-oro"
+            FRAMEWORK="oro"
+            ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "unknown"' composer.json 2>/dev/null || echo "unknown")
+        elif [ -f "config/oro/bundles.yml" ] || [ -f "src/*/Bundle/*/Resources/config/oro/workflows.yml" ]; then
+            PROJECT_TYPE="php-oro-bundle"
+            FRAMEWORK="oro"
         elif jq -e '.require."laravel/framework"' composer.json &>/dev/null; then
             PROJECT_TYPE="php-laravel"
             FRAMEWORK="laravel"
-        elif jq -e '.require."symfony/symfony"' composer.json &>/dev/null; then
+        elif jq -e '.require."symfony/symfony"' composer.json &>/dev/null || \
+             jq -e '.require."symfony/framework-bundle"' composer.json &>/dev/null; then
             PROJECT_TYPE="php-symfony"
             FRAMEWORK="symfony"
         else
