@@ -6,7 +6,7 @@
 
 **Precedence:** the **closest `AGENTS.md`** to the files you're changing wins. Root holds global defaults only.
 
-## Commands (unverified - run scripts/verify-commands.sh)
+## Commands (unverified)
 > Source: go.mod — CI-sourced commands are most reliable
 
 <!-- AGENTS-GENERATED:START commands -->
@@ -37,14 +37,12 @@
 <!-- AGENTS-GENERATED:START golden-samples -->
 | For | Reference | Key patterns |
 |-----|-----------|--------------|
-
 <!-- AGENTS-GENERATED:END golden-samples -->
 
 ## Utilities (check before creating new)
 <!-- AGENTS-GENERATED:START utilities -->
 | Need | Use | Location |
 |------|-----|----------|
-
 <!-- AGENTS-GENERATED:END utilities -->
 
 ## Heuristics (quick decisions)
@@ -54,7 +52,6 @@
 | Adding package | Internal → `internal/`, Public → `pkg/` |
 | Committing | Use Conventional Commits (feat:, fix:, docs:, etc.) |
 | Merging PRs | Squash and merge |
-
 | Adding dependency | Ask first - we minimize deps |
 | Unsure about pattern | Check Golden Samples above |
 <!-- AGENTS-GENERATED:END heuristics -->
@@ -65,7 +62,7 @@
 - Run pre-commit checks before committing
 - Add tests for new code paths
 - Use conventional commit format: `type(scope): subject`
-- Follow Go 1.21 conventions and idioms
+- Follow Go 1.25 conventions and idioms
 
 ### Ask First
 - Adding new dependencies
@@ -89,7 +86,6 @@
 ## Terminology
 | Term | Means |
 |------|-------|
-
 ## Index of scoped AGENTS.md
 <!-- AGENTS-GENERATED:START scope-index -->
 - (No scoped AGENTS.md files yet)

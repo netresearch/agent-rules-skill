@@ -28,12 +28,13 @@
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
-- Typecheck (project-wide): `npx tsc --noEmit`
-- Lint a file: `npx eslint {{FILE_PATH}}`
-- Format a file: `npx prettier --write {{FILE_PATH}}`
-- Test related: `npm test -- --findRelatedTests {{FILE_PATH}}`
-- Build: {{BUILD_CMD}}
-- Dev server: {{DEV_CMD}}
+- Install: `{{INSTALL_CMD}}`
+- Typecheck: `{{TYPECHECK_CMD}}`
+- Lint: `{{LINT_CMD}}`
+- Format: `{{FORMAT_CMD}}`
+- Test: `{{TEST_CMD}}`
+- Build: `{{BUILD_CMD}}`
+- Dev server: `{{DEV_CMD}}`
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->

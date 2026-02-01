@@ -25,8 +25,42 @@ render_template() {
     # Delete bullet points with only unresolved placeholders
     content=$(echo "$content" | sed '/^[[:space:]]*[-*][[:space:]]*{{[A-Z_][A-Z0-9_]*}}[[:space:]]*$/d')
 
+    # Delete lines that are ONLY a placeholder (prevents blank lines in tables)
+    content=$(echo "$content" | sed '/^{{[A-Z_][A-Z0-9_]*}}$/d')
+    # Also handle placeholders with leading/trailing whitespace
+    content=$(echo "$content" | sed '/^[[:space:]]*{{[A-Z_][A-Z0-9_]*}}[[:space:]]*$/d')
+
     # Remove any remaining inline placeholders (better than "(not configured)" noise)
     content=$(echo "$content" | sed 's/{{[A-Z_][A-Z0-9_]*}}//g')
+
+    # Remove empty lines that appear after table rows but before non-table content
+    # This fixes broken tables when placeholders were replaced with empty content
+    content=$(echo "$content" | awk '
+        /^\|.*\|$/ {
+            # Print any pending empty lines first if we are continuing a table
+            if (prev_was_table && pending_empty) {
+                # Skip the pending empty - it was between table rows with no data
+            }
+            print
+            prev_was_table=1
+            pending_empty=0
+            next
+        }
+        /^[[:space:]]*$/ {
+            if (prev_was_table) {
+                pending_empty=1  # Hold empty line, might be inside table
+            } else {
+                print  # Normal empty line outside table
+            }
+            next
+        }
+        {
+            # Non-table line - do not print pending empty from table section
+            pending_empty=0
+            prev_was_table=0
+            print
+        }
+    ')
 
     # Clean up multiple consecutive empty lines
     content=$(echo "$content" | cat -s)

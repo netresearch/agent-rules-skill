@@ -137,11 +137,11 @@ enforce_byte_budget() {
     if echo "$content" | grep -q "AGENTS-GENERATED:START golden-samples"; then
         local sample_count
         sample_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START golden-samples/,/AGENTS-GENERATED:END golden-samples/p' | grep -c "^|" || echo 0)
-        if [ "$sample_count" -gt 6 ]; then  # header + 5 rows
+        if [ "$sample_count" -gt 7 ]; then  # header + separator + 5 data rows = 7
             content=$(echo "$content" | awk '
                 /AGENTS-GENERATED:START golden-samples/ { in_section=1; count=0; print; next }
                 /AGENTS-GENERATED:END golden-samples/ { in_section=0; print; next }
-                in_section && /^\|/ { count++; if (count <= 6) print; next }
+                in_section && /^\|/ { count++; if (count <= 7) print; next }
                 { print }
             ')
             pruned=true
@@ -153,11 +153,11 @@ enforce_byte_budget() {
     if echo "$content" | grep -q "AGENTS-GENERATED:START heuristics"; then
         local heuristic_count
         heuristic_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START heuristics/,/AGENTS-GENERATED:END heuristics/p' | grep -c "^|" || echo 0)
-        if [ "$heuristic_count" -gt 6 ]; then
+        if [ "$heuristic_count" -gt 7 ]; then  # header + separator + 5 data rows = 7
             content=$(echo "$content" | awk '
                 /AGENTS-GENERATED:START heuristics/ { in_section=1; count=0; print; next }
                 /AGENTS-GENERATED:END heuristics/ { in_section=0; print; next }
-                in_section && /^\|/ { count++; if (count <= 6) print; next }
+                in_section && /^\|/ { count++; if (count <= 7) print; next }
                 { print }
             ')
             pruned=true
@@ -169,11 +169,11 @@ enforce_byte_budget() {
     if echo "$content" | grep -q "AGENTS-GENERATED:START utilities"; then
         local utility_count
         utility_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START utilities/,/AGENTS-GENERATED:END utilities/p' | grep -c "^|" || echo 0)
-        if [ "$utility_count" -gt 6 ]; then
+        if [ "$utility_count" -gt 7 ]; then  # header + separator + 5 data rows = 7
             content=$(echo "$content" | awk '
                 /AGENTS-GENERATED:START utilities/ { in_section=1; count=0; print; next }
                 /AGENTS-GENERATED:END utilities/ { in_section=0; print; next }
-                in_section && /^\|/ { count++; if (count <= 6) print; next }
+                in_section && /^\|/ { count++; if (count <= 7) print; next }
                 { print }
             ')
             pruned=true
@@ -514,11 +514,11 @@ else
             vars[VERIFIED_STATUS]=" (verified ✓)"
         else
             vars[VERIFIED_TIMESTAMP]="never"
-            vars[VERIFIED_STATUS]=" (unverified - run scripts/verify-commands.sh)"
+            vars[VERIFIED_STATUS]=" (unverified)"
         fi
     else
         vars[VERIFIED_TIMESTAMP]="never"
-        vars[VERIFIED_STATUS]=" (unverified - run scripts/verify-commands.sh)"
+        vars[VERIFIED_STATUS]=" (unverified)"
     fi
 
     vars[TYPECHECK_TIME]=$(get_verified_time "typecheck" "~15s")
@@ -555,17 +555,23 @@ else
     fi
 
     # Combine detected heuristics with workflow heuristics
-    # Ensure proper newlines between sections
+    # Ensure no trailing blank lines
     combined_heuristics=""
     if [ -n "$HEURISTICS" ]; then
-        # Trim and ensure newline at end
-        combined_heuristics=$(echo "$HEURISTICS" | sed '/^[[:space:]]*$/d')
-        combined_heuristics="${combined_heuristics}
-"
+        # Trim blank lines and trailing whitespace
+        combined_heuristics=$(printf '%s' "$HEURISTICS" | sed '/^[[:space:]]*$/d')
     fi
     if [ -n "$workflow_heuristics" ]; then
-        combined_heuristics="${combined_heuristics}${workflow_heuristics}"
+        # Add newline separator only if both have content
+        if [ -n "$combined_heuristics" ]; then
+            combined_heuristics="${combined_heuristics}
+${workflow_heuristics}"
+        else
+            combined_heuristics="$workflow_heuristics"
+        fi
     fi
+    # Remove any trailing newlines
+    combined_heuristics=$(printf '%s' "$combined_heuristics" | sed '/^[[:space:]]*$/d')
     vars[HEURISTICS]="$combined_heuristics"
 
     # Codebase state - detect migrations, deprecations
@@ -985,7 +991,15 @@ else
                 scope_vars[PYTHON_VERSION]="$VERSION"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
                 scope_vars[ENV_VARS]="See .env or .env.example"
+                # Populate all command variables from scope-local extraction
+                set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
+                set_scope_if_present TYPECHECK_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.typecheck // empty')"
+                set_scope_if_present LINT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.lint // empty')"
+                set_scope_if_present FORMAT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.format // empty')"
+                set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
+                set_scope_if_present TEST_SINGLE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_single // empty')"
                 set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "py")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "py")
                 ;;
@@ -994,7 +1008,15 @@ else
                 scope_vars[NODE_VERSION]="$VERSION"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
                 scope_vars[ENV_VARS]="See .env or .env.example"
+                # Populate all command variables from scope-local extraction
+                set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
+                set_scope_if_present TYPECHECK_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.typecheck // empty')"
+                set_scope_if_present LINT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.lint // empty')"
+                set_scope_if_present FORMAT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.format // empty')"
+                set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
+                set_scope_if_present TEST_SINGLE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_single // empty')"
                 set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
+                set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
                 ;;
@@ -1005,6 +1027,12 @@ else
                 scope_vars[FRAMEWORK]="$FRAMEWORK"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
                 scope_vars[ENV_VARS]="See .env.example"
+                # Populate all command variables from scope-local extraction
+                set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
+                set_scope_if_present TYPECHECK_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.typecheck // empty')"
+                set_scope_if_present LINT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.lint // empty')"
+                set_scope_if_present FORMAT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.format // empty')"
+                set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
                 set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
                 set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
                 scope_vars[CSS_APPROACH]="CSS Modules"

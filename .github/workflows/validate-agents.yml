@@ -75,7 +75,45 @@ jobs:
               exit 1
             fi
 
-            echo "✅ $fixture passed (generated $size bytes)"
+            # Regression test 1: No blank lines inside tables
+            # A blank line between two table rows (|...|) indicates a broken table
+            if awk '
+              /^\|.*\|$/ {
+                if (pending_blank) {
+                  print "ERROR: Blank line between table rows at line " NR
+                  exit 1
+                }
+                in_table=1
+                next
+              }
+              /^[[:space:]]*$/ {
+                if (in_table) pending_blank=1
+                next
+              }
+              {
+                in_table=0
+                pending_blank=0
+              }
+            ' "$fixture/AGENTS.md"; then
+              echo "  ✓ No blank lines inside tables"
+            fi
+
+            # Regression test 2: No empty backticks (`` or ` `)
+            # Check for empty double backticks, excluding triple backticks (code blocks)
+            if grep -n '\`\`' "$fixture/AGENTS.md" | grep -v '\`\`\`' | grep -q .; then
+              echo "ERROR: Found empty backticks in $fixture/AGENTS.md"
+              grep -n '\`\`' "$fixture/AGENTS.md" | grep -v '\`\`\`'
+              exit 1
+            fi
+
+            # Regression test 3: No unresolved placeholder syntax
+            if grep -qE '\{\{[A-Z][A-Z0-9_]*\}\}' "$fixture/AGENTS.md"; then
+              echo "ERROR: Found unresolved placeholders in $fixture/AGENTS.md"
+              grep -nE '\{\{[A-Z][A-Z0-9_]*\}\}' "$fixture/AGENTS.md"
+              exit 1
+            fi
+
+            echo "✅ $fixture passed (generated $size bytes, all regression tests passed)"
           done
 
           echo "✅ All fixture tests passed"
