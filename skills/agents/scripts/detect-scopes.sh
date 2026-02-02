@@ -221,6 +221,16 @@ if [ -d "skills" ]; then
     done
 fi
 
+# Check for Docker/container directories (cross-language)
+# These get "docker" scope type for container-focused documentation
+for docker_dir in docker deploy .docker infrastructure infra; do
+    if [ -d "$docker_dir" ]; then
+        # Count Docker-related files
+        count=$(find "$docker_dir" -type f \( -name "Dockerfile*" -o -name "*.dockerfile" -o -name "docker-compose*.yml" -o -name "compose*.yml" -o -name "*.yaml" -o -name "*.sh" \) 2>/dev/null | wc -l)
+        [ "$count" -ge 2 ] && add_scope "$docker_dir" "docker" "$count"
+    fi
+done
+
 # Output JSON
 if [ ${#scopes[@]} -eq 0 ]; then
     echo '{"scopes": []}'

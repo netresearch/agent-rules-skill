@@ -1419,6 +1419,45 @@ else
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "md")
                 scope_vars[HOUSE_RULES]=""
                 ;;
+
+            "docker")
+                # Detect Docker and Compose versions from CI or system
+                docker_version="latest"
+                compose_version="v2"
+
+                # Try to get from CI config
+                if [ -f ".github/workflows/docker-build.yml" ]; then
+                    docker_version=$(grep -E 'docker.*version' .github/workflows/*.yml 2>/dev/null | head -1 | sed 's/.*: *//' || echo "latest")
+                fi
+
+                # Build whole-line placeholders for setup section
+                [ -n "$docker_version" ] && [ "$docker_version" != "latest" ] && \
+                    scope_vars[DOCKER_VERSION_LINE]="- Docker version: $docker_version"
+                [ -n "$compose_version" ] && \
+                    scope_vars[COMPOSE_VERSION_LINE]="- Compose version: $compose_version"
+
+                # Detect registry from CI or compose files
+                registry=""
+                if [ -f "docker-compose.yml" ]; then
+                    registry=$(grep -E 'image:' docker-compose.yml 2>/dev/null | head -1 | sed 's/.*image: *//;s/:.*//;s|/.*||' || echo "")
+                fi
+                if [ -z "$registry" ] && [ -f ".github/workflows/"*".yml" ]; then
+                    registry=$(grep -E 'registry:|ghcr.io|docker.io|quay.io' .github/workflows/*.yml 2>/dev/null | head -1 | sed 's/.*: *//' || echo "")
+                fi
+                [ -n "$registry" ] && scope_vars[REGISTRY_LINE]="- Registry: $registry"
+
+                # Generate file map for Docker files
+                docker_file_map=""
+                for df in Dockerfile Dockerfile.* *.dockerfile docker-compose*.yml compose*.yml .dockerignore; do
+                    if [ -f "$SCOPE_PATH/$df" ] 2>/dev/null; then
+                        [ -z "$docker_file_map" ] && docker_file_map="| File | Purpose |\n|------|---------|"
+                        docker_file_map="$docker_file_map\n| \`$df\` | (add description) |"
+                    fi
+                done
+                scope_vars[SCOPE_FILE_MAP]=$(echo -e "$docker_file_map")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=""
+                scope_vars[HOUSE_RULES]=""
+                ;;
         esac
 
         # Render template (smart mode respects --update flag)

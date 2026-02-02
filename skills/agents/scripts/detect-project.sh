@@ -19,6 +19,7 @@ HAS_DOCKER=false
 CI="none"
 IDE_CONFIGS=()
 AGENT_CONFIGS=()
+STACKS=()                 # Multi-stack detection: (go, php, python, typescript, docker)
 
 # Detect language and version
 detect_language() {
@@ -226,7 +227,7 @@ detect_language() {
         local skill_count=0
 
         [ -f ".claude-plugin/plugin.json" ] && has_plugin=true
-        skill_count=$(find skills -maxdepth 2 -name "SKILL.md" -type f 2>/dev/null | wc -l)
+        [ -d "skills" ] && skill_count=$(find skills -maxdepth 2 -name "SKILL.md" -type f 2>/dev/null | wc -l)
         [ "$skill_count" -gt 0 ] && has_skills=true
 
         if [ "$has_plugin" = true ] || [ "$has_skills" = true ]; then
@@ -260,6 +261,31 @@ detect_language() {
             if [ "$sh_count" -gt 3 ]; then
                 BUILD_TOOL="bash"
                 [ -f ".shellcheckrc" ] && QUALITY_TOOLS+=("shellcheck") || true
+            fi
+        fi
+    fi
+
+    # Container-primary detection (Dockerfile-only repos)
+    # Must come before bash fallback - some container repos have helper scripts
+    if [ "$LANGUAGE" = "unknown" ]; then
+        if [ -f "Dockerfile" ]; then
+            # Check if this is primarily a container image project
+            # Indicators: no source code, or only build scripts
+            local has_source=false
+            # Check for significant source files
+            [ "$(find . -maxdepth 3 -name '*.go' -o -name '*.py' -o -name '*.php' -o -name '*.ts' -o -name '*.js' 2>/dev/null | head -5 | wc -l)" -gt 3 ] && has_source=true
+
+            if [ "$has_source" = false ]; then
+                LANGUAGE="docker"
+                PROJECT_TYPE="container-image"
+                BUILD_TOOL="docker"
+                PACKAGE_MANAGER="none"
+                FRAMEWORK="docker"
+
+                # Detect if it's a compose-based project
+                if [ -f "docker-compose.yml" ] || [ -f "compose.yml" ] || [ -f "compose.yaml" ]; then
+                    PROJECT_TYPE="container-stack"
+                fi
             fi
         fi
     fi
@@ -324,6 +350,63 @@ fi
 # Run detection
 detect_language
 
+# Multi-stack detection: detect secondary languages/technologies
+# STACKS array is populated here after primary language detection
+detect_stacks() {
+    # Always add primary language to stacks (if known)
+    [ "$LANGUAGE" != "unknown" ] && STACKS+=("$LANGUAGE")
+
+    # Detect Docker as secondary stack (if not already primary)
+    if [ "$LANGUAGE" != "docker" ] && [ "$HAS_DOCKER" = true ]; then
+        STACKS+=("docker")
+    fi
+
+    # Detect frontend stack in backend projects
+    if [[ "$LANGUAGE" =~ ^(php|go|python)$ ]]; then
+        # Check for Node.js frontend
+        if [ -f "package.json" ]; then
+            # Check what kind of frontend
+            if jq -e '.dependencies."react" // .dependencies."next"' package.json &>/dev/null; then
+                STACKS+=("react")
+            elif jq -e '.dependencies."vue"' package.json &>/dev/null; then
+                STACKS+=("vue")
+            elif jq -e '.dependencies."svelte"' package.json &>/dev/null; then
+                STACKS+=("svelte")
+            else
+                STACKS+=("typescript")
+            fi
+        fi
+        # Check for frontend in subdirectories
+        for frontend_dir in web frontend client ui internal/web; do
+            if [ -d "$frontend_dir" ] && [ -f "$frontend_dir/package.json" ]; then
+                if jq -e '.dependencies."react" // .dependencies."next"' "$frontend_dir/package.json" &>/dev/null; then
+                    [[ ! " ${STACKS[*]} " =~ " react " ]] && STACKS+=("react")
+                elif jq -e '.dependencies."vue"' "$frontend_dir/package.json" &>/dev/null; then
+                    [[ ! " ${STACKS[*]} " =~ " vue " ]] && STACKS+=("vue")
+                fi
+            fi
+        done
+    fi
+
+    # Detect backend in frontend projects (monorepo patterns)
+    if [[ "$LANGUAGE" == "typescript" ]]; then
+        # Check for Go backend
+        if [ -f "go.mod" ] || [ -d "server" ] && [ -f "server/go.mod" ]; then
+            STACKS+=("go")
+        fi
+        # Check for Python backend
+        if [ -f "pyproject.toml" ] || { [ -d "server" ] && [ -f "server/pyproject.toml" ]; }; then
+            STACKS+=("python")
+        fi
+        # Check for PHP backend
+        if [ -f "composer.json" ] || { [ -d "api" ] && [ -f "api/composer.json" ]; }; then
+            STACKS+=("php")
+        fi
+    fi
+}
+
+detect_stacks
+
 # Output JSON
 # Handle empty arrays
 if [ ${#QUALITY_TOOLS[@]} -eq 0 ]; then
@@ -344,6 +427,12 @@ else
     AGENT_JSON="$(printf '%s\n' "${AGENT_CONFIGS[@]}" | jq -R . | jq -s .)"
 fi
 
+if [ ${#STACKS[@]} -eq 0 ]; then
+    STACKS_JSON="[]"
+else
+    STACKS_JSON="$(printf '%s\n' "${STACKS[@]}" | jq -R . | jq -s .)"
+fi
+
 jq -n \
     --arg type "$PROJECT_TYPE" \
     --arg lang "$LANGUAGE" \
@@ -358,6 +447,7 @@ jq -n \
     --arg ci "$CI" \
     --argjson ide_configs "$IDE_JSON" \
     --argjson agent_configs "$AGENT_JSON" \
+    --argjson stacks "$STACKS_JSON" \
     '{
         type: $type,
         language: $lang,
@@ -371,5 +461,6 @@ jq -n \
         test_framework: $test,
         ci: $ci,
         ide_configs: $ide_configs,
-        agent_configs: $agent_configs
+        agent_configs: $agent_configs,
+        stacks: $stacks
     }'
