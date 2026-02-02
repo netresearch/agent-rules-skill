@@ -22,21 +22,21 @@ Command-line interface tools and entry points.
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 {{SETUP_INSTRUCTIONS}}
-- CLI framework: {{CLI_FRAMEWORK}}
-- Build output: {{BUILD_OUTPUT_PATH}}
+{{CLI_FRAMEWORK_LINE}}
+{{BUILD_OUTPUT_LINE}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
-- Build CLI: {{BUILD_CMD}}
-- Run CLI: {{RUN_CMD}}
-- Test: {{TEST_CMD}}
-- Lint: {{LINT_CMD}}
+{{BUILD_LINE}}
+{{RUN_LINE}}
+{{TEST_LINE}}
+{{LINT_LINE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->
 ## Code style & conventions
-- Use flag parsing library consistently ({{CLI_FRAMEWORK}})
+{{CLI_FRAMEWORK_CONVENTION_LINE}}
 - Provide `--help` for all commands and subcommands
 - Use `--version` to display version information
 - Exit codes: 0 = success, 1 = general error, 2 = usage error
@@ -74,7 +74,7 @@ Command-line interface tools and entry points.
 
 <!-- AGENTS-GENERATED:START help -->
 ## When stuck
-- Review {{CLI_FRAMEWORK}} documentation
+{{CLI_FRAMEWORK_DOCS_LINE}}
 - Check existing commands for patterns
 - Test with `--help` to ensure clarity
 - Check root AGENTS.md for project conventions

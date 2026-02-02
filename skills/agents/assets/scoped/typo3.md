@@ -21,11 +21,11 @@ TYPO3 extension following [TYPO3 Coding Guidelines](https://docs.typo3.org/m/typ
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
-- Install: `composer install` or via Extension Manager
-- PHP version: {{PHP_VERSION}}
-- TYPO3 version: {{TYPO3_VERSION}}
-- Local dev: `ddev start && ddev composer install`
-- Required extensions: {{REQUIRED_EXTENSIONS}}
+{{INSTALL_LINE}}
+{{PHP_VERSION_LINE}}
+{{TYPO3_VERSION_LINE}}
+{{DEV_SETUP_LINE}}
+{{REQUIRED_EXTENSIONS_LINE}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START structure -->
@@ -53,18 +53,8 @@ Documentation/     → RST documentation for docs.typo3.org
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
-| Task | Command | ~Time |
-|------|---------|-------|
-| Lint | `composer ci:php:lint` | ~5s |
-| CS Fix | `composer ci:php:cs-fixer` | ~10s |
-| PHPStan | `composer ci:php:stan` | ~15s |
-| Unit tests | `composer ci:tests:unit` | ~10s |
-| Functional | `composer ci:tests:functional` | ~60s |
-| All CI | `composer ci` | ~90s |
-
-Alternative with ddev:
-- `ddev composer ci:tests:unit`
-- `ddev exec vendor/bin/phpunit -c Tests/Build/UnitTests.xml`
+{{COMMANDS_TABLE}}
+{{DDEV_ALTERNATIVE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->
@@ -101,13 +91,13 @@ Alternative with ddev:
 
 <!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
-- [ ] `composer ci` passes (lint, cs-fixer, phpstan, tests)
-- [ ] PHPStan level {{PHPSTAN_LEVEL}} clean
+{{CI_CHECKLIST_LINE}}
+{{PHPSTAN_CHECKLIST_LINE}}
 - [ ] ext_emconf.php version updated if releasing
 - [ ] TCA changes have matching SQL in ext_tables.sql
 - [ ] Documentation updated in Documentation/
 - [ ] No deprecated TYPO3 APIs (run Extension Scanner)
-- [ ] Tested on target TYPO3 versions ({{TYPO3_VERSION}})
+{{TYPO3_VERSION_CHECKLIST_LINE}}
 <!-- AGENTS-GENERATED:END checklist -->
 
 <!-- AGENTS-GENERATED:START examples -->

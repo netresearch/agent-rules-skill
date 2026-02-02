@@ -19,20 +19,20 @@
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
-- Install: `go mod download`
-- Go version: {{GO_VERSION}}
-- Required tools: {{GO_TOOLS}}
-- Environment variables: {{ENV_VARS}}
+{{INSTALL_LINE}}
+{{GO_VERSION_LINE}}
+{{GO_TOOLS_LINE}}
+{{ENV_VARS_LINE}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
-- Vet (static analysis): `go vet ./...`
-- Format a file: `gofmt -w {{FILE_PATH}}`
-- Lint: `golangci-lint run ./...`
-- Test a package: `go test -v -race ./path/to/pkg/...`
-- Test specific: `go test -v -race -run TestName ./...`
-- Build: {{BUILD_CMD}}
+{{VET_LINE}}
+{{FORMAT_LINE}}
+{{LINT_LINE}}
+{{TEST_LINE}}
+{{TEST_SINGLE_LINE}}
+{{BUILD_LINE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->
@@ -58,9 +58,9 @@
 
 <!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
-- [ ] Tests pass: `go test -v -race ./...`
-- [ ] Lint clean: `golangci-lint run ./...`
-- [ ] Formatted: `gofmt -w .`
+{{TEST_CHECKLIST_LINE}}
+{{LINT_CHECKLIST_LINE}}
+{{FORMAT_CHECKLIST_LINE}}
 - [ ] No goroutine leaks
 - [ ] Error messages are descriptive
 - [ ] Public APIs have godoc comments

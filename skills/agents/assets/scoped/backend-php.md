@@ -19,20 +19,20 @@
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
-- Install: `composer install`
-- PHP version: {{PHP_VERSION}}
-- Framework: {{FRAMEWORK}}
-- Required extensions: {{PHP_EXTENSIONS}}
-- Environment variables: {{ENV_VARS}}
+{{INSTALL_LINE}}
+{{PHP_VERSION_LINE}}
+{{FRAMEWORK_LINE}}
+{{PHP_EXTENSIONS_LINE}}
+{{ENV_VARS_LINE}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START commands -->
-## Build & tests (file-scoped supported)
-- Typecheck a file: `vendor/bin/phpstan analyze {{FILE_PATH}} --level={{PHPSTAN_LEVEL}}`
-- Format a file: `vendor/bin/php-cs-fixer fix {{FILE_PATH}}`
-- Lint a file: `php -l {{FILE_PATH}}`
-- Test a file: `vendor/bin/phpunit {{FILE_PATH}}`
-- Build: {{BUILD_CMD}}
+## Build & tests
+{{TYPECHECK_LINE}}
+{{FORMAT_LINE}}
+{{LINT_LINE}}
+{{TEST_LINE}}
+{{BUILD_LINE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->
@@ -59,9 +59,9 @@
 
 <!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
-- [ ] Tests pass: `vendor/bin/phpunit`
-- [ ] PHPStan Level {{PHPSTAN_LEVEL}} clean: `vendor/bin/phpstan analyze`
-- [ ] PSR-12 compliant: `vendor/bin/php-cs-fixer fix --dry-run`
+{{TEST_CHECKLIST_LINE}}
+{{TYPECHECK_CHECKLIST_LINE}}
+{{FORMAT_CHECKLIST_LINE}}
 - [ ] No deprecated functions used
 - [ ] Public methods have PHPDoc
 - [ ] Security: inputs validated, outputs escaped
@@ -76,7 +76,7 @@
 <!-- AGENTS-GENERATED:START help -->
 ## When stuck
 - Check PHP documentation: https://www.php.net
-- {{FRAMEWORK_DOCS}}
+{{FRAMEWORK_DOCS_LINE}}
 - Review existing patterns in this codebase
 - Check root AGENTS.md for project-wide conventions
 <!-- AGENTS-GENERATED:END help -->

@@ -21,13 +21,11 @@ Oro bundle following [Oro Architecture](https://doc.oroinc.com/backend/architect
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
-- Install: `composer install`
-- PHP version: {{PHP_VERSION}}
-- Oro version: {{ORO_VERSION}}
-- Database: PostgreSQL (recommended) or MySQL
-- Required: `bin/console oro:install` for fresh setup
-- Cache clear: `bin/console cache:clear`
-- Assets: `bin/console oro:assets:install`
+{{INSTALL_LINE}}
+{{PHP_VERSION_LINE}}
+{{ORO_VERSION_LINE}}
+{{DATABASE_LINE}}
+{{SETUP_COMMANDS}}
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START structure -->
@@ -63,15 +61,7 @@ src/
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
-| Task | Command | ~Time |
-|------|---------|-------|
-| Lint | `bin/console lint:yaml src/` | ~5s |
-| CS Fix | `vendor/bin/php-cs-fixer fix` | ~15s |
-| PHPStan | `vendor/bin/phpstan analyse` | ~30s |
-| Unit tests | `vendor/bin/phpunit --testsuite=unit` | ~30s |
-| Functional | `vendor/bin/phpunit --testsuite=functional` | ~5min |
-| Behat | `vendor/bin/behat` | ~10min |
-| Full CI | `bin/console oro:test:all` | ~20min |
+{{COMMANDS_TABLE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->
@@ -168,9 +158,9 @@ acl:
 
 <!-- AGENTS-GENERATED:START checklist -->
 ## PR/commit checklist
-- [ ] `bin/console cache:clear` runs without errors
-- [ ] PHPStan passes at configured level
-- [ ] Unit tests pass: `vendor/bin/phpunit --testsuite=unit`
+{{CACHE_CHECKLIST_LINE}}
+{{PHPSTAN_CHECKLIST_LINE}}
+{{UNIT_TEST_CHECKLIST_LINE}}
 - [ ] Schema migrations are reversible
 - [ ] Data migrations use `DependentFixtureInterface` for ordering
 - [ ] Datagrids tested in browser

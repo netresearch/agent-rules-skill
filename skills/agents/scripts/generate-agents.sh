@@ -975,6 +975,30 @@ else
                 scope_vars[GO_TOOLS]="golangci-lint, gofmt"
                 scope_vars[ENV_VARS]="See .env.example"
                 set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
+
+                # Build whole-line placeholders for setup section
+                scope_vars[INSTALL_LINE]="- Install: \`go mod download\`"
+                [ -n "${scope_vars[GO_VERSION]:-}" ] && [ "${scope_vars[GO_VERSION]}" != "unknown" ] && \
+                    scope_vars[GO_VERSION_LINE]="- Go version: ${scope_vars[GO_VERSION]}"
+                [ -n "${scope_vars[GO_TOOLS]:-}" ] && \
+                    scope_vars[GO_TOOLS_LINE]="- Required tools: ${scope_vars[GO_TOOLS]}"
+                [ -n "${scope_vars[ENV_VARS]:-}" ] && \
+                    scope_vars[ENV_VARS_LINE]="- Environment variables: ${scope_vars[ENV_VARS]}"
+
+                # Build whole-line placeholders for commands section
+                scope_vars[VET_LINE]="- Vet (static analysis): \`go vet ./...\`"
+                scope_vars[FORMAT_LINE]="- Format: \`gofmt -w .\`"
+                scope_vars[LINT_LINE]="- Lint: \`golangci-lint run ./...\`"
+                scope_vars[TEST_LINE]="- Test: \`go test -v -race ./...\`"
+                scope_vars[TEST_SINGLE_LINE]="- Test specific: \`go test -v -race -run TestName ./...\`"
+                [ -n "${scope_vars[BUILD_CMD]:-}" ] && \
+                    scope_vars[BUILD_LINE]="- Build: \`${scope_vars[BUILD_CMD]}\`"
+
+                # Build checklist lines
+                scope_vars[TEST_CHECKLIST_LINE]="- [ ] Tests pass: \`go test -v -race ./...\`"
+                scope_vars[LINT_CHECKLIST_LINE]="- [ ] Lint clean: \`golangci-lint run ./...\`"
+                scope_vars[FORMAT_CHECKLIST_LINE]="- [ ] Formatted: \`gofmt -w .\`"
+
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "go")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "go")
                 ;;
@@ -990,11 +1014,36 @@ else
 
                 if [ "$FRAMEWORK" = "typo3" ]; then
                     scope_vars[FRAMEWORK_CONVENTIONS]="- TYPO3-specific: Use dependency injection, follow TYPO3 CGL"
-                    scope_vars[FRAMEWORK_DOCS]="- TYPO3 documentation: https://docs.typo3.org"
+                    scope_vars[FRAMEWORK_DOCS_LINE]="- TYPO3 documentation: https://docs.typo3.org"
                 else
                     scope_vars[FRAMEWORK_CONVENTIONS]=""
-                    scope_vars[FRAMEWORK_DOCS]=""
+                    scope_vars[FRAMEWORK_DOCS_LINE]=""
                 fi
+
+                # Build whole-line placeholders for setup section
+                scope_vars[INSTALL_LINE]="- Install: \`composer install\`"
+                [ -n "${scope_vars[PHP_VERSION]:-}" ] && [ "${scope_vars[PHP_VERSION]}" != "unknown" ] && \
+                    scope_vars[PHP_VERSION_LINE]="- PHP version: ${scope_vars[PHP_VERSION]}"
+                [ -n "${scope_vars[FRAMEWORK]:-}" ] && [ "${scope_vars[FRAMEWORK]}" != "none" ] && \
+                    scope_vars[FRAMEWORK_LINE]="- Framework: ${scope_vars[FRAMEWORK]}"
+                [ -n "${scope_vars[PHP_EXTENSIONS]:-}" ] && \
+                    scope_vars[PHP_EXTENSIONS_LINE]="- Required extensions: ${scope_vars[PHP_EXTENSIONS]}"
+                [ -n "${scope_vars[ENV_VARS]:-}" ] && \
+                    scope_vars[ENV_VARS_LINE]="- Environment variables: ${scope_vars[ENV_VARS]}"
+
+                # Build whole-line placeholders for commands section
+                scope_vars[TYPECHECK_LINE]="- Typecheck: \`vendor/bin/phpstan analyze --level=${scope_vars[PHPSTAN_LEVEL]}\`"
+                scope_vars[FORMAT_LINE]="- Format: \`vendor/bin/php-cs-fixer fix\`"
+                scope_vars[LINT_LINE]="- Lint: \`php -l\`"
+                scope_vars[TEST_LINE]="- Test: \`vendor/bin/phpunit\`"
+                [ -n "${scope_vars[BUILD_CMD]:-}" ] && \
+                    scope_vars[BUILD_LINE]="- Build: \`${scope_vars[BUILD_CMD]}\`"
+
+                # Build checklist lines
+                scope_vars[TEST_CHECKLIST_LINE]="- [ ] Tests pass: \`vendor/bin/phpunit\`"
+                scope_vars[TYPECHECK_CHECKLIST_LINE]="- [ ] PHPStan Level ${scope_vars[PHPSTAN_LEVEL]} clean: \`vendor/bin/phpstan analyze\`"
+                scope_vars[FORMAT_CHECKLIST_LINE]="- [ ] PSR-12 compliant: \`vendor/bin/php-cs-fixer fix --dry-run\`"
+
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
@@ -1016,6 +1065,36 @@ else
                 scope_vars[VENDOR]="$VENDOR"
                 scope_vars[REQUIRED_EXTENSIONS]="See ext_emconf.php"
                 scope_vars[HOUSE_RULES]=""
+
+                # Build whole-line placeholders for setup section
+                scope_vars[INSTALL_LINE]="- Install: \`composer install\` or via Extension Manager"
+                [ -n "${scope_vars[PHP_VERSION]:-}" ] && [ "${scope_vars[PHP_VERSION]}" != "unknown" ] && \
+                    scope_vars[PHP_VERSION_LINE]="- PHP version: ${scope_vars[PHP_VERSION]}"
+                [ -n "${scope_vars[TYPO3_VERSION]:-}" ] && \
+                    scope_vars[TYPO3_VERSION_LINE]="- TYPO3 version: ${scope_vars[TYPO3_VERSION]}"
+                scope_vars[DEV_SETUP_LINE]="- Local dev: \`ddev start && ddev composer install\`"
+                [ -n "${scope_vars[REQUIRED_EXTENSIONS]:-}" ] && \
+                    scope_vars[REQUIRED_EXTENSIONS_LINE]="- Required extensions: ${scope_vars[REQUIRED_EXTENSIONS]}"
+
+                # Build commands table
+                scope_vars[COMMANDS_TABLE]="| Task | Command |
+|------|---------|
+| Lint | \`composer ci:php:lint\` |
+| CS Fix | \`composer ci:php:cs-fixer\` |
+| PHPStan | \`composer ci:php:stan\` |
+| Unit tests | \`composer ci:tests:unit\` |
+| Functional | \`composer ci:tests:functional\` |
+| All CI | \`composer ci\` |"
+
+                scope_vars[DDEV_ALTERNATIVE]="Alternative with ddev:
+- \`ddev composer ci:tests:unit\`
+- \`ddev exec vendor/bin/phpunit -c Tests/Build/UnitTests.xml\`"
+
+                # Build checklist lines
+                scope_vars[CI_CHECKLIST_LINE]="- [ ] \`composer ci\` passes (lint, cs-fixer, phpstan, tests)"
+                scope_vars[PHPSTAN_CHECKLIST_LINE]="- [ ] PHPStan level ${scope_vars[PHPSTAN_LEVEL]} clean"
+                scope_vars[TYPO3_VERSION_CHECKLIST_LINE]="- [ ] Tested on target TYPO3 versions (${scope_vars[TYPO3_VERSION]})"
+
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
@@ -1026,6 +1105,34 @@ else
                 scope_vars[ORO_VERSION]="$ORO_VERSION"
                 scope_vars[PHPSTAN_LEVEL]="8"
                 scope_vars[HOUSE_RULES]=""
+
+                # Build whole-line placeholders for setup section
+                scope_vars[INSTALL_LINE]="- Install: \`composer install\`"
+                [ -n "${scope_vars[PHP_VERSION]:-}" ] && [ "${scope_vars[PHP_VERSION]}" != "unknown" ] && \
+                    scope_vars[PHP_VERSION_LINE]="- PHP version: ${scope_vars[PHP_VERSION]}"
+                [ -n "${scope_vars[ORO_VERSION]:-}" ] && \
+                    scope_vars[ORO_VERSION_LINE]="- Oro version: ${scope_vars[ORO_VERSION]}"
+                scope_vars[DATABASE_LINE]="- Database: PostgreSQL (recommended) or MySQL"
+                scope_vars[SETUP_COMMANDS]="- Required: \`bin/console oro:install\` for fresh setup
+- Cache clear: \`bin/console cache:clear\`
+- Assets: \`bin/console oro:assets:install\`"
+
+                # Build commands table
+                scope_vars[COMMANDS_TABLE]="| Task | Command |
+|------|---------|
+| Lint | \`bin/console lint:yaml src/\` |
+| CS Fix | \`vendor/bin/php-cs-fixer fix\` |
+| PHPStan | \`vendor/bin/phpstan analyse\` |
+| Unit tests | \`vendor/bin/phpunit --testsuite=unit\` |
+| Functional | \`vendor/bin/phpunit --testsuite=functional\` |
+| Behat | \`vendor/bin/behat\` |
+| Full CI | \`bin/console oro:test:all\` |"
+
+                # Build checklist lines
+                scope_vars[CACHE_CHECKLIST_LINE]="- [ ] \`bin/console cache:clear\` runs without errors"
+                scope_vars[PHPSTAN_CHECKLIST_LINE]="- [ ] PHPStan passes at configured level"
+                scope_vars[UNIT_TEST_CHECKLIST_LINE]="- [ ] Unit tests pass: \`vendor/bin/phpunit --testsuite=unit\`"
+
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
@@ -1208,11 +1315,34 @@ else
                 scope_vars[CLI_FRAMEWORK]="$CLI_FRAMEWORK"
                 scope_vars[BUILD_OUTPUT_PATH]="./bin/"
                 build_cmd="$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
-                [ -n "$build_cmd" ] && scope_vars[SETUP_INSTRUCTIONS]="- Build: $build_cmd"
+                [ -n "$build_cmd" ] && scope_vars[SETUP_INSTRUCTIONS]="- Build: \`$build_cmd\`"
                 set_scope_if_present BUILD_CMD "$build_cmd"
                 scope_vars[RUN_CMD]="./bin/$(basename "$PROJECT_DIR")"
                 set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
                 set_scope_if_present LINT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.lint // empty')"
+
+                # Build whole-line placeholders for setup section
+                [ -n "${scope_vars[CLI_FRAMEWORK]:-}" ] && [ "${scope_vars[CLI_FRAMEWORK]}" != "standard" ] && \
+                    scope_vars[CLI_FRAMEWORK_LINE]="- CLI framework: ${scope_vars[CLI_FRAMEWORK]}"
+                [ -n "${scope_vars[BUILD_OUTPUT_PATH]:-}" ] && \
+                    scope_vars[BUILD_OUTPUT_LINE]="- Build output: ${scope_vars[BUILD_OUTPUT_PATH]}"
+
+                # Build whole-line placeholders for commands section
+                [ -n "${scope_vars[BUILD_CMD]:-}" ] && \
+                    scope_vars[BUILD_LINE]="- Build CLI: \`${scope_vars[BUILD_CMD]}\`"
+                [ -n "${scope_vars[RUN_CMD]:-}" ] && \
+                    scope_vars[RUN_LINE]="- Run CLI: \`${scope_vars[RUN_CMD]}\`"
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_LINE]="- Test: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[LINT_LINE]="- Lint: \`${scope_vars[LINT_CMD]}\`"
+
+                # Build convention and help lines
+                [ -n "${scope_vars[CLI_FRAMEWORK]:-}" ] && [ "${scope_vars[CLI_FRAMEWORK]}" != "standard" ] && \
+                    scope_vars[CLI_FRAMEWORK_CONVENTION_LINE]="- Use flag parsing library consistently (${scope_vars[CLI_FRAMEWORK]})"
+                [ -n "${scope_vars[CLI_FRAMEWORK]:-}" ] && [ "${scope_vars[CLI_FRAMEWORK]}" != "standard" ] && \
+                    scope_vars[CLI_FRAMEWORK_DOCS_LINE]="- Review ${scope_vars[CLI_FRAMEWORK]} documentation"
+
                 # Detect language for CLI scope
                 cli_ext="go"
                 [ -f "package.json" ] && cli_ext="ts"
@@ -1223,6 +1353,17 @@ else
 
             "testing")
                 set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
+                set_scope_if_present TEST_SINGLE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_single // empty')"
+                set_scope_if_present TEST_COVERAGE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_coverage // empty')"
+
+                # Build whole-line placeholders for commands section
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_LINE]="- Run all tests: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[TEST_SINGLE_CMD]:-}" ] && \
+                    scope_vars[TEST_SINGLE_LINE]="- Run specific test file: \`${scope_vars[TEST_SINGLE_CMD]}\`"
+                [ -n "${scope_vars[TEST_COVERAGE_CMD]:-}" ] && \
+                    scope_vars[TEST_COVERAGE_LINE]="- Run with coverage: \`${scope_vars[TEST_COVERAGE_CMD]}\`"
+
                 # Detect test file extension
                 test_ext="php"
                 [ -f "go.mod" ] && test_ext="go"

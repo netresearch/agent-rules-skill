@@ -28,10 +28,10 @@ Test suites, fixtures, and testing utilities for the project.
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Running tests
-- Run all tests: {{TEST_CMD}}
-- Run specific test file: {{TEST_CMD}} <file>
-- Run with coverage: {{TEST_CMD}} --coverage (if supported)
-- Watch mode: {{TEST_CMD}} --watch (if supported)
+{{TEST_LINE}}
+{{TEST_SINGLE_LINE}}
+{{TEST_COVERAGE_LINE}}
+{{TEST_WATCH_LINE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START organization -->
