@@ -209,6 +209,18 @@ for web_dir in internal/web web frontend client ui; do
     fi
 done
 
+# Check for Claude Code skills (each skill gets its own scope)
+if [ -d "skills" ]; then
+    for skill_dir in skills/*/; do
+        if [ -f "${skill_dir}SKILL.md" ]; then
+            skill_name=$(basename "$skill_dir")
+            # Count files in skill (sh, md, yaml)
+            count=$(find "$skill_dir" -type f \( -name "*.sh" -o -name "*.md" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l)
+            add_scope "${skill_dir%/}" "claude-code-skill" "$count"
+        fi
+    done
+fi
+
 # Output JSON
 if [ ${#scopes[@]} -eq 0 ]; then
     echo '{"scopes": []}'

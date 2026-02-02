@@ -1391,6 +1391,34 @@ else
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "*")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=""
                 ;;
+
+            "claude-code-skill")
+                # Extract plugin info (if plugin.json exists)
+                plugin_name=$(jq -r '.name // "unknown"' .claude-plugin/plugin.json 2>/dev/null || echo "unknown")
+                plugin_version=$(jq -r '.version // "unknown"' .claude-plugin/plugin.json 2>/dev/null || echo "unknown")
+                skill_count=$(find skills -maxdepth 2 -name "SKILL.md" -type f 2>/dev/null | wc -l)
+
+                # Build whole-line placeholders
+                if [ -f ".claude-plugin/plugin.json" ]; then
+                    scope_vars[PLUGIN_JSON_LINE]="- Plugin: $plugin_name v$plugin_version"
+                fi
+                scope_vars[SKILLS_LINE]="- Skills: $skill_count skill(s) in \`skills/\`"
+                if [ -f "composer.json" ]; then
+                    scope_vars[INSTALL_LINE]="- Install: \`composer require $(jq -r '.name // "vendor/package"' composer.json 2>/dev/null)\`"
+                fi
+
+                # Build command lines if shell scripts exist
+                sh_count=$(find . -maxdepth 5 -name "*.sh" -type f 2>/dev/null | wc -l)
+                if [ "$sh_count" -gt 0 ]; then
+                    scope_vars[LINT_LINE]="- Lint scripts: \`shellcheck skills/*/scripts/*.sh\`"
+                    scope_vars[LINT_CHECKLIST_LINE]="- [ ] ShellCheck passes: \`shellcheck skills/*/scripts/*.sh\`"
+                fi
+                scope_vars[VALIDATE_LINE]="- Validate plugin: \`jq . .claude-plugin/plugin.json\`"
+
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "sh")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "md")
+                scope_vars[HOUSE_RULES]=""
+                ;;
         esac
 
         # Render template (smart mode respects --update flag)

@@ -218,6 +218,52 @@ detect_language() {
         grep -q 'pytest' pyproject.toml 2>/dev/null && TEST_FRAMEWORK="pytest"
     fi
 
+    # Check for Claude Code plugin/skill repos
+    # Can be: plugin-only, skill-only, plugin+skills, or any of these with bash
+    if [ "$LANGUAGE" = "unknown" ]; then
+        local has_plugin=false
+        local has_skills=false
+        local skill_count=0
+
+        [ -f ".claude-plugin/plugin.json" ] && has_plugin=true
+        skill_count=$(find skills -maxdepth 2 -name "SKILL.md" -type f 2>/dev/null | wc -l)
+        [ "$skill_count" -gt 0 ] && has_skills=true
+
+        if [ "$has_plugin" = true ] || [ "$has_skills" = true ]; then
+            FRAMEWORK="claude-code"
+            PACKAGE_MANAGER="none"
+
+            # Determine project type based on combination
+            if [ "$has_plugin" = true ] && [ "$has_skills" = true ]; then
+                if [ "$skill_count" -gt 1 ]; then
+                    PROJECT_TYPE="claude-code-plugin-monorepo"
+                else
+                    PROJECT_TYPE="claude-code-plugin"
+                fi
+                LANGUAGE="claude-code-plugin"
+            elif [ "$has_plugin" = true ]; then
+                PROJECT_TYPE="claude-code-plugin"
+                LANGUAGE="claude-code-plugin"
+            else
+                # Skills without plugin.json (standalone skill repo)
+                if [ "$skill_count" -gt 1 ]; then
+                    PROJECT_TYPE="claude-code-skill-monorepo"
+                else
+                    PROJECT_TYPE="claude-code-skill"
+                fi
+                LANGUAGE="claude-code-skill"
+            fi
+
+            # Check for shell scripts (common in skills)
+            local sh_count
+            sh_count=$(find . -maxdepth 5 -name "*.sh" -type f 2>/dev/null | wc -l)
+            if [ "$sh_count" -gt 3 ]; then
+                BUILD_TOOL="bash"
+                [ -f ".shellcheckrc" ] && QUALITY_TOOLS+=("shellcheck") || true
+            fi
+        fi
+    fi
+
     # Fallback: Check for bash/shell projects
     if [ "$LANGUAGE" = "unknown" ]; then
         local sh_count
