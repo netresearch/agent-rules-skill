@@ -38,12 +38,12 @@
 
 <!-- AGENTS-GENERATED:START code-style -->
 ## Code style & conventions
-- TypeScript strict mode enabled
-- Use functional components with hooks (React)
+{{TS_STRICT_LINE}}
+{{COMPONENT_STYLE_LINE}}
 - Naming: `camelCase` for variables/functions, `PascalCase` for components
 - File naming: `ComponentName.tsx`, `utilityName.ts`
 - Imports: group and sort (external, internal, types)
-- CSS: {{CSS_APPROACH}} (CSS Modules, Tailwind, styled-components, etc.)
+{{CSS_APPROACH_LINE}}
 {{FRAMEWORK_CONVENTIONS}}
 <!-- AGENTS-GENERATED:END code-style -->
 

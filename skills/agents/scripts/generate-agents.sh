@@ -155,6 +155,56 @@ detect_node_package_manager() {
     echo "npm"  # Ultimate fallback
 }
 
+# Detect CSS approach/framework used in project
+# Checks package.json dependencies and config files
+detect_css_approach() {
+    local config_root="$1"
+    local pkg_json="$config_root/package.json"
+    local approaches=()
+
+    # Check package.json dependencies
+    if [ -f "$pkg_json" ]; then
+        local deps
+        deps=$(jq -r '(.dependencies // {}) + (.devDependencies // {}) | keys[]' "$pkg_json" 2>/dev/null || echo "")
+
+        # Tailwind CSS
+        if echo "$deps" | grep -q "^tailwindcss$"; then
+            approaches+=("Tailwind CSS")
+        fi
+
+        # styled-components
+        if echo "$deps" | grep -q "^styled-components$"; then
+            approaches+=("styled-components")
+        fi
+
+        # Emotion
+        if echo "$deps" | grep -q "^@emotion/"; then
+            approaches+=("Emotion")
+        fi
+
+        # CSS Modules (indicated by config or common patterns)
+        if [ -f "$config_root/postcss.config.js" ] || [ -f "$config_root/postcss.config.mjs" ]; then
+            if ! printf '%s\n' "${approaches[@]}" | grep -q "Tailwind"; then
+                approaches+=("CSS Modules")
+            fi
+        fi
+
+        # Sass/SCSS
+        if echo "$deps" | grep -q "^sass$"; then
+            approaches+=("Sass/SCSS")
+        fi
+    fi
+
+    # Default to CSS Modules if nothing detected but tsconfig exists
+    if [ ${#approaches[@]} -eq 0 ]; then
+        [ -f "$config_root/tsconfig.json" ] && approaches+=("CSS Modules")
+    fi
+
+    # Join approaches with comma
+    local IFS=', '
+    echo "${approaches[*]}"
+}
+
 # Byte budget enforcement (OpenAI Codex default: 32 KiB for combined instructions)
 BYTE_BUDGET="${BYTE_BUDGET:-32768}"
 
@@ -1416,8 +1466,22 @@ else
                 _ts_strict=$(get_ts_strict_mode "$_node_config_root") || _ts_strict=""
                 scope_vars[TS_STRICT]="$_ts_strict"
 
-                # CSS approach detection (keep existing logic)
-                scope_vars[CSS_APPROACH]="CSS Modules"
+                # Conditional TS_STRICT_LINE based on actual tsconfig.json
+                if [[ "${scope_vars[TS_STRICT]}" == "true" ]]; then
+                    scope_vars[TS_STRICT_LINE]="- TypeScript strict mode enabled (verified from tsconfig.json)"
+                elif [[ "${scope_vars[TS_STRICT]}" == "false" ]]; then
+                    scope_vars[TS_STRICT_LINE]="- TypeScript strict mode: disabled (consider enabling)"
+                else
+                    scope_vars[TS_STRICT_LINE]="- Follow tsconfig.json compiler options"
+                fi
+
+                # CSS approach detection
+                _css_approach=$(detect_css_approach "$_node_config_root") || _css_approach=""
+                scope_vars[CSS_APPROACH]="$_css_approach"
+
+                # CSS approach line (only show if detected)
+                [[ -n "${scope_vars[CSS_APPROACH]:-}" ]] && \
+                    scope_vars[CSS_APPROACH_LINE]="- CSS: ${scope_vars[CSS_APPROACH]}"
 
                 # Build whole-line placeholders for commands section
                 [ -n "${scope_vars[INSTALL_CMD]:-}" ] && \
@@ -1435,26 +1499,41 @@ else
                 [ -n "${scope_vars[DEV_CMD]:-}" ] && \
                     scope_vars[DEV_LINE]="- Dev server: \`${scope_vars[DEV_CMD]}\`"
 
+                # Framework-specific component style and conventions
                 case "$FRAMEWORK" in
                     "react")
-                        scope_vars[FRAMEWORK_CONVENTIONS]="- Use functional components with hooks
-- Avoid class components"
+                        scope_vars[COMPONENT_STYLE_LINE]="- Use functional components with hooks"
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Avoid class components"
                         scope_vars[FRAMEWORK_DOCS]="https://react.dev"
                         scope_vars[FRAMEWORK_DOCS_LINE]="- Check React documentation: https://react.dev"
                         ;;
                     "next.js")
+                        scope_vars[COMPONENT_STYLE_LINE]="- Use functional components with hooks"
                         scope_vars[FRAMEWORK_CONVENTIONS]="- Use App Router (app/)
 - Server Components by default"
                         scope_vars[FRAMEWORK_DOCS]="https://nextjs.org/docs"
                         scope_vars[FRAMEWORK_DOCS_LINE]="- Check Next.js documentation: https://nextjs.org/docs"
                         ;;
                     "vue")
-                        scope_vars[FRAMEWORK_CONVENTIONS]="- Use Composition API
-- Avoid Options API for new code"
+                        scope_vars[COMPONENT_STYLE_LINE]="- Use Composition API with script setup"
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Avoid Options API for new code"
                         scope_vars[FRAMEWORK_DOCS]="https://vuejs.org/guide"
                         scope_vars[FRAMEWORK_DOCS_LINE]="- Check Vue documentation: https://vuejs.org/guide"
                         ;;
+                    "svelte")
+                        scope_vars[COMPONENT_STYLE_LINE]="- Use Svelte component syntax"
+                        scope_vars[FRAMEWORK_CONVENTIONS]=""
+                        scope_vars[FRAMEWORK_DOCS]="https://svelte.dev/docs"
+                        scope_vars[FRAMEWORK_DOCS_LINE]="- Check Svelte documentation: https://svelte.dev/docs"
+                        ;;
+                    "angular")
+                        scope_vars[COMPONENT_STYLE_LINE]="- Use standalone components"
+                        scope_vars[FRAMEWORK_CONVENTIONS]="- Follow Angular style guide"
+                        scope_vars[FRAMEWORK_DOCS]="https://angular.dev"
+                        scope_vars[FRAMEWORK_DOCS_LINE]="- Check Angular documentation: https://angular.dev"
+                        ;;
                     *)
+                        scope_vars[COMPONENT_STYLE_LINE]=""
                         scope_vars[FRAMEWORK_CONVENTIONS]=""
                         scope_vars[FRAMEWORK_DOCS]=""
                         scope_vars[FRAMEWORK_DOCS_LINE]=""
