@@ -1796,6 +1796,9 @@ else
         # Render template (smart mode respects --update flag)
         render_template_smart "$SCOPE_TEMPLATE" "$SCOPE_FILE" scope_vars "$UPDATE_ONLY"
 
+        # Enforce byte budget for scoped files (use half of root budget)
+        enforce_byte_budget "$SCOPE_FILE" "$((BYTE_BUDGET / 2))"
+
         if [ "$UPDATE_ONLY" = true ]; then
             echo "✅ Updated: $SCOPE_FILE"
         else
