@@ -19,6 +19,7 @@ TEMPLATE_DIR="$SKILL_DIR/assets"
 # Source helper libraries
 source "$SCRIPT_DIR/lib/template.sh"
 source "$SCRIPT_DIR/lib/summary.sh"
+source "$SCRIPT_DIR/lib/config-root.sh"
 
 # Default options
 PROJECT_DIR="${1:-.}"
@@ -1299,19 +1300,29 @@ else
                 ;;
 
             "backend-typescript")
-                scope_vars[NODE_VERSION]="$VERSION"
-                # For cross-language scopes, detect package manager locally
+                # CRITICAL: Get Node version from nearest package.json,
+                # NOT from root PROJECT_INFO (which may be PHP/Go/Python)
+                _node_config_root=$(find_node_config_root "$SCOPE_PATH") || _node_config_root="."
+
+                # Extract Node-specific metadata from correct config root
+                _node_version=$(get_node_version "$_node_config_root") || _node_version=""
+                scope_vars[NODE_VERSION]="$_node_version"
+
+                # Package manager from scope's config root
                 scope_vars[PACKAGE_MANAGER]=$(detect_node_package_manager "$SCOPE_PATH")
                 scope_vars[ENV_VARS]="See .env or .env.example"
-                # Populate all command variables from scope-local extraction
-                set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
-                set_scope_if_present TYPECHECK_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.typecheck // empty')"
-                set_scope_if_present LINT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.lint // empty')"
-                set_scope_if_present FORMAT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.format // empty')"
-                set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
-                set_scope_if_present TEST_SINGLE_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test_single // empty')"
-                set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
-                set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
+
+                # Extract commands using Node-specific extraction from config root
+                _node_commands=$("$SCRIPT_DIR/extract-commands.sh" "$_node_config_root" node 2>/dev/null || echo '{}')
+
+                set_scope_if_present INSTALL_CMD "$(echo "$_node_commands" | jq -r '.install // empty')"
+                set_scope_if_present TYPECHECK_CMD "$(echo "$_node_commands" | jq -r '.typecheck // empty')"
+                set_scope_if_present LINT_CMD "$(echo "$_node_commands" | jq -r '.lint // empty')"
+                set_scope_if_present FORMAT_CMD "$(echo "$_node_commands" | jq -r '.format // empty')"
+                set_scope_if_present TEST_CMD "$(echo "$_node_commands" | jq -r '.test // empty')"
+                set_scope_if_present TEST_SINGLE_CMD "$(echo "$_node_commands" | jq -r '.test_single // empty')"
+                set_scope_if_present BUILD_CMD "$(echo "$_node_commands" | jq -r '.build // empty')"
+                set_scope_if_present DEV_CMD "$(echo "$_node_commands" | jq -r '.dev // empty')"
 
                 # Build whole-line placeholders for setup section
                 [ -n "${scope_vars[INSTALL_CMD]:-}" ] && \
@@ -1352,20 +1363,38 @@ else
                 ;;
 
             "frontend-typescript")
-                scope_vars[NODE_VERSION]="$VERSION"
-                FRAMEWORK=$(echo "$PROJECT_INFO" | jq -r '.framework')
+                # CRITICAL: Get Node version and framework from nearest package.json,
+                # NOT from root PROJECT_INFO (which may be PHP/Go/Python)
+                _node_config_root=$(find_node_config_root "$SCOPE_PATH") || _node_config_root="."
+
+                # Extract Node-specific metadata from correct config root
+                _node_version=$(get_node_version "$_node_config_root") || _node_version=""
+                scope_vars[NODE_VERSION]="$_node_version"
+
+                _js_framework=$(get_js_framework "$_node_config_root") || _js_framework=""
+                FRAMEWORK="$_js_framework"
                 scope_vars[FRAMEWORK]="$FRAMEWORK"
-                # For cross-language scopes, detect package manager locally
+
+                # Package manager from scope's config root
                 scope_vars[PACKAGE_MANAGER]=$(detect_node_package_manager "$SCOPE_PATH")
                 scope_vars[ENV_VARS]="See .env.example"
-                # Populate all command variables from scope-local extraction
-                set_scope_if_present INSTALL_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.install // empty')"
-                set_scope_if_present TYPECHECK_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.typecheck // empty')"
-                set_scope_if_present LINT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.lint // empty')"
-                set_scope_if_present FORMAT_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.format // empty')"
-                set_scope_if_present TEST_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.test // empty')"
-                set_scope_if_present BUILD_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.build // empty')"
-                set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
+
+                # Extract commands using Node-specific extraction from config root
+                _node_commands=$("$SCRIPT_DIR/extract-commands.sh" "$_node_config_root" node 2>/dev/null || echo '{}')
+
+                set_scope_if_present INSTALL_CMD "$(echo "$_node_commands" | jq -r '.install // empty')"
+                set_scope_if_present TYPECHECK_CMD "$(echo "$_node_commands" | jq -r '.typecheck // empty')"
+                set_scope_if_present LINT_CMD "$(echo "$_node_commands" | jq -r '.lint // empty')"
+                set_scope_if_present FORMAT_CMD "$(echo "$_node_commands" | jq -r '.format // empty')"
+                set_scope_if_present TEST_CMD "$(echo "$_node_commands" | jq -r '.test // empty')"
+                set_scope_if_present BUILD_CMD "$(echo "$_node_commands" | jq -r '.build // empty')"
+                set_scope_if_present DEV_CMD "$(echo "$_node_commands" | jq -r '.dev // empty')"
+
+                # TypeScript strict mode - check, don't assume
+                _ts_strict=$(get_ts_strict_mode "$_node_config_root") || _ts_strict=""
+                scope_vars[TS_STRICT]="$_ts_strict"
+
+                # CSS approach detection (keep existing logic)
                 scope_vars[CSS_APPROACH]="CSS Modules"
 
                 # Build whole-line placeholders for commands section

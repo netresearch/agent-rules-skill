@@ -1,0 +1,3 @@
+# Scopes for testing cross-language projects
+# Format: path:type
+web:frontend-typescript
