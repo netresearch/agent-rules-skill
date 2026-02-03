@@ -102,7 +102,7 @@ describe_file() {
         *Service*|*_service*) echo "Service" ;;
         *Handler*|*_handler*) echo "Handler" ;;
         *Model*|*models*) echo "Model" ;;
-        *Test*|*test*|*_test*) echo "Test" ;;
+        *Test*|*_test*) echo "Test" ;;
         *Button*|*Card*|*Modal*) echo "Component" ;;
         */api/*) echo "API route" ;;
         *) echo "Reference" ;;

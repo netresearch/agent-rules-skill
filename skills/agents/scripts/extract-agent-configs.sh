@@ -63,7 +63,7 @@ parse_cursor() {
     local rules_content="[]"
     local settings_file=""
     local model=""
-    local context_files="[]"
+    # Note: context_files would be used for extracting @file references but not yet implemented
 
     # Check for rules files
     for f in "$cursor_dir/rules" "$cursor_dir/rules.md" "$cursor_dir/.cursorrules"; do

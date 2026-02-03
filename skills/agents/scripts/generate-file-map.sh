@@ -128,7 +128,6 @@ infer_purpose() {
 
 # Generate the file map
 generate_map() {
-    local output=""
     local max_dirs=15  # Limit to top 15 directories
 
     while read -r count dir; do

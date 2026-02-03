@@ -19,6 +19,7 @@ count_matches() {
     local input="$2"
     local flags="${3:-}"
     local count
+    # shellcheck disable=SC2086  # flags must be unquoted to work as separate arguments
     count=$(echo "$input" | grep $flags -cE "$pattern" 2>/dev/null) || count=0
     echo "$count"
 }

@@ -47,7 +47,7 @@ EOF
 done
 
 PROJECT_DIR="${PROJECT_DIR:-.}"
-cd "$PROJECT_DIR"
+cd "$PROJECT_DIR" || exit 1
 
 ERRORS=0
 WARNINGS=0
@@ -86,7 +86,8 @@ check_managed_header() {
 # Check if root is thin (≤50 lines or has scope index)
 check_root_is_thin() {
     local file="$1"
-    local line_count=$(wc -l < "$file")
+    local line_count
+    line_count=$(wc -l < "$file")
 
     if [ "$line_count" -le 50 ]; then
         success "Root is thin: $line_count lines"
@@ -168,7 +169,8 @@ check_scope_links() {
     fi
 
     # Extract links from scope index
-    local links=$(sed -n '/## Index of scoped AGENTS.md/,/^##/p' "$root_file" | grep -o '\./[^)]*AGENTS.md' || true)
+    local links
+    links=$(sed -n '/## Index of scoped AGENTS.md/,/^##/p' "$root_file" | grep -o '\./[^)]*AGENTS.md' || true)
 
     if [ -z "$links" ]; then
         # Empty scope index with AGENTS-GENERATED markers is valid (placeholder)
@@ -230,7 +232,7 @@ SCOPED_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
 if [ -n "$SCOPED_FILES" ]; then
     echo "=== Scoped AGENTS.md Files ==="
     while read -r file; do
-        rel_path="${file#$PROJECT_DIR/}"
+        rel_path="${file#"$PROJECT_DIR"/}"
         echo "Checking: $rel_path"
         check_managed_header "$file"
         check_scoped_sections "$file"

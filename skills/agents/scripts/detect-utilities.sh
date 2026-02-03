@@ -59,7 +59,7 @@ infer_purpose() {
     case "$name" in
         *date*|*time*|*format*Date*) echo "date/time formatting" ;;
         *http*|*fetch*|*api*|*client*) echo "HTTP requests" ;;
-        *log*|*logger*) echo "logging" ;;
+        *log*) echo "logging" ;;
         *valid*|*check*) echo "validation" ;;
         *parse*) echo "parsing" ;;
         *format*) echo "formatting" ;;

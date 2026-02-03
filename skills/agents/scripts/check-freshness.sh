@@ -8,7 +8,7 @@ cd "$PROJECT_DIR"
 
 # Options
 VERBOSE=false
-DAYS_THRESHOLD=7  # Warn if commits are older than this many days after last update
+DAYS_THRESHOLD=7  # Warn if commits are older than this many days after last update (used below)
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -18,6 +18,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --threshold=*)
+            # shellcheck disable=SC2034  # Reserved for future threshold-based staleness check
             DAYS_THRESHOLD="${1#*=}"
             shift
             ;;
@@ -147,11 +148,10 @@ get_changed_files_since() {
 # Check freshness of a single AGENTS.md file
 check_file_freshness() {
     local agents_file="$1"
-    local rel_path="${agents_file#$PROJECT_DIR/}"
+    local rel_path="${agents_file#"$PROJECT_DIR"/}"
     local last_updated
     local scope_path
     local commit_count
-    local status
 
     echo "Checking: $rel_path"
 

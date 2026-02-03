@@ -8,6 +8,7 @@ cd "$PROJECT_DIR"
 # Get project info
 PROJECT_INFO=$(bash "$(dirname "$0")/detect-project.sh" "$PROJECT_DIR")
 LANGUAGE=$(echo "$PROJECT_INFO" | jq -r '.language')
+# shellcheck disable=SC2034  # BUILD_TOOL reserved for future build-tool-specific detection
 BUILD_TOOL=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
 
 # Initialize command variables
@@ -67,7 +68,8 @@ extract_from_makefile() {
     while IFS= read -r line; do
         if [[ $line =~ ^([a-zA-Z_-]+):.*\#\#(.*)$ ]]; then
             target="${BASH_REMATCH[1]}"
-            description="${BASH_REMATCH[2]}"
+            # description captured but not yet used (for future enhanced output)
+            # description="${BASH_REMATCH[2]}"
 
             case "$target" in
                 lint|check) LINT_CMD="make $target" ;;

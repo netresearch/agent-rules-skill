@@ -94,6 +94,7 @@ log_check() {
 # VERIFICATION FUNCTIONS
 # ============================================================================
 
+# shellcheck disable=SC2329  # Called indirectly by verification driver
 verify_file_exists() {
     local file="$1"
     local source="$2"

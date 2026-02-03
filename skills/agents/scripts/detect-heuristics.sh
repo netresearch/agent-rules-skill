@@ -22,7 +22,7 @@ if [ -f "src/env.d.ts" ] || [ -f "types/env.d.ts" ]; then
 fi
 
 # Check for Next.js App Router
-if [ -d "app" ] && [ -f "next.config.js" -o -f "next.config.ts" -o -f "next.config.mjs" ]; then
+if [ -d "app" ] && { [ -f "next.config.js" ] || [ -f "next.config.ts" ] || [ -f "next.config.mjs" ]; }; then
     output="$output| Adding new page | Create in \`app/\` (App Router) |\n"
 fi
 
