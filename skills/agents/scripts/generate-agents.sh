@@ -1048,7 +1048,7 @@ else
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
 
-            "typo3")
+            "typo3-extension")
                 scope_vars[PHP_VERSION]="$VERSION"
                 TYPO3_VERSION=$(jq -r '.require."typo3/cms-core" // .["require-dev"]."typo3/cms-core" // "^12.4 || ^13.4"' composer.json 2>/dev/null || echo "^12.4 || ^13.4")
                 scope_vars[TYPO3_VERSION]="$TYPO3_VERSION"
@@ -1099,7 +1099,42 @@ else
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
 
-            "oro")
+            "typo3-project")
+                scope_vars[PHP_VERSION]="$VERSION"
+                TYPO3_VERSION=$(jq -r '.require."typo3/cms-core" // "^12.4 || ^13.4"' composer.json 2>/dev/null || echo "^12.4 || ^13.4")
+                scope_vars[TYPO3_VERSION]="$TYPO3_VERSION"
+                scope_vars[HOUSE_RULES]=""
+
+                # Build whole-line placeholders for setup section
+                scope_vars[INSTALL_LINE]="- Install: \`composer install\`"
+                [ -n "${scope_vars[PHP_VERSION]:-}" ] && [ "${scope_vars[PHP_VERSION]}" != "unknown" ] && \
+                    scope_vars[PHP_VERSION_LINE]="- PHP version: ${scope_vars[PHP_VERSION]}"
+                [ -n "${scope_vars[TYPO3_VERSION]:-}" ] && \
+                    scope_vars[TYPO3_VERSION_LINE]="- TYPO3 version: ${scope_vars[TYPO3_VERSION]}"
+                scope_vars[DEV_SETUP_LINE]="- Local dev: \`ddev start && ddev composer install\`"
+
+                # Detect composer mode
+                if [ -f "public/typo3" ] || [ -d "public/typo3" ]; then
+                    scope_vars[COMPOSER_MODE_LINE]="- Composer mode: enabled (public/ web root)"
+                fi
+
+                # Build commands table
+                scope_vars[COMMANDS_TABLE]="| Task | Command |
+|------|---------|
+| Clear cache | \`vendor/bin/typo3 cache:flush\` |
+| Warmup cache | \`vendor/bin/typo3 cache:warmup\` |
+| Update DB | \`vendor/bin/typo3 database:updateschema\` |
+| List commands | \`vendor/bin/typo3 list\` |"
+
+                # Build checklist lines
+                scope_vars[CI_CHECKLIST_LINE]="- [ ] Site configuration valid"
+                scope_vars[TYPO3_VERSION_CHECKLIST_LINE]="- [ ] Tested on TYPO3 ${scope_vars[TYPO3_VERSION]}"
+
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
+                ;;
+
+            "oro-bundle")
                 scope_vars[PHP_VERSION]="$VERSION"
                 ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "^6.0"' composer.json 2>/dev/null || echo "^6.0")
                 scope_vars[ORO_VERSION]="$ORO_VERSION"
@@ -1132,6 +1167,42 @@ else
                 scope_vars[CACHE_CHECKLIST_LINE]="- [ ] \`bin/console cache:clear\` runs without errors"
                 scope_vars[PHPSTAN_CHECKLIST_LINE]="- [ ] PHPStan passes at configured level"
                 scope_vars[UNIT_TEST_CHECKLIST_LINE]="- [ ] Unit tests pass: \`vendor/bin/phpunit --testsuite=unit\`"
+
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
+                ;;
+
+            "oro-project")
+                scope_vars[PHP_VERSION]="$VERSION"
+                ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "^6.0"' composer.json 2>/dev/null || echo "^6.0")
+                scope_vars[ORO_VERSION]="$ORO_VERSION"
+                scope_vars[PHPSTAN_LEVEL]="8"
+                scope_vars[HOUSE_RULES]=""
+
+                # Build whole-line placeholders for setup section
+                scope_vars[INSTALL_LINE]="- Install: \`composer install\`"
+                [ -n "${scope_vars[PHP_VERSION]:-}" ] && [ "${scope_vars[PHP_VERSION]}" != "unknown" ] && \
+                    scope_vars[PHP_VERSION_LINE]="- PHP version: ${scope_vars[PHP_VERSION]}"
+                [ -n "${scope_vars[ORO_VERSION]:-}" ] && \
+                    scope_vars[ORO_VERSION_LINE]="- Oro version: ${scope_vars[ORO_VERSION]}"
+                scope_vars[DATABASE_LINE]="- Database: PostgreSQL (recommended) or MySQL"
+                scope_vars[MESSAGE_QUEUE_LINE]="- Message queue: Required for background jobs"
+
+                # Build commands table
+                scope_vars[COMMANDS_TABLE]="| Task | Command |
+|------|---------|
+| Install | \`bin/console oro:install\` |
+| Update platform | \`bin/console oro:platform:update\` |
+| Clear cache | \`bin/console cache:clear\` |
+| Install assets | \`bin/console oro:assets:install\` |
+| Message queue | \`bin/console oro:message-queue:consume\` |
+| Run cron | \`bin/console oro:cron\` |
+| Unit tests | \`vendor/bin/phpunit --testsuite=unit\` |"
+
+                # Build checklist lines
+                scope_vars[CACHE_CHECKLIST_LINE]="- [ ] \`bin/console cache:clear\` runs without errors"
+                scope_vars[PHPSTAN_CHECKLIST_LINE]="- [ ] PHPStan passes at configured level"
+                scope_vars[UNIT_TEST_CHECKLIST_LINE]="- [ ] Unit tests pass"
 
                 scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")

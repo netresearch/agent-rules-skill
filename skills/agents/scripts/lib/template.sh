@@ -134,8 +134,10 @@ get_scope_description() {
         "resources") echo "Static resources, assets, templates, and configuration files" ;;
         "docker") echo "Container/Docker configuration for building and deploying images" ;;
         "claude-code-skill") echo "Claude Code skill/plugin providing AI agent capabilities" ;;
-        "typo3") echo "TYPO3 extension following TYPO3 CGL and PSR-12" ;;
-        "oro") echo "Oro bundle following Oro Architecture and Symfony best practices" ;;
+        "typo3-extension") echo "TYPO3 extension following TYPO3 CGL and PSR-12" ;;
+        "typo3-project") echo "TYPO3 project installation with site configuration" ;;
+        "oro-bundle") echo "Oro bundle following Oro Architecture and Symfony best practices" ;;
+        "oro-project") echo "Oro application with platform configuration and bundles" ;;
         "symfony") echo "Symfony application following Symfony best practices" ;;
         "github-actions") echo "GitHub Actions workflows and CI/CD automation" ;;
         "gitlab-ci") echo "GitLab CI/CD pipeline configuration" ;;

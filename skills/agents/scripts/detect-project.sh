@@ -107,13 +107,23 @@ detect_language() {
                 FRAMEWORK="typo3"
                 TYPO3_VERSION=$(jq -r '.require."typo3/cms-core"' composer.json 2>/dev/null || echo "unknown")
             # Oro detection (OroCommerce, OroPlatform, OroCRM)
+            # Differentiate between full Oro project and standalone bundle
             elif jq -e '.require."oro/platform"' composer.json &>/dev/null || \
                  jq -e '.require."oro/commerce"' composer.json &>/dev/null || \
                  jq -e '.require."oro/crm"' composer.json &>/dev/null; then
-                PROJECT_TYPE="php-oro"
                 FRAMEWORK="oro"
                 ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "unknown"' composer.json 2>/dev/null || echo "unknown")
-            elif [ -f "config/oro/bundles.yml" ] || [ -f "src/*/Bundle/*/Resources/config/oro/workflows.yml" ]; then
+                # Check if it's a standalone bundle (has type: oro-bundle, or no bin/console)
+                composer_type=$(jq -r '.type // ""' composer.json 2>/dev/null)
+                if [ "$composer_type" = "oro-bundle" ] || [ "$composer_type" = "symfony-bundle" ]; then
+                    PROJECT_TYPE="php-oro-bundle"
+                elif [ -f "bin/console" ] || [ -f "public/index.php" ]; then
+                    PROJECT_TYPE="php-oro"
+                else
+                    # Likely a standalone bundle without explicit type
+                    PROJECT_TYPE="php-oro-bundle"
+                fi
+            elif [ -f "config/oro/bundles.yml" ]; then
                 PROJECT_TYPE="php-oro-bundle"
                 FRAMEWORK="oro"
             elif jq -e '.require."laravel/framework"' composer.json &>/dev/null; then
