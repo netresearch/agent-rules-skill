@@ -18,7 +18,7 @@ jobs:
     name: ShellCheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Run ShellCheck on all scripts
         run: |
@@ -42,7 +42,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -142,7 +142,7 @@ jobs:
     name: Validate Structure
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Validate AGENTS.md structure
         run: |
@@ -165,8 +165,10 @@ jobs:
       - name: Check for unresolved placeholders
         run: |
           # Check for {{PLACEHOLDER}} patterns that indicate incomplete generation
-          if grep -rE '\{\{[A-Z][A-Z0-9_]*\}\}' AGENTS.md **/AGENTS.md 2>/dev/null; then
-            echo "ERROR: Found unresolved placeholders in AGENTS.md files"
+          # Use find to avoid glob expansion issues
+          if find . -name "AGENTS.md" -exec grep -lE '\{\{[A-Z][A-Z0-9_]*\}\}' {} \; 2>/dev/null | grep -q .; then
+            echo "ERROR: Found unresolved placeholders in AGENTS.md files:"
+            find . -name "AGENTS.md" -exec grep -lE '\{\{[A-Z][A-Z0-9_]*\}\}' {} \;
             exit 1
           fi
           echo "No unresolved placeholders found"
@@ -183,28 +185,30 @@ jobs:
     name: Checkpoint Verification
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Install yq
         run: |
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.52.2/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
       - name: Run mechanical checkpoint verification
         run: |
+          set -eo pipefail
           CHECKPOINTS_FILE="skills/agents/checkpoints.yaml"
           if [ ! -f "$CHECKPOINTS_FILE" ]; then
             echo "No checkpoints.yaml found, skipping"
             exit 0
           fi
 
-          ERRORS=0
-          WARNINGS=0
+          # Use temp file to track errors (avoids subshell scoping issues)
+          ERROR_FILE=$(mktemp)
+          trap 'rm -f "$ERROR_FILE"' EXIT
 
           echo "=== Running Mechanical Checkpoints ==="
 
-          # Process each mechanical checkpoint
-          yq e '.mechanical[]' "$CHECKPOINTS_FILE" -o=json | jq -c '.' | while read -r checkpoint; do
+          # Process each mechanical checkpoint using process substitution (not pipe)
+          while read -r checkpoint; do
             id=$(echo "$checkpoint" | jq -r '.id')
             type=$(echo "$checkpoint" | jq -r '.type')
             target=$(echo "$checkpoint" | jq -r '.target')
@@ -216,7 +220,7 @@ jobs:
             if [ ! -f "$target" ]; then
               if [ "$severity" = "error" ]; then
                 echo "❌ [$id] $desc (file not found: $target)"
-                echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+                echo "1" > "$ERROR_FILE"
               fi
               continue
             fi
@@ -227,7 +231,7 @@ jobs:
                   echo "✅ [$id] $desc"
                 else
                   echo "❌ [$id] $desc"
-                  [ "$severity" = "error" ] && echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+                  [ "$severity" = "error" ] && echo "1" > "$ERROR_FILE"
                 fi
                 ;;
               "regex")
@@ -236,7 +240,7 @@ jobs:
                 else
                   if [ "$severity" = "error" ]; then
                     echo "❌ [$id] $desc"
-                    echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+                    echo "1" > "$ERROR_FILE"
                   elif [ "$severity" = "warning" ]; then
                     echo "⚠️  [$id] $desc"
                   else
@@ -249,7 +253,7 @@ jobs:
                   if [ "$severity" = "error" ]; then
                     echo "❌ [$id] $desc"
                     grep -nE "$pattern" "$target" | head -3
-                    echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+                    echo "1" > "$ERROR_FILE"
                   else
                     echo "⚠️  [$id] $desc"
                   fi
@@ -258,11 +262,11 @@ jobs:
                 fi
                 ;;
             esac
-          done
+          done < <(yq e '.mechanical[]' "$CHECKPOINTS_FILE" -o=json | jq -c '.')
 
           echo ""
           echo "=== Checkpoint Summary ==="
-          if [ "${CHECKPOINT_ERROR:-0}" = "1" ]; then
+          if [ -s "$ERROR_FILE" ]; then
             echo "❌ Some error-level checkpoints failed"
             exit 1
           else
