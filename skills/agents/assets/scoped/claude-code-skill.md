@@ -5,8 +5,6 @@
 <!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
-
-Claude Code skill/plugin providing AI agent capabilities.
 <!-- AGENTS-GENERATED:END overview -->
 
 <!-- AGENTS-GENERATED:START filemap -->

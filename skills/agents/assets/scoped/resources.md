@@ -5,8 +5,6 @@
 <!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
-
-Static resources, assets, templates, and configuration files.
 <!-- AGENTS-GENERATED:END overview -->
 
 <!-- AGENTS-GENERATED:START filemap -->

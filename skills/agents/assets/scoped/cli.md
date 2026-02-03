@@ -5,8 +5,6 @@
 <!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
-
-Command-line interface tools and entry points.
 <!-- AGENTS-GENERATED:END overview -->
 
 <!-- AGENTS-GENERATED:START filemap -->

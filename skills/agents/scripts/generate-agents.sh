@@ -1448,12 +1448,12 @@ else
 
                 # Generate file map for Docker files
                 docker_file_map=""
-                for df in Dockerfile Dockerfile.* *.dockerfile docker-compose*.yml compose*.yml .dockerignore; do
-                    if [ -f "$SCOPE_PATH/$df" ] 2>/dev/null; then
-                        [ -z "$docker_file_map" ] && docker_file_map="| File | Purpose |\n|------|---------|"
-                        docker_file_map="$docker_file_map\n| \`$df\` | (add description) |"
-                    fi
-                done
+                while IFS= read -r df; do
+                    [ -z "$df" ] && continue
+                    filename=$(basename "$df")
+                    [ -z "$docker_file_map" ] && docker_file_map="| File | Purpose |\n|------|---------|"
+                    docker_file_map="$docker_file_map\n| \`$filename\` | (add description) |"
+                done < <(find "$SCOPE_PATH" -maxdepth 1 -type f \( -name "Dockerfile*" -o -name "*.dockerfile" -o -name "docker-compose*.yml" -o -name "compose*.yml" -o -name ".dockerignore" \) 2>/dev/null | sort)
                 scope_vars[SCOPE_FILE_MAP]=$(echo -e "$docker_file_map")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=""
                 scope_vars[HOUSE_RULES]=""

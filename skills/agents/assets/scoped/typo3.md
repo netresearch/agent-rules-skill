@@ -5,8 +5,6 @@
 <!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
-
-TYPO3 extension following [TYPO3 Coding Guidelines](https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/CodingGuidelines/Index.html) and PSR-12.
 <!-- AGENTS-GENERATED:END overview -->
 
 <!-- AGENTS-GENERATED:START filemap -->

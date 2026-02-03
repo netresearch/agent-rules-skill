@@ -5,8 +5,6 @@
 <!-- AGENTS-GENERATED:START overview -->
 ## Overview
 {{SCOPE_DESCRIPTION}}
-
-Example applications, usage patterns, and sample code.
 <!-- AGENTS-GENERATED:END overview -->
 
 <!-- AGENTS-GENERATED:START filemap -->

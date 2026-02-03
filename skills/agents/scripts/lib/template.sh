@@ -127,11 +127,15 @@ get_scope_description() {
         "backend-typescript") echo "Backend services (TypeScript/Node.js)" ;;
         "backend-python") echo "Backend services (Python)" ;;
         "frontend-typescript") echo "Frontend application (TypeScript/React/Vue)" ;;
-        "cli") echo "Command-line interface tools" ;;
-        "testing") echo "Test suites and testing utilities" ;;
-        "documentation") echo "Documentation and guides" ;;
-        "examples") echo "Example applications and usage patterns" ;;
-        "resources") echo "Static resources and assets" ;;
+        "cli") echo "Command-line interface tools and entry points" ;;
+        "testing") echo "Test suites, fixtures, and testing utilities" ;;
+        "documentation") echo "Project documentation, guides, and reference materials" ;;
+        "examples") echo "Example applications, usage patterns, and sample code" ;;
+        "resources") echo "Static resources, assets, templates, and configuration files" ;;
+        "docker") echo "Container/Docker configuration for building and deploying images" ;;
+        "claude-code-skill") echo "Claude Code skill/plugin providing AI agent capabilities" ;;
+        "typo3") echo "TYPO3 extension following TYPO3 CGL and PSR-12" ;;
+        "oro") echo "Oro bundle following Oro Architecture and Symfony best practices" ;;
         *) echo "$type" ;;
     esac
 }
