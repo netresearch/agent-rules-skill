@@ -81,7 +81,7 @@ Documentation/     → RST documentation for docs.typo3.org
 ## Security & safety
 - **Always use QueryBuilder** or Extbase repositories - never raw SQL
 - **Escape output** in Fluid: `{variable}` auto-escapes, use `<f:format.raw>` only when safe
-- **CSRF protection**: use `@TYPO3\CMS\Extbase\Annotation\IgnoreValidation` carefully
+- **CSRF protection**: use `\TYPO3\CMS\Core\FormProtection\FormProtectionFactory` for forms
 - **Access checks**: use `$GLOBALS['BE_USER']->check()` for backend
 - **File handling**: use FAL (File Abstraction Layer), never direct file paths
 - **Never trust user input**: validate via Extbase validators or custom validation

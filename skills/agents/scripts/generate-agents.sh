@@ -1368,6 +1368,22 @@ else
                 set_scope_if_present DEV_CMD "$(echo "$SCOPE_COMMANDS" | jq -r '.dev // empty')"
                 scope_vars[CSS_APPROACH]="CSS Modules"
 
+                # Build whole-line placeholders for commands section
+                [ -n "${scope_vars[INSTALL_CMD]:-}" ] && \
+                    scope_vars[INSTALL_LINE]="- Install: \`${scope_vars[INSTALL_CMD]}\`"
+                [ -n "${scope_vars[TYPECHECK_CMD]:-}" ] && \
+                    scope_vars[TYPECHECK_LINE]="- Typecheck: \`${scope_vars[TYPECHECK_CMD]}\`"
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[LINT_LINE]="- Lint: \`${scope_vars[LINT_CMD]}\`"
+                [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
+                    scope_vars[FORMAT_LINE]="- Format: \`${scope_vars[FORMAT_CMD]}\`"
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[TEST_LINE]="- Test: \`${scope_vars[TEST_CMD]}\`"
+                [ -n "${scope_vars[BUILD_CMD]:-}" ] && \
+                    scope_vars[BUILD_LINE]="- Build: \`${scope_vars[BUILD_CMD]}\`"
+                [ -n "${scope_vars[DEV_CMD]:-}" ] && \
+                    scope_vars[DEV_LINE]="- Dev server: \`${scope_vars[DEV_CMD]}\`"
+
                 case "$FRAMEWORK" in
                     "react")
                         scope_vars[FRAMEWORK_CONVENTIONS]="- Use functional components with hooks

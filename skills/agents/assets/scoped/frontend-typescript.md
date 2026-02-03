@@ -27,13 +27,13 @@
 
 <!-- AGENTS-GENERATED:START commands -->
 ## Build & tests
-- Install: `{{INSTALL_CMD}}`
-- Typecheck: `{{TYPECHECK_CMD}}`
-- Lint: `{{LINT_CMD}}`
-- Format: `{{FORMAT_CMD}}`
-- Test: `{{TEST_CMD}}`
-- Build: `{{BUILD_CMD}}`
-- Dev server: `{{DEV_CMD}}`
+{{INSTALL_LINE}}
+{{TYPECHECK_LINE}}
+{{LINT_LINE}}
+{{FORMAT_LINE}}
+{{TEST_LINE}}
+{{BUILD_LINE}}
+{{DEV_LINE}}
 <!-- AGENTS-GENERATED:END commands -->
 
 <!-- AGENTS-GENERATED:START code-style -->

@@ -72,9 +72,8 @@
 > See **Golden Samples** section above for files that demonstrate correct patterns.
 
 Key patterns:
-- Error wrapping: `fmt.Errorf("context: %w", err)`
 - Context handling: always pass and respect `context.Context`
-- Naming: `camelCase` unexported, `PascalCase` exported
+- Interfaces: define where used, not where implemented
 <!-- AGENTS-GENERATED:END examples -->
 
 <!-- AGENTS-GENERATED:START help -->
