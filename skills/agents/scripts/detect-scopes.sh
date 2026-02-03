@@ -220,7 +220,6 @@ done
 if [ -d "skills" ]; then
     for skill_dir in skills/*/; do
         if [ -f "${skill_dir}SKILL.md" ]; then
-            skill_name=$(basename "$skill_dir")
             # Count files in skill (sh, md, yaml)
             count=$(find "$skill_dir" -type f \( -name "*.sh" -o -name "*.md" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l)
             add_scope "${skill_dir%/}" "claude-code-skill" "$count"
@@ -256,29 +255,35 @@ fi
 
 # Concourse CI
 concourse_detected=false
-for concourse_pattern in "ci/pipeline.yml" "ci/pipeline.yaml" "concourse/pipeline.yml" "pipeline.yml" "pipeline.yaml"; do
+concourse_dir=""
+for concourse_pattern in "ci/pipeline.yml" "ci/pipeline.yaml" "concourse/pipeline.yml"; do
     if [ -f "$concourse_pattern" ]; then
         concourse_dir=$(dirname "$concourse_pattern")
-        [ "$concourse_dir" = "." ] && concourse_dir="ci"
         concourse_detected=true
         break
     fi
 done
-# Also check for *-pipeline.yml at root
+# Check for pipeline.yml at root - only create scope if ci/ directory exists
+if [ "$concourse_detected" = false ]; then
+    if [ -f "pipeline.yml" ] || [ -f "pipeline.yaml" ]; then
+        if [ -d "ci" ]; then
+            concourse_dir="ci"
+            concourse_detected=true
+        fi
+        # If no ci/ directory, root AGENTS.md will cover the pipeline file
+    fi
+fi
+# Also check for *-pipeline.yml at root - only create scope if ci/ directory exists
 if [ "$concourse_detected" = false ]; then
     pipeline_files=$(find . -maxdepth 1 -name "*-pipeline.yml" -o -name "*-pipeline.yaml" 2>/dev/null | wc -l)
-    if [ "$pipeline_files" -gt 0 ]; then
-        concourse_dir="."
+    if [ "$pipeline_files" -gt 0 ] && [ -d "ci" ]; then
+        concourse_dir="ci"
         concourse_detected=true
     fi
 fi
-if [ "$concourse_detected" = true ]; then
-    if [ -d "ci" ]; then
-        count=$(find ci -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.sh" \) 2>/dev/null | wc -l)
-    else
-        count=$(find . -maxdepth 1 -name "*pipeline*.yml" -o -name "*pipeline*.yaml" 2>/dev/null | wc -l)
-    fi
-    [ "$count" -ge 1 ] && add_scope "${concourse_dir}" "concourse" "$count"
+if [ "$concourse_detected" = true ] && [ -n "$concourse_dir" ] && [ -d "$concourse_dir" ]; then
+    count=$(find "$concourse_dir" -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.sh" \) 2>/dev/null | wc -l)
+    [ "$count" -ge 1 ] && add_scope "$concourse_dir" "concourse" "$count"
 fi
 
 # Output JSON

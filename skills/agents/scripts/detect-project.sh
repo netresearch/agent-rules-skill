@@ -100,19 +100,15 @@ detect_language() {
             if [ -f "ext_emconf.php" ]; then
                 PROJECT_TYPE="php-typo3-extension"
                 FRAMEWORK="typo3"
-                # Try to get TYPO3 version from composer.json or ext_emconf.php
-                TYPO3_VERSION=$(jq -r '.require."typo3/cms-core" // .["require-dev"]."typo3/cms-core" // "unknown"' composer.json 2>/dev/null || echo "unknown")
             elif jq -e '.require."typo3/cms-core"' composer.json &>/dev/null; then
                 PROJECT_TYPE="php-typo3"
                 FRAMEWORK="typo3"
-                TYPO3_VERSION=$(jq -r '.require."typo3/cms-core"' composer.json 2>/dev/null || echo "unknown")
             # Oro detection (OroCommerce, OroPlatform, OroCRM)
             # Differentiate between full Oro project and standalone bundle
             elif jq -e '.require."oro/platform"' composer.json &>/dev/null || \
                  jq -e '.require."oro/commerce"' composer.json &>/dev/null || \
                  jq -e '.require."oro/crm"' composer.json &>/dev/null; then
                 FRAMEWORK="oro"
-                ORO_VERSION=$(jq -r '.require."oro/platform" // .require."oro/commerce" // .require."oro/crm" // "unknown"' composer.json 2>/dev/null || echo "unknown")
                 # Check if it's a standalone bundle (has type: oro-bundle, or no bin/console)
                 composer_type=$(jq -r '.type // ""' composer.json 2>/dev/null)
                 if [ "$composer_type" = "oro-bundle" ] || [ "$composer_type" = "symfony-bundle" ]; then

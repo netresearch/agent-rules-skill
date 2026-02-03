@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Main AGENTS.md generator script
 # Requires: Bash 4.3+ (for nameref variables)
+# shellcheck disable=SC2034  # vars/scope_vars are used via nameref in template functions
 set -euo pipefail
 
 # Check Bash version - we need 4.3+ for nameref variables (local -n)
@@ -936,10 +937,10 @@ else
             if [ -n "$files" ]; then
                 result="| File | Purpose |\n|------|---------|"
                 while IFS= read -r file; do
-                    local basename=$(basename "$file")
-                    local rel_path="${file#$PROJECT_DIR/}"
+                    local rel_path="${file#"$PROJECT_DIR"/}"
                     # Try to extract purpose from first docblock or comment
-                    local purpose=$(head -20 "$file" 2>/dev/null | grep -E '^\s*(//|#|\*|/\*\*)' | head -1 | sed 's/^[[:space:]]*[/*#]*[[:space:]]*//' | cut -c1-50)
+                    local purpose
+                    purpose=$(head -20 "$file" 2>/dev/null | grep -E '^\s*(//|#|\*|/\*\*)' | head -1 | sed 's/^[[:space:]]*[/*#]*[[:space:]]*//' | cut -c1-50)
                     [ -z "$purpose" ] && purpose="(add description)"
                     result="$result\n| \`$rel_path\` | $purpose |"
                 done <<< "$files"
@@ -955,12 +956,13 @@ else
 
             # Look for well-documented files with tests
             local sample
+            # shellcheck disable=SC2038  # Source files rarely have special chars
             sample=$(find "$scope_path" -maxdepth 2 -name "*.$file_ext" -type f 2>/dev/null | \
                      xargs -I{} sh -c 'wc -l "{}" | grep -v "^0"' 2>/dev/null | \
                      sort -rn | head -1 | awk '{print $2}')
 
             if [ -n "$sample" ] && [ -f "$sample" ]; then
-                local rel_path="${sample#$PROJECT_DIR/}"
+                local rel_path="${sample#"$PROJECT_DIR"/}"
                 result="| Pattern | Reference |\n|---------|-----------|"
                 result="$result\n| Standard implementation | \`$rel_path\` |"
             fi
@@ -1550,7 +1552,7 @@ else
                 if [ -f "docker-compose.yml" ]; then
                     registry=$(grep -E 'image:' docker-compose.yml 2>/dev/null | head -1 | sed 's/.*image: *//;s/:.*//;s|/.*||' || echo "")
                 fi
-                if [ -z "$registry" ] && [ -f ".github/workflows/"*".yml" ]; then
+                if [ -z "$registry" ] && [ -d ".github/workflows" ]; then
                     registry=$(grep -E 'registry:|ghcr.io|docker.io|quay.io' .github/workflows/*.yml 2>/dev/null | head -1 | sed 's/.*: *//' || echo "")
                 fi
                 [ -n "$registry" ] && scope_vars[REGISTRY_LINE]="- Registry: $registry"
