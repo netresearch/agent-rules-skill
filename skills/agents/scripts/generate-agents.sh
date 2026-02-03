@@ -1137,6 +1137,44 @@ else
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
                 ;;
 
+            "symfony")
+                scope_vars[PHP_VERSION]="$VERSION"
+                SYMFONY_VERSION=$(jq -r '.require."symfony/framework-bundle" // .require."symfony/symfony" // "^7.0"' composer.json 2>/dev/null || echo "^7.0")
+                scope_vars[SYMFONY_VERSION]="$SYMFONY_VERSION"
+                scope_vars[PHPSTAN_LEVEL]="9"
+                scope_vars[HOUSE_RULES]=""
+
+                # Build whole-line placeholders for setup section
+                scope_vars[INSTALL_LINE]="- Install: \`composer install\`"
+                [ -n "${scope_vars[PHP_VERSION]:-}" ] && [ "${scope_vars[PHP_VERSION]}" != "unknown" ] && \
+                    scope_vars[PHP_VERSION_LINE]="- PHP version: ${scope_vars[PHP_VERSION]}"
+                [ -n "${scope_vars[SYMFONY_VERSION]:-}" ] && \
+                    scope_vars[SYMFONY_VERSION_LINE]="- Symfony version: ${scope_vars[SYMFONY_VERSION]}"
+                # Detect database from doctrine config
+                if [ -f "config/packages/doctrine.yaml" ]; then
+                    scope_vars[DATABASE_LINE]="- Database: See config/packages/doctrine.yaml"
+                fi
+
+                # Build commands table
+                scope_vars[COMMANDS_TABLE]="| Task | Command |
+|------|---------|
+| Lint | \`bin/console lint:yaml config/\` |
+| CS Fix | \`vendor/bin/php-cs-fixer fix\` |
+| PHPStan | \`vendor/bin/phpstan analyse\` |
+| Unit tests | \`vendor/bin/phpunit\` |
+| Clear cache | \`bin/console cache:clear\` |
+| Debug routes | \`bin/console debug:router\` |
+| Debug container | \`bin/console debug:container\` |"
+
+                # Build checklist lines
+                scope_vars[PHPSTAN_CHECKLIST_LINE]="- [ ] PHPStan level ${scope_vars[PHPSTAN_LEVEL]} clean"
+                scope_vars[CS_CHECKLIST_LINE]="- [ ] Code style clean: \`vendor/bin/php-cs-fixer fix --dry-run\`"
+                scope_vars[TEST_CHECKLIST_LINE]="- [ ] Tests pass: \`vendor/bin/phpunit\`"
+
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "php")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "php")
+                ;;
+
             "backend-python")
                 scope_vars[PYTHON_VERSION]="$VERSION"
                 scope_vars[PACKAGE_MANAGER]=$(echo "$PROJECT_INFO" | jq -r '.package_manager')
@@ -1455,6 +1493,82 @@ else
                     docker_file_map="$docker_file_map\n| \`$filename\` | (add description) |"
                 done < <(find "$SCOPE_PATH" -maxdepth 1 -type f \( -name "Dockerfile*" -o -name "*.dockerfile" -o -name "docker-compose*.yml" -o -name "compose*.yml" -o -name ".dockerignore" \) 2>/dev/null | sort)
                 scope_vars[SCOPE_FILE_MAP]=$(echo -e "$docker_file_map")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=""
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
+            "github-actions")
+                # Count workflows
+                workflow_count=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | wc -l)
+                scope_vars[WORKFLOW_COUNT_LINE]="- Workflows: $workflow_count workflow file(s)"
+
+                # Check for reusable workflows
+                reusable_count=$(grep -l "workflow_call:" .github/workflows/*.yml 2>/dev/null | wc -l || true)
+                [ "$reusable_count" -gt 0 ] && \
+                    scope_vars[REUSABLE_WORKFLOWS_LINE]="- Reusable workflows: $reusable_count"
+
+                # Generate file map for workflows
+                workflow_file_map=""
+                while IFS= read -r wf; do
+                    [ -z "$wf" ] && continue
+                    filename=$(basename "$wf")
+                    # Try to extract workflow name from file
+                    wf_name=$(grep -m1 "^name:" "$wf" 2>/dev/null | sed 's/name: *//' || echo "(add description)")
+                    [ -z "$workflow_file_map" ] && workflow_file_map="| File | Purpose |\n|------|---------|"
+                    workflow_file_map="$workflow_file_map\n| \`$filename\` | $wf_name |"
+                done < <(find .github/workflows -maxdepth 1 -type f \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | sort)
+                scope_vars[SCOPE_FILE_MAP]=$(echo -e "$workflow_file_map")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=""
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
+            "gitlab-ci")
+                # Count pipeline stages/jobs
+                job_count=$(grep -cE "^[a-zA-Z_-]+:$" .gitlab-ci.yml 2>/dev/null || echo "0")
+                scope_vars[JOB_COUNT_LINE]="- Jobs defined: ~$job_count"
+
+                # Check for includes
+                include_count=$(grep -cE "^  *- " .gitlab-ci.yml 2>/dev/null | head -1 || echo "0")
+                [ "$include_count" -gt 0 ] && \
+                    scope_vars[INCLUDES_LINE]="- Includes external files/templates"
+
+                # File map - just the main file and any .gitlab/ directory contents
+                gitlab_file_map="| File | Purpose |\n|------|---------|"
+                gitlab_file_map="$gitlab_file_map\n| \`.gitlab-ci.yml\` | Main pipeline configuration |"
+                if [ -d ".gitlab" ]; then
+                    while IFS= read -r gf; do
+                        [ -z "$gf" ] && continue
+                        filename="${gf#.gitlab/}"
+                        gitlab_file_map="$gitlab_file_map\n| \`.gitlab/$filename\` | (add description) |"
+                    done < <(find .gitlab -type f -name "*.yml" 2>/dev/null | sort)
+                fi
+                scope_vars[SCOPE_FILE_MAP]=$(echo -e "$gitlab_file_map")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=""
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
+            "concourse")
+                # Count pipeline files
+                pipeline_count=$(find . -maxdepth 2 -name "*pipeline*.yml" -o -name "*pipeline*.yaml" 2>/dev/null | wc -l)
+                scope_vars[PIPELINE_COUNT_LINE]="- Pipeline files: $pipeline_count"
+
+                # Check for tasks directory
+                [ -d "ci/tasks" ] || [ -d "tasks" ] && \
+                    scope_vars[TASKS_LINE]="- Tasks directory present"
+
+                # File map
+                concourse_file_map="| File | Purpose |\n|------|---------|"
+                while IFS= read -r pf; do
+                    [ -z "$pf" ] && continue
+                    filename=$(basename "$pf")
+                    concourse_file_map="$concourse_file_map\n| \`$filename\` | (add description) |"
+                done < <(find . -maxdepth 2 \( -name "*pipeline*.yml" -o -name "*pipeline*.yaml" \) 2>/dev/null | sort)
+                if [ -d "ci/tasks" ]; then
+                    task_count=$(find ci/tasks -name "*.yml" 2>/dev/null | wc -l)
+                    [ "$task_count" -gt 0 ] && \
+                        concourse_file_map="$concourse_file_map\n| \`ci/tasks/\` | $task_count task definition(s) |"
+                fi
+                scope_vars[SCOPE_FILE_MAP]=$(echo -e "$concourse_file_map")
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=""
                 scope_vars[HOUSE_RULES]=""
                 ;;

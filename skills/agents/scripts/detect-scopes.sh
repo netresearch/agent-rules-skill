@@ -74,6 +74,8 @@ case "$LANGUAGE" in
             PHP_BACKEND_TYPE="typo3"
         elif [ "$FRAMEWORK" = "oro" ] || [ "$PROJECT_TYPE" = "php-oro" ] || [ "$PROJECT_TYPE" = "php-oro-bundle" ]; then
             PHP_BACKEND_TYPE="oro"
+        elif [ "$FRAMEWORK" = "symfony" ] || [ "$PROJECT_TYPE" = "php-symfony" ]; then
+            PHP_BACKEND_TYPE="symfony"
         else
             PHP_BACKEND_TYPE="backend-php"
         fi
@@ -230,6 +232,49 @@ for docker_dir in docker deploy .docker infrastructure infra; do
         [ "$count" -ge 2 ] && add_scope "$docker_dir" "docker" "$count"
     fi
 done
+
+# Check for CI/CD configurations (cross-language)
+# GitHub Actions
+if [ -d ".github/workflows" ]; then
+    count=$(find .github/workflows -type f -name "*.yml" -o -name "*.yaml" 2>/dev/null | wc -l)
+    [ "$count" -ge 1 ] && add_scope ".github/workflows" "github-actions" "$count"
+fi
+
+# GitLab CI - use .gitlab directory if exists, otherwise skip (root AGENTS.md covers it)
+if [ -f ".gitlab-ci.yml" ]; then
+    if [ -d ".gitlab" ]; then
+        count=$(find .gitlab -type f -name "*.yml" 2>/dev/null | wc -l)
+        [ "$count" -ge 1 ] && add_scope ".gitlab" "gitlab-ci" "$count"
+    fi
+    # Note: If no .gitlab/ directory, the root AGENTS.md will mention gitlab-ci.yml
+fi
+
+# Concourse CI
+concourse_detected=false
+for concourse_pattern in "ci/pipeline.yml" "ci/pipeline.yaml" "concourse/pipeline.yml" "pipeline.yml" "pipeline.yaml"; do
+    if [ -f "$concourse_pattern" ]; then
+        concourse_dir=$(dirname "$concourse_pattern")
+        [ "$concourse_dir" = "." ] && concourse_dir="ci"
+        concourse_detected=true
+        break
+    fi
+done
+# Also check for *-pipeline.yml at root
+if [ "$concourse_detected" = false ]; then
+    pipeline_files=$(find . -maxdepth 1 -name "*-pipeline.yml" -o -name "*-pipeline.yaml" 2>/dev/null | wc -l)
+    if [ "$pipeline_files" -gt 0 ]; then
+        concourse_dir="."
+        concourse_detected=true
+    fi
+fi
+if [ "$concourse_detected" = true ]; then
+    if [ -d "ci" ]; then
+        count=$(find ci -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.sh" \) 2>/dev/null | wc -l)
+    else
+        count=$(find . -maxdepth 1 -name "*pipeline*.yml" -o -name "*pipeline*.yaml" 2>/dev/null | wc -l)
+    fi
+    [ "$count" -ge 1 ] && add_scope "${concourse_dir}" "concourse" "$count"
+fi
 
 # Output JSON
 if [ ${#scopes[@]} -eq 0 ]; then

@@ -136,6 +136,10 @@ get_scope_description() {
         "claude-code-skill") echo "Claude Code skill/plugin providing AI agent capabilities" ;;
         "typo3") echo "TYPO3 extension following TYPO3 CGL and PSR-12" ;;
         "oro") echo "Oro bundle following Oro Architecture and Symfony best practices" ;;
+        "symfony") echo "Symfony application following Symfony best practices" ;;
+        "github-actions") echo "GitHub Actions workflows and CI/CD automation" ;;
+        "gitlab-ci") echo "GitLab CI/CD pipeline configuration" ;;
+        "concourse") echo "Concourse CI pipeline and task definitions" ;;
         *) echo "$type" ;;
     esac
 }
