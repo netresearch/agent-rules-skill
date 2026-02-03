@@ -2,11 +2,33 @@
 # Extract build commands from various build tool files
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
-# Get project info
-PROJECT_INFO=$(bash "$(dirname "$0")/detect-project.sh" "$PROJECT_DIR")
+# Stack filter: node, php, go, python, or auto (default)
+STACK_FILTER="${2:-auto}"
+
+# Skip extraction functions based on stack
+should_extract_node() {
+    [[ "$STACK_FILTER" == "auto" || "$STACK_FILTER" == "node" ]]
+}
+
+should_extract_php() {
+    [[ "$STACK_FILTER" == "auto" || "$STACK_FILTER" == "php" ]]
+}
+
+should_extract_go() {
+    [[ "$STACK_FILTER" == "auto" || "$STACK_FILTER" == "go" ]]
+}
+
+should_extract_python() {
+    [[ "$STACK_FILTER" == "auto" || "$STACK_FILTER" == "python" ]]
+}
+
+# Get project info (use . since we already cd'd to PROJECT_DIR)
+PROJECT_INFO=$(bash "$SCRIPT_DIR/detect-project.sh" ".")
 LANGUAGE=$(echo "$PROJECT_INFO" | jq -r '.language')
 # shellcheck disable=SC2034  # BUILD_TOOL reserved for future build-tool-specific detection
 BUILD_TOOL=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
@@ -270,12 +292,25 @@ set_language_defaults() {
     esac
 }
 
-# Run extraction
-extract_from_makefile
-extract_from_package_json
-extract_from_composer_json
-extract_from_pyproject
-set_language_defaults
+# Run extraction (stack-filtered)
+extract_from_makefile  # Always extract Makefile (cross-stack)
+should_extract_node && extract_from_package_json
+should_extract_php && extract_from_composer_json
+should_extract_python && extract_from_pyproject
+
+# Only set language defaults if matching stack or auto
+case "$STACK_FILTER" in
+    "auto") set_language_defaults ;;
+    "node") [[ "$LANGUAGE" == "typescript" || "$LANGUAGE" == "javascript" ]] && set_language_defaults ;;
+    "php") [[ "$LANGUAGE" == "php" ]] && set_language_defaults ;;
+    "go") [[ "$LANGUAGE" == "go" ]] && set_language_defaults ;;
+    "python") [[ "$LANGUAGE" == "python" ]] && set_language_defaults ;;
+    *)
+        echo "ERROR: Invalid STACK_FILTER value: $STACK_FILTER" >&2
+        echo "Valid options: auto, node, php, go, python" >&2
+        exit 1
+        ;;
+esac
 
 # Output JSON
 jq -n \

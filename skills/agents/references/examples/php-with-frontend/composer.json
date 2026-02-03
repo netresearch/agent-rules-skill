@@ -1,0 +1,8 @@
+{
+    "name": "test/php-with-frontend",
+    "require": { "php": "^8.2" },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "phpstan": "vendor/bin/phpstan analyze"
+    }
+}
