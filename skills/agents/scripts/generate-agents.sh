@@ -926,14 +926,25 @@ else
         }
 
         # Generate scope-specific file map
+        # Usage: generate_scope_file_map <path> <ext1> [ext2] [ext3]...
         generate_scope_file_map() {
             local scope_path="$1"
-            local file_ext="$2"
+            shift  # Remove first arg, leaving extensions
+            local extensions=("$@")
             local result=""
+
+            # Build find pattern for multiple extensions
+            local find_args=()
+            for ext in "${extensions[@]}"; do
+                if [[ ${#find_args[@]} -gt 0 ]]; then
+                    find_args+=("-o")
+                fi
+                find_args+=("-name" "*.$ext")
+            done
 
             # Find key files (most recently modified, largest, or entry points)
             local files
-            files=$(find "$scope_path" -maxdepth 2 -name "*.$file_ext" -type f 2>/dev/null | head -5)
+            files=$(find "$scope_path" -maxdepth 2 -type f \( "${find_args[@]}" \) 2>/dev/null | head -5)
 
             if [ -n "$files" ]; then
                 result="| File | Purpose |\n|------|---------|"
@@ -950,15 +961,26 @@ else
         }
 
         # Generate scope-specific golden samples
+        # Usage: generate_scope_golden_samples <path> <ext1> [ext2] [ext3]...
         generate_scope_golden_samples() {
             local scope_path="$1"
-            local file_ext="$2"
+            shift  # Remove first arg, leaving extensions
+            local extensions=("$@")
             local result=""
+
+            # Build find pattern for multiple extensions
+            local find_args=()
+            for ext in "${extensions[@]}"; do
+                if [[ ${#find_args[@]} -gt 0 ]]; then
+                    find_args+=("-o")
+                fi
+                find_args+=("-name" "*.$ext")
+            done
 
             # Look for well-documented files with tests
             local sample
             # shellcheck disable=SC2038  # Source files rarely have special chars
-            sample=$(find "$scope_path" -maxdepth 2 -name "*.$file_ext" -type f 2>/dev/null | \
+            sample=$(find "$scope_path" -maxdepth 2 -type f \( "${find_args[@]}" \) 2>/dev/null | \
                      xargs -I{} sh -c 'wc -l "{}" | grep -v "^0"' 2>/dev/null | \
                      sort -rn | head -1 | awk '{print $2}')
 
@@ -1358,8 +1380,8 @@ else
                 [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
                     scope_vars[FORMAT_CHECKLIST_LINE]="- [ ] Formatted: \`${scope_vars[FORMAT_CMD]}\`"
 
-                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
-                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts" "tsx")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts" "tsx")
                 ;;
 
             "frontend-typescript")
@@ -1459,8 +1481,8 @@ else
                 [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
                     scope_vars[FORMAT_CHECKLIST_LINE]="- [ ] Formatted: \`${scope_vars[FORMAT_CMD]}\`"
 
-                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts")
-                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts")
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "ts" "tsx")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "ts" "tsx")
                 ;;
 
             "cli")
