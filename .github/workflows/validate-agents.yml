@@ -133,6 +133,31 @@ jobs:
               exit 1
             fi
 
+            # Regression test 4: No cross-stack contamination
+            # In hybrid repos, frontend scopes should NOT have PHP/Go versions
+            if [[ "$fixture" == *"php-with-frontend"* ]] || [[ "$fixture" == *"go-with-internal-web"* ]]; then
+              # Find any scoped AGENTS.md that contains frontend/web
+              for agents_file in $(find "$fixture" -name "AGENTS.md" | grep -E "(web|frontend)"); do
+                if grep -qE 'PHP version|Go version' "$agents_file" 2>/dev/null; then
+                  echo "ERROR: Cross-stack contamination detected in $agents_file"
+                  grep -E 'PHP version|Go version' "$agents_file"
+                  exit 1
+                fi
+                echo "  ✓ No cross-stack contamination in $agents_file"
+              done
+            fi
+
+            # Regression test 5: Frontend scopes with TSX should have files in output
+            if find "$fixture" -name "*.tsx" 2>/dev/null | grep -q .; then
+              # Has TSX files - check root AGENTS.md mentions them
+              if grep -q "Key Files\|File Map" "$fixture/AGENTS.md" 2>/dev/null; then
+                if ! grep -qE '\.tsx' "$fixture/AGENTS.md" 2>/dev/null; then
+                  echo "WARNING: TSX files exist but may not appear in AGENTS.md"
+                  # Not a hard failure - just warning
+                fi
+              fi
+            fi
+
             echo "✅ $fixture passed (generated $size bytes, all regression tests passed)"
           done
 
