@@ -36,29 +36,49 @@ jobs:
           echo "✅ All scripts passed ShellCheck (errors only)"
 
   test-generator:
-    name: Test Generator
-    runs-on: ubuntu-latest
+    name: Test Generator (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update && sudo apt-get install -y jq
 
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          # macOS ships with Bash 3.x, but scripts require Bash 4.3+ for nameref
+          brew install bash jq
+          echo "Using Homebrew bash: $(brew --prefix)/bin/bash"
+          $(brew --prefix)/bin/bash --version
+
       - name: Test generator on fixture repos
         run: |
+          # On macOS, use Homebrew bash (4.x+); on Linux, use system bash
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            BASH_CMD="$(brew --prefix)/bin/bash"
+          else
+            BASH_CMD="bash"
+          fi
+          echo "Using bash: $BASH_CMD ($($BASH_CMD --version | head -1))"
+
           # Test against example fixture repos
           for fixture in skills/agents/references/examples/*/; do
             echo "Testing generator on: $fixture"
 
             # Run generator (dry-run first to check for errors)
-            if ! bash skills/agents/scripts/generate-agents.sh "$fixture" --dry-run; then
+            if ! $BASH_CMD skills/agents/scripts/generate-agents.sh "$fixture" --dry-run; then
               echo "ERROR: Generator failed dry-run on $fixture"
               exit 1
             fi
 
             # Run actual generation
-            if ! bash skills/agents/scripts/generate-agents.sh "$fixture" --force; then
+            if ! $BASH_CMD skills/agents/scripts/generate-agents.sh "$fixture" --force; then
               echo "ERROR: Generator failed on $fixture"
               exit 1
             fi
@@ -157,4 +177,94 @@ jobs:
             bash skills/agents/scripts/verify-commands.sh . || echo "Some commands failed verification"
           else
             echo "Command verification script not available"
+          fi
+
+  checkpoints:
+    name: Checkpoint Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Run mechanical checkpoint verification
+        run: |
+          CHECKPOINTS_FILE="skills/agents/checkpoints.yaml"
+          if [ ! -f "$CHECKPOINTS_FILE" ]; then
+            echo "No checkpoints.yaml found, skipping"
+            exit 0
+          fi
+
+          ERRORS=0
+          WARNINGS=0
+
+          echo "=== Running Mechanical Checkpoints ==="
+
+          # Process each mechanical checkpoint
+          yq e '.mechanical[]' "$CHECKPOINTS_FILE" -o=json | jq -c '.' | while read -r checkpoint; do
+            id=$(echo "$checkpoint" | jq -r '.id')
+            type=$(echo "$checkpoint" | jq -r '.type')
+            target=$(echo "$checkpoint" | jq -r '.target')
+            pattern=$(echo "$checkpoint" | jq -r '.pattern // empty')
+            severity=$(echo "$checkpoint" | jq -r '.severity')
+            desc=$(echo "$checkpoint" | jq -r '.desc')
+
+            # Skip if target doesn't exist
+            if [ ! -f "$target" ]; then
+              if [ "$severity" = "error" ]; then
+                echo "❌ [$id] $desc (file not found: $target)"
+                echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+              fi
+              continue
+            fi
+
+            case "$type" in
+              "file_exists")
+                if [ -f "$target" ]; then
+                  echo "✅ [$id] $desc"
+                else
+                  echo "❌ [$id] $desc"
+                  [ "$severity" = "error" ] && echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+                fi
+                ;;
+              "regex")
+                if grep -qE "$pattern" "$target" 2>/dev/null; then
+                  echo "✅ [$id] $desc"
+                else
+                  if [ "$severity" = "error" ]; then
+                    echo "❌ [$id] $desc"
+                    echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+                  elif [ "$severity" = "warning" ]; then
+                    echo "⚠️  [$id] $desc"
+                  else
+                    echo "ℹ️  [$id] $desc"
+                  fi
+                fi
+                ;;
+              "regex_not")
+                if grep -qE "$pattern" "$target" 2>/dev/null; then
+                  if [ "$severity" = "error" ]; then
+                    echo "❌ [$id] $desc"
+                    grep -nE "$pattern" "$target" | head -3
+                    echo "CHECKPOINT_ERROR=1" >> "$GITHUB_ENV"
+                  else
+                    echo "⚠️  [$id] $desc"
+                  fi
+                else
+                  echo "✅ [$id] $desc"
+                fi
+                ;;
+            esac
+          done
+
+          echo ""
+          echo "=== Checkpoint Summary ==="
+          if [ "${CHECKPOINT_ERROR:-0}" = "1" ]; then
+            echo "❌ Some error-level checkpoints failed"
+            exit 1
+          else
+            echo "✅ All error-level checkpoints passed"
           fi

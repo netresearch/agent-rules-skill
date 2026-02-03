@@ -20,13 +20,14 @@ count_source_files() {
     find "$dir" -maxdepth 3 -type f -name "$pattern" 2>/dev/null | wc -l
 }
 
-# Function to add scope
+# Function to add scope (uses jq for proper JSON escaping)
 add_scope() {
     local path="$1"
     local type="$2"
     local count="$3"
 
-    scopes+=("{\"path\": \"$path\", \"type\": \"$type\", \"files\": $count}")
+    scopes+=("$(jq -n --arg p "$path" --arg t "$type" --argjson c "$count" \
+        '{path: $p, type: $t, files: $c}')")
 }
 
 # Language-specific scope detection
