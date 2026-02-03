@@ -1,6 +1,111 @@
 #!/usr/bin/env bash
 # Template rendering helper functions
 
+# Remove sections that are entirely empty (only header + whitespace/empty tables)
+# A section is: ## Header followed by content until next ## or EOF
+# Empty means: only whitespace, empty table headers (2 rows only), or empty code blocks
+remove_empty_sections() {
+    local content="$1"
+
+    # Use awk to process sections
+    echo "$content" | awk '
+        BEGIN {
+            section_header = ""
+            section_body = ""
+            preamble = ""
+            in_section = 0
+        }
+
+        # Match section headers (## Something)
+        /^## / {
+            # Flush previous section if it had real content
+            if (in_section) {
+                if (has_content(section_body)) {
+                    print section_header
+                    printf "%s", section_body
+                }
+            } else {
+                # Print any preamble before first section
+                printf "%s", preamble
+            }
+
+            section_header = $0
+            section_body = ""
+            in_section = 1
+            next
+        }
+
+        # Accumulate content
+        {
+            if (in_section) {
+                section_body = section_body $0 "\n"
+            } else {
+                preamble = preamble $0 "\n"
+            }
+        }
+
+        END {
+            # Flush last section
+            if (in_section && has_content(section_body)) {
+                print section_header
+                printf "%s", section_body
+            }
+        }
+
+        # Check if body has real content (not just empty structural elements)
+        function has_content(body,    stripped, table_rows, n, i, data_rows) {
+            stripped = body
+
+            # Remove HTML comments
+            gsub(/<!--[^>]*-->/, "", stripped)
+
+            # Count table rows - if exactly 2 (header + divider), table is empty
+            # Split by newlines and count lines starting with |
+            n = split(stripped, lines, "\n")
+            table_rows = 0
+            data_rows = 0
+            for (i = 1; i <= n; i++) {
+                if (lines[i] ~ /^\|/) {
+                    table_rows++
+                    # Data row = table row that is NOT a header divider (|---|)
+                    if (lines[i] !~ /^\|[-:| ]+\|$/) {
+                        # Also not just the header row if we are still in first 2
+                        if (table_rows > 2) {
+                            data_rows++
+                        }
+                    }
+                }
+            }
+
+            # If we have a table with more than 2 rows, it has data
+            if (table_rows > 2) {
+                return 1
+            }
+
+            # Remove tables that are just header+divider (2 rows)
+            # Pattern: | ... |\n|---...|\n
+            gsub(/\|[^|\n]+(\|[^|\n]+)*\|\n\|[-:| ]+\|\n?/, "", stripped)
+
+            # Remove empty code blocks (``` followed by optional whitespace and ```)
+            gsub(/```[^\n]*\n[ \t]*\n?```/, "", stripped)
+            # Remove standalone code block markers
+            gsub(/```[a-z]*\n?/, "", stripped)
+
+            # Remove bullet points that are just placeholder markers or empty
+            gsub(/^[ \t]*[-*][ \t]*\n/, "", stripped)
+
+            # Remove lines that say "No scoped AGENTS.md files yet" or similar placeholder text
+            gsub(/- \(No scoped [^)]+\)/, "", stripped)
+            gsub(/- No known [^\n]+/, "", stripped)
+
+            # Check if anything substantive remains
+            gsub(/[ \t\n]/, "", stripped)
+
+            return length(stripped) > 0
+        }
+    '
+}
+
 # Render template with placeholder replacement
 # Supports multi-line values using bash string replacement
 render_template() {
@@ -63,6 +168,12 @@ render_template() {
     ')
 
     # Clean up multiple consecutive empty lines
+    content=$(echo "$content" | cat -s)
+
+    # Remove empty sections (only header + whitespace/empty tables)
+    content=$(remove_empty_sections "$content")
+
+    # Final cleanup of multiple consecutive empty lines after section removal
     content=$(echo "$content" | cat -s)
 
     # Write output

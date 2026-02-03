@@ -89,6 +89,3 @@ Backend services (TypeScript/Node.js)
 - Review existing patterns in this codebase
 - Check root AGENTS.md for project-wide conventions
 <!-- AGENTS-GENERATED:END help -->
-
-## House Rules (project-specific)
-<!-- This section is NOT auto-generated - add your project-specific rules here -->

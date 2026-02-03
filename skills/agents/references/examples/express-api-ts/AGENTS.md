@@ -30,7 +30,7 @@
 ## File Map
 <!-- AGENTS-GENERATED:START filemap -->
 ```
-
+src/             → application source code
 ```
 <!-- AGENTS-GENERATED:END filemap -->
 
@@ -40,12 +40,6 @@
 |-----|-----------|--------------|
 | Entrypoint | `src/index.ts` | standard patterns |
 <!-- AGENTS-GENERATED:END golden-samples -->
-
-## Utilities (check before creating new)
-<!-- AGENTS-GENERATED:START utilities -->
-| Need | Use | Location |
-|------|-----|----------|
-<!-- AGENTS-GENERATED:END utilities -->
 
 ## Heuristics (quick decisions)
 <!-- AGENTS-GENERATED:START heuristics -->
@@ -81,14 +75,6 @@
 - Commit package-lock.json without package.json changes
 - Use any type without justification
 
-## Codebase State
-<!-- AGENTS-GENERATED:START codebase-state -->
-- No known migrations or tech debt documented
-<!-- AGENTS-GENERATED:END codebase-state -->
-
-## Terminology
-| Term | Means |
-|------|-------|
 ## Index of scoped AGENTS.md
 <!-- AGENTS-GENERATED:START scope-index -->
 - `./src/AGENTS.md` — Backend services (TypeScript/Node.js)

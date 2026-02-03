@@ -83,6 +83,3 @@ Backend services (Python)
 - Check root AGENTS.md for project-wide conventions
 - Use `python -m pydoc <module>` for stdlib help
 <!-- AGENTS-GENERATED:END help -->
-
-## House Rules (project-specific)
-<!-- This section is NOT auto-generated - add your project-specific rules here -->

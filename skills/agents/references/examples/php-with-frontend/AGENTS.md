@@ -42,12 +42,6 @@ src/             → application source code
 | Controller | `src/Controller.php` |  (class) |
 <!-- AGENTS-GENERATED:END golden-samples -->
 
-## Utilities (check before creating new)
-<!-- AGENTS-GENERATED:START utilities -->
-| Need | Use | Location |
-|------|-----|----------|
-<!-- AGENTS-GENERATED:END utilities -->
-
 ## Heuristics (quick decisions)
 <!-- AGENTS-GENERATED:START heuristics -->
 | When | Do |
@@ -82,14 +76,6 @@ src/             → application source code
 - Commit composer.lock without composer.json changes
 - Modify core framework files
 
-## Codebase State
-<!-- AGENTS-GENERATED:START codebase-state -->
-- No known migrations or tech debt documented
-<!-- AGENTS-GENERATED:END codebase-state -->
-
-## Terminology
-| Term | Means |
-|------|-------|
 ## Index of scoped AGENTS.md
 <!-- AGENTS-GENERATED:START scope-index -->
 - `./web/AGENTS.md` — Frontend application (TypeScript/React/Vue)

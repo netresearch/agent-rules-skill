@@ -9,12 +9,20 @@ Frontend application (TypeScript/React/Vue)
 
 <!-- AGENTS-GENERATED:START filemap -->
 ## Key Files
-
+| File | Purpose |
+|------|---------|
+| `web/src/App.tsx` | (add description) |
+| `web/src/Button.tsx` | (add description) |
+| `web/src/Header.tsx` | (add description) |
+| `web/src/main.tsx` | (add description) |
+| `web/src/Footer.tsx` | (add description) |
 <!-- AGENTS-GENERATED:END filemap -->
 
 <!-- AGENTS-GENERATED:START golden-samples -->
 ## Golden Samples (follow these patterns)
-
+| Pattern | Reference |
+|---------|-----------|
+| Standard implementation | `web/src/Button.tsx` |
 <!-- AGENTS-GENERATED:END golden-samples -->
 
 <!-- AGENTS-GENERATED:START setup -->
@@ -38,13 +46,12 @@ Frontend application (TypeScript/React/Vue)
 
 <!-- AGENTS-GENERATED:START code-style -->
 ## Code style & conventions
-- TypeScript strict mode enabled
-- Use functional components with hooks (React)
+- TypeScript strict mode enabled (verified from tsconfig.json)
+- Use functional components with hooks
 - Naming: `camelCase` for variables/functions, `PascalCase` for components
 - File naming: `ComponentName.tsx`, `utilityName.ts`
 - Imports: group and sort (external, internal, types)
-- CSS: CSS Modules (CSS Modules, Tailwind, styled-components, etc.)
-- Use functional components with hooks
+- CSS: Tailwind CSS
 - Avoid class components
 <!-- AGENTS-GENERATED:END code-style -->
 
@@ -83,6 +90,3 @@ Frontend application (TypeScript/React/Vue)
 - Check root AGENTS.md for project-wide conventions
 - Review existing components for patterns
 <!-- AGENTS-GENERATED:END help -->
-
-## House Rules (project-specific)
-<!-- This section is NOT auto-generated - add your project-specific rules here -->

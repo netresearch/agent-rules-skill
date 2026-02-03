@@ -1,6 +1,6 @@
 <!-- FOR AI AGENTS - Human readability is a side effect, not a goal -->
 <!-- Managed by agent: keep sections and order; edit content, not structure -->
-<!-- Last updated: 2026-02-01 | Last verified: never -->
+<!-- Last updated: 2026-02-03 | Last verified: never -->
 
 # AGENTS.md
 
@@ -24,25 +24,6 @@
 1. **Before coding**: Read nearest `AGENTS.md` + check Golden Samples for the area you're touching
 2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
 3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
-
-## File Map
-<!-- AGENTS-GENERATED:START filemap -->
-```
-
-```
-<!-- AGENTS-GENERATED:END filemap -->
-
-## Golden Samples (follow these patterns)
-<!-- AGENTS-GENERATED:START golden-samples -->
-| For | Reference | Key patterns |
-|-----|-----------|--------------|
-<!-- AGENTS-GENERATED:END golden-samples -->
-
-## Utilities (check before creating new)
-<!-- AGENTS-GENERATED:START utilities -->
-| Need | Use | Location |
-|------|-----|----------|
-<!-- AGENTS-GENERATED:END utilities -->
 
 ## Heuristics (quick decisions)
 <!-- AGENTS-GENERATED:START heuristics -->
@@ -77,19 +58,6 @@
 - Delete migration files or schema changes
 - Commit composer.lock without composer.json changes
 - Modify core framework files
-
-## Codebase State
-<!-- AGENTS-GENERATED:START codebase-state -->
-- No known migrations or tech debt documented
-<!-- AGENTS-GENERATED:END codebase-state -->
-
-## Terminology
-| Term | Means |
-|------|-------|
-## Index of scoped AGENTS.md
-<!-- AGENTS-GENERATED:START scope-index -->
-- (No scoped AGENTS.md files yet)
-<!-- AGENTS-GENERATED:END scope-index -->
 
 ## When instructions conflict
 The nearest `AGENTS.md` wins. Explicit user prompts override files.
