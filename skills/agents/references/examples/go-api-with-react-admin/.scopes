@@ -1,0 +1,3 @@
+# Scopes for Go API with React admin dashboard
+# Format: path:type
+admin:frontend-typescript

@@ -158,6 +158,16 @@ jobs:
               fi
             fi
 
+            # Regression test 6: Go root should NOT have Node commands
+            if [[ "$fixture" == *"go-api-with-react-admin"* ]] || [[ "$fixture" == *"go-with-internal-web"* ]]; then
+                if grep -qE 'npm run|npx |yarn |pnpm ' "$fixture/AGENTS.md"; then
+                    echo "ERROR: Go project root has Node.js commands in Commands table"
+                    grep -E 'npm run|npx |yarn |pnpm ' "$fixture/AGENTS.md"
+                    exit 1
+                fi
+                echo "  ✓ Go root has correct stack commands"
+            fi
+
             echo "✅ $fixture passed (generated $size bytes, all regression tests passed)"
           done
 

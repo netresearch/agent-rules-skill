@@ -26,17 +26,11 @@
 2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
 3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
 
-## File Map
-<!-- AGENTS-GENERATED:START filemap -->
-```
-internal/        → internal packages (not exported)
-```
-<!-- AGENTS-GENERATED:END filemap -->
-
 ## Golden Samples (follow these patterns)
 <!-- AGENTS-GENERATED:START golden-samples -->
 | For | Reference | Key patterns |
 |-----|-----------|--------------|
+| Entrypoint | `cmd/api/main.go` | standard patterns |
 | Entrypoint | `main.go` | standard patterns |
 <!-- AGENTS-GENERATED:END golden-samples -->
 
@@ -72,11 +66,6 @@ internal/        → internal packages (not exported)
 - Push directly to main/master branch
 - Delete migration files or schema changes
 - Commit go.sum without go.mod changes
-
-## Index of scoped AGENTS.md
-<!-- AGENTS-GENERATED:START scope-index -->
-- `./internal/web/AGENTS.md` — Frontend application (TypeScript/React/Vue)
-<!-- AGENTS-GENERATED:END scope-index -->
 
 ## When instructions conflict
 The nearest `AGENTS.md` wins. Explicit user prompts override files.
