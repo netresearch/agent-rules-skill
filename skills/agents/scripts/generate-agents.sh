@@ -114,11 +114,22 @@ error() {
 
 # Detect Node.js package manager for a scope directory
 # Walks up from scope dir to find package.json with lockfile
+# Workspace-aware: checks workspace root for lockfiles if in a monorepo
 detect_node_package_manager() {
     local scope_dir="$1"
     local search_dir="$scope_dir"
 
-    # Walk up to find package.json
+    # First, check if we're in a workspace - lockfile will be at workspace root
+    local workspace_root
+    workspace_root=$(find_node_workspace_root "$scope_dir" || true)
+    if [ -n "$workspace_root" ]; then
+        [ -f "$workspace_root/pnpm-lock.yaml" ] && echo "pnpm" && return
+        [ -f "$workspace_root/yarn.lock" ] && echo "yarn" && return
+        [ -f "$workspace_root/bun.lockb" ] && echo "bun" && return
+        [ -f "$workspace_root/package-lock.json" ] && echo "npm" && return
+    fi
+
+    # Walk up to find package.json with lockfile
     while [ "$search_dir" != "." ] && [ "$search_dir" != "/" ]; do
         if [ -f "$search_dir/package.json" ]; then
             # Found package.json, check for lockfiles

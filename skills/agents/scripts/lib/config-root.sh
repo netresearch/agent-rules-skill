@@ -88,6 +88,61 @@ find_python_config_root() {
     return 1
 }
 
+# Find Node workspace root (monorepo root)
+# Detects: pnpm-workspace.yaml, package.json with "workspaces", lerna.json, nx.json
+# Usage: find_node_workspace_root "/path/to/scope"
+# Returns: workspace root directory or empty string
+find_node_workspace_root() {
+    local start_dir="$1"
+    local search_dir="$start_dir"
+
+    while [[ "$search_dir" != "." && "$search_dir" != "/" ]]; do
+        # pnpm workspace
+        if [[ -f "$search_dir/pnpm-workspace.yaml" ]]; then
+            echo "$search_dir"
+            return 0
+        fi
+
+        # npm/yarn workspaces (package.json with "workspaces" field)
+        if [[ -f "$search_dir/package.json" ]]; then
+            if jq -e '.workspaces' "$search_dir/package.json" >/dev/null 2>&1; then
+                echo "$search_dir"
+                return 0
+            fi
+        fi
+
+        # Lerna monorepo
+        if [[ -f "$search_dir/lerna.json" ]]; then
+            echo "$search_dir"
+            return 0
+        fi
+
+        # Nx monorepo
+        if [[ -f "$search_dir/nx.json" ]]; then
+            echo "$search_dir"
+            return 0
+        fi
+
+        search_dir=$(dirname "$search_dir")
+    done
+
+    # Check project root as fallback
+    if [[ -f "pnpm-workspace.yaml" ]]; then
+        echo "."
+        return 0
+    fi
+    if [[ -f "package.json" ]] && jq -e '.workspaces' "package.json" >/dev/null 2>&1; then
+        echo "."
+        return 0
+    fi
+    if [[ -f "lerna.json" || -f "nx.json" ]]; then
+        echo "."
+        return 0
+    fi
+
+    return 1
+}
+
 # Extract Node version from nearest config
 # Priority: package.json engines.node > .nvmrc > .node-version > .tool-versions
 get_node_version() {

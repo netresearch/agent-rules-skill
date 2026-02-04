@@ -2,6 +2,9 @@
 # Detect project type, language, version, and build tools
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/config-root.sh"
+
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
@@ -147,11 +150,22 @@ detect_language() {
         LANGUAGE="typescript"
         VERSION=$(jq -r '.engines.node // "unknown"' package.json 2>/dev/null || echo "unknown")
 
-        # Detect package manager from lockfile (default npm)
+        # Detect package manager from lockfile (workspace-aware, default npm)
         PACKAGE_MANAGER="npm"
-        [ -f "yarn.lock" ] && PACKAGE_MANAGER="yarn"
-        [ -f "pnpm-lock.yaml" ] && PACKAGE_MANAGER="pnpm"
-        [ -f "bun.lockb" ] && PACKAGE_MANAGER="bun"
+        local ws_root
+        ws_root=$(find_node_workspace_root "$(pwd)" || true)
+        if [ -n "$ws_root" ]; then
+            # Check workspace root for lockfiles
+            [ -f "$ws_root/pnpm-lock.yaml" ] && PACKAGE_MANAGER="pnpm"
+            [ -f "$ws_root/yarn.lock" ] && PACKAGE_MANAGER="yarn"
+            [ -f "$ws_root/bun.lockb" ] && PACKAGE_MANAGER="bun"
+            [ -f "$ws_root/package-lock.json" ] && PACKAGE_MANAGER="npm"
+        else
+            # Fallback to local lockfiles
+            [ -f "yarn.lock" ] && PACKAGE_MANAGER="yarn"
+            [ -f "pnpm-lock.yaml" ] && PACKAGE_MANAGER="pnpm"
+            [ -f "bun.lockb" ] && PACKAGE_MANAGER="bun"
+        fi
         BUILD_TOOL="$PACKAGE_MANAGER"
 
         # Detect JS/TS framework

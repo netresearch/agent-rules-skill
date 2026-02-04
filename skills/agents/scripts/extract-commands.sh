@@ -3,6 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/config-root.sh"
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
@@ -44,8 +45,29 @@ BUILD_CMD=""
 DEV_CMD=""
 
 # Detect package manager for Node.js projects
+# Workspace-aware: checks workspace root for lockfiles if in a monorepo
 PACKAGE_MANAGER="npm"
 detect_package_manager() {
+    # First, check if we're in a workspace - lockfile will be at workspace root
+    local workspace_root
+    workspace_root=$(find_node_workspace_root "$(pwd)" || true)
+    if [ -n "$workspace_root" ]; then
+        if [ -f "$workspace_root/pnpm-lock.yaml" ]; then
+            PACKAGE_MANAGER="pnpm"
+            return
+        elif [ -f "$workspace_root/yarn.lock" ]; then
+            PACKAGE_MANAGER="yarn"
+            return
+        elif [ -f "$workspace_root/bun.lockb" ]; then
+            PACKAGE_MANAGER="bun"
+            return
+        elif [ -f "$workspace_root/package-lock.json" ]; then
+            PACKAGE_MANAGER="npm"
+            return
+        fi
+    fi
+
+    # Fallback: check local directory
     if [ -f "pnpm-lock.yaml" ]; then
         PACKAGE_MANAGER="pnpm"
     elif [ -f "yarn.lock" ]; then
