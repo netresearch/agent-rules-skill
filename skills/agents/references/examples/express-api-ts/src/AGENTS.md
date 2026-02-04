@@ -1,4 +1,4 @@
-<!-- Managed by agent: keep sections and order; edit content, not structure. Last updated: 2026-02-03 -->
+<!-- Managed by agent: keep sections and order; edit content, not structure. Last updated: 2026-02-04 -->
 
 # AGENTS.md — src
 

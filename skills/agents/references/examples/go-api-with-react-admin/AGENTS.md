@@ -26,6 +26,14 @@
 2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
 3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
 
+## File Map
+<!-- AGENTS-GENERATED:START filemap -->
+```
+admin/           → configuration/data
+cmd/             → CLI entrypoints
+```
+<!-- AGENTS-GENERATED:END filemap -->
+
 ## Golden Samples (follow these patterns)
 <!-- AGENTS-GENERATED:START golden-samples -->
 | For | Reference | Key patterns |
