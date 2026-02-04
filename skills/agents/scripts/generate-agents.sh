@@ -303,9 +303,22 @@ log "Detecting scopes..."
 SCOPES_INFO=$("$SCRIPT_DIR/detect-scopes.sh" "$PROJECT_DIR")
 [ "$VERBOSE" = true ] && echo "$SCOPES_INFO" | jq . >&2
 
+# Map language to stack filter for extract-commands.sh
+get_stack_filter() {
+    local lang="$1"
+    case "$lang" in
+        go) echo "go" ;;
+        php) echo "php" ;;
+        python) echo "python" ;;
+        typescript|javascript) echo "node" ;;
+        *) echo "auto" ;;
+    esac
+}
+
 # Extract commands
 log "Extracting build commands..."
-COMMANDS=$("$SCRIPT_DIR/extract-commands.sh" "$PROJECT_DIR")
+PRIMARY_STACK=$(get_stack_filter "$LANGUAGE")
+COMMANDS=$("$SCRIPT_DIR/extract-commands.sh" "$PROJECT_DIR" "$PRIMARY_STACK")
 [ "$VERBOSE" = true ] && echo "$COMMANDS" | jq . >&2
 
 # Extract documentation (README, CONTRIBUTING, SECURITY, etc.)
