@@ -41,15 +41,43 @@ parse_github_actions() {
             fi
         done < "$f"
 
-        # Extract run commands
+        # Extract run commands (handles both single-line and multiline YAML blocks)
+        local in_multiline=false
+        local run_indent=0
         while IFS= read -r line; do
-            if [[ "$line" =~ run:[[:space:]]*(.+) ]]; then
-                local cmd="${BASH_REMATCH[1]}"
-                # Skip if it's a multi-line indicator
-                [[ "$cmd" == "|" ]] && continue
-                [[ "$cmd" == "|-" ]] && continue
-                # Clean and add
-                cmd=$(echo "$cmd" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+            if $in_multiline; then
+                # Calculate current line's indent (count leading spaces)
+                local current_indent=0
+                if [[ "$line" =~ ^([[:space:]]*) ]]; then
+                    current_indent=${#BASH_REMATCH[1]}
+                fi
+                # Check if we've exited the multiline block (same or less indent, non-empty line)
+                if [[ -n "${line//[[:space:]]/}" ]] && (( current_indent <= run_indent )); then
+                    in_multiline=false
+                    # Re-check this line in case it contains a new run: command
+                else
+                    # Inside multiline block - capture first meaningful command line
+                    local trimmed="${line#"${line%%[![:space:]]*}"}"  # Trim leading whitespace
+                    # Skip empty lines and comments
+                    if [[ -n "$trimmed" ]] && [[ ! "$trimmed" =~ ^# ]]; then
+                        all_commands+=("$trimmed")
+                        in_multiline=false  # We only want the first command
+                        continue
+                    fi
+                    continue
+                fi
+            fi
+
+            if [[ "$line" =~ ^([[:space:]]*)(-[[:space:]]+)?run:[[:space:]]*(.*) ]]; then
+                run_indent=${#BASH_REMATCH[1]}
+                local cmd="${BASH_REMATCH[3]}"
+                # Check if it's a multi-line indicator
+                if [[ "$cmd" == "|" ]] || [[ "$cmd" == "|-" ]] || [[ "$cmd" == "|+" ]]; then
+                    in_multiline=true
+                    continue
+                fi
+                # Single-line command - clean and add
+                cmd=$(echo "$cmd" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
                 [ -n "$cmd" ] && all_commands+=("$cmd")
             fi
         done < "$f"
@@ -201,11 +229,38 @@ parse_circleci() {
         fi
     done < ".circleci/config.yml"
 
-    # Extract run commands
+    # Extract run commands (handles both single-line and multiline YAML blocks)
+    local in_multiline=false
+    local cmd_indent=0
     while IFS= read -r line; do
-        if [[ "$line" =~ command:[[:space:]]*(.+) ]]; then
-            local cmd="${BASH_REMATCH[1]}"
-            [[ "$cmd" == "|" ]] && continue
+        if $in_multiline; then
+            # Calculate current line's indent
+            local current_indent=0
+            if [[ "$line" =~ ^([[:space:]]*) ]]; then
+                current_indent=${#BASH_REMATCH[1]}
+            fi
+            # Check if we've exited the multiline block
+            if [[ -n "${line//[[:space:]]/}" ]] && (( current_indent <= cmd_indent )); then
+                in_multiline=false
+            else
+                # Inside multiline block - capture first meaningful command line
+                local trimmed="${line#"${line%%[![:space:]]*}"}"
+                if [[ -n "$trimmed" ]] && [[ ! "$trimmed" =~ ^# ]]; then
+                    commands+=("$trimmed")
+                    in_multiline=false
+                    continue
+                fi
+                continue
+            fi
+        fi
+
+        if [[ "$line" =~ ^([[:space:]]*)command:[[:space:]]*(.*) ]]; then
+            cmd_indent=${#BASH_REMATCH[1]}
+            local cmd="${BASH_REMATCH[2]}"
+            if [[ "$cmd" == "|" ]] || [[ "$cmd" == "|-" ]] || [[ "$cmd" == "|+" ]]; then
+                in_multiline=true
+                continue
+            fi
             cmd=$(echo "$cmd" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
             [ -n "$cmd" ] && commands+=("$cmd")
         fi
