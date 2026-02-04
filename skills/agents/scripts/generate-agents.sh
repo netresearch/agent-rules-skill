@@ -378,6 +378,11 @@ log "Extracting CI commands..."
 CI_INFO=$("$SCRIPT_DIR/extract-ci-commands.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
 [ "$VERBOSE" = true ] && echo "$CI_INFO" | jq . >&2
 
+# Extract GitHub repository settings
+log "Extracting GitHub settings..."
+GITHUB_SETTINGS=$("$SCRIPT_DIR/extract-github-settings.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
+[ "$VERBOSE" = true ] && echo "$GITHUB_SETTINGS" | jq . >&2
+
 # Determine command source confidence
 # Priority: CI > Makefile > package.json/composer.json > fallback defaults
 get_command_source() {
@@ -692,6 +697,33 @@ ${workflow_heuristics}"
     # Remove any trailing newlines
     combined_heuristics=$(printf '%s' "$combined_heuristics" | sed '/^[[:space:]]*$/d')
     vars[HEURISTICS]="$combined_heuristics"
+
+    # Repository settings (from GitHub API)
+    build_repo_settings() {
+        local settings_json="$1"
+        local available
+        available=$(echo "$settings_json" | jq -r '.available // false')
+
+        [ "$available" != "true" ] && return 0
+
+        local content=""
+        local default_branch merge_strategies required_approvals required_checks require_up_to_date
+
+        default_branch=$(echo "$settings_json" | jq -r '.default_branch')
+        merge_strategies=$(echo "$settings_json" | jq -r '.merge_strategies | join(", ")')
+        required_approvals=$(echo "$settings_json" | jq -r '.required_approvals')
+        required_checks=$(echo "$settings_json" | jq -r 'if .required_checks | length > 0 then .required_checks | map("`" + . + "`") | join(", ") else "" end')
+        require_up_to_date=$(echo "$settings_json" | jq -r '.require_up_to_date')
+
+        content="- **Default branch:** \`$default_branch\`\n"
+        [ -n "$merge_strategies" ] && content="${content}- **Merge strategy:** $merge_strategies\n"
+        [ "$required_approvals" != "0" ] && [ "$required_approvals" != "null" ] && content="${content}- **Required approvals:** $required_approvals\n"
+        [ -n "$required_checks" ] && content="${content}- **Required checks:** $required_checks\n"
+        [ "$require_up_to_date" = "true" ] && content="${content}- **Require up-to-date:** yes — rebase before merge\n"
+
+        printf '%b' "$content"
+    }
+    vars[REPO_SETTINGS]=$(build_repo_settings "$GITHUB_SETTINGS")
 
     # Codebase state - detect migrations, deprecations
     codebase_state=""

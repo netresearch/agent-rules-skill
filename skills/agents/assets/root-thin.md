@@ -57,6 +57,11 @@
 | Unsure about pattern | Check Golden Samples above |
 <!-- AGENTS-GENERATED:END heuristics -->
 
+## Repository Settings
+<!-- AGENTS-GENERATED:START repo-settings -->
+{{REPO_SETTINGS}}
+<!-- AGENTS-GENERATED:END repo-settings -->
+
 ## Boundaries
 
 ### Always Do
