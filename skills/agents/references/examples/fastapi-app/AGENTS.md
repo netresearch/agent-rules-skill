@@ -1,6 +1,6 @@
 <!-- FOR AI AGENTS - Human readability is a side effect, not a goal -->
 <!-- Managed by agent: keep sections and order; edit content, not structure -->
-<!-- Last updated: 2026-02-04 | Last verified: never -->
+<!-- Last updated: 2026-02-05 | Last verified: never -->
 
 # AGENTS.md
 
@@ -52,6 +52,12 @@ src/             → application source code
 | Adding dependency | Ask first - we minimize deps |
 | Unsure about pattern | Check Golden Samples above |
 <!-- AGENTS-GENERATED:END heuristics -->
+
+## Repository Settings
+<!-- AGENTS-GENERATED:START repo-settings -->
+- **Default branch:** `main`
+- **Merge strategy:** squash, merge, rebase
+<!-- AGENTS-GENERATED:END repo-settings -->
 
 ## Boundaries
 
