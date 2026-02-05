@@ -32,6 +32,53 @@ When ensuring multi-repo consistency, use this skill to apply the same standards
 
 When checking if AGENTS.md files are up to date, use the freshness checking scripts to compare file timestamps with git commits.
 
+## Audit Before Generating
+
+**NEVER generate AGENTS.md blindly.** Before running generation scripts, understand the project:
+
+### 1. Discover Existing Documentation
+
+```bash
+# Find all existing guides and documentation
+find . -name "*.md" -type f | head -30
+ls -la .github/ .gitlab/ .claude/ .cursor/ 2>/dev/null
+
+# Check for existing agent instructions
+cat CLAUDE.md copilot-instructions.md .github/copilot-instructions.md 2>/dev/null
+```
+
+### 2. Understand Where Work Happens
+
+```bash
+# Most active directories (by recent commits)
+git log --oneline --name-only -100 | grep '/' | cut -d'/' -f1 | sort | uniq -c | sort -rn | head -10
+
+# Largest directories (by file count)
+find . -type f -not -path './.git/*' | cut -d'/' -f2 | sort | uniq -c | sort -rn | head -10
+```
+
+### 3. Identify Pain Points
+
+Look for patterns that indicate areas needing explicit guidance:
+- **Repeated review comments** - Check PR history for recurring feedback
+- **CI failures** - Check recent CI logs for common failure modes
+- **Large files** - Files with 500+ lines often need refactoring guidance
+- **Inconsistent naming** - Mixed conventions suggest missing style rules
+
+### 4. Interview the Codebase
+
+Ask these questions before generating:
+
+| Question | Where to Look |
+|----------|---------------|
+| What's the primary language? | `package.json`, `composer.json`, `go.mod` |
+| What framework is used? | `composer.json` (TYPO3, Symfony), `package.json` (React, Vue) |
+| How are tests run? | `Makefile`, `package.json scripts`, CI config |
+| What's the deployment target? | `.github/workflows/`, `Dockerfile`, `docker-compose.yml` |
+| Are there existing conventions? | `CONTRIBUTING.md`, `.editorconfig`, linter configs |
+
+**This audit ensures generated content addresses real needs rather than generic patterns.**
+
 ## Prerequisites
 
 The generator scripts require:
@@ -350,6 +397,43 @@ Options:
 
 **Why this matters:** Research shows broken commands waste 500+ tokens as agents debug non-existent commands. Verified commands enable confident execution.
 
+### Post-Generation Validation Checklist
+
+**After generating AGENTS.md files, ALWAYS validate the output:**
+
+```bash
+# 1. Run structure validation
+scripts/validate-structure.sh /path/to/project --verbose
+
+# 2. Verify content accuracy
+scripts/verify-content.sh /path/to/project
+
+# 3. Verify commands work
+scripts/verify-commands.sh /path/to/project
+```
+
+**Validation criteria:**
+
+| Check | Pass Criteria | Common Issues |
+|-------|---------------|---------------|
+| **Thin root** | Root AGENTS.md ≤ 80 lines | Duplicated scope content in root |
+| **All scopes covered** | Every major directory has AGENTS.md | Missing `Tests/`, `Configuration/` |
+| **No duplication** | Content appears in ONE location | Commands duplicated in root + scope |
+| **Commands verified** | All documented commands execute | Typos, renamed targets |
+| **Files exist** | All referenced files are real | Hallucinated paths |
+| **Links valid** | All cross-references resolve | Broken relative paths |
+
+**Example validation output:**
+```
+✓ Root AGENTS.md: 47 lines (thin)
+✓ Scopes found: Classes/, Tests/, Configuration/
+✓ No duplicate commands between root and scopes
+✗ Missing: Resources/Private/Templates/ (no AGENTS.md)
+✗ Command "make phpstan" not found (actual: "make typecheck")
+```
+
+**Never consider generation complete until all checks pass.**
+
 ## Using Reference Documentation
 
 ### AGENTS.md Analysis
@@ -486,6 +570,81 @@ project/
 ### GitHub Copilot
 
 GitHub Copilot uses `.github/copilot-instructions.md` for repository-wide instructions. This skill extracts existing Copilot instructions and can coexist with AGENTS.md files.
+
+## When to Customize vs Auto-Generate
+
+Not all sections should be auto-generated. Understanding which sections benefit from manual curation vs automation prevents wasted effort and preserves valuable human insight.
+
+### Auto-Generate These Sections
+
+These sections are factual and extractable - let scripts handle them:
+
+| Section | Why Auto-Generate |
+|---------|-------------------|
+| **Commands** | Extract from Makefile/package.json - always accurate |
+| **File Map** | Directory listing is objective |
+| **Scope Index** | Detectable from filesystem structure |
+| **Language/Framework** | Detectable from config files |
+| **Test Commands** | Extract from CI config |
+
+### Manually Curate These Sections
+
+These sections require human judgment - preserve them during updates:
+
+| Section | Why Manual |
+|---------|------------|
+| **Golden Samples** | Requires taste - which file exemplifies good patterns? |
+| **Heuristics** | Decision rules come from team experience |
+| **Boundaries** | Always/Ask/Never rules reflect team policy |
+| **Codebase State** | Tech debt awareness requires context |
+| **Terminology** | Domain knowledge is human insight |
+| **Architecture Decisions** | Why choices were made isn't extractable |
+
+### Override Best Practices
+
+When updating existing AGENTS.md files, preserve custom content:
+
+**1. Use `--update` flag:**
+```bash
+scripts/generate-agents.sh /path/to/project --update
+```
+This preserves content outside `<!-- GENERATED:START -->` / `<!-- GENERATED:END -->` markers.
+
+**2. Place custom content outside markers:**
+```markdown
+<!-- GENERATED:START -->
+## Commands (auto-generated)
+| Command | Purpose |
+|---------|---------|
+| `make test` | Run tests |
+<!-- GENERATED:END -->
+
+## Custom Heuristics (preserved)
+| When | Do |
+|------|-----|
+| Adding endpoint | Create OpenAPI spec first |
+```
+
+**3. Use scoped overrides for exceptions:**
+```
+project/
+├── AGENTS.md              # Global rules
+└── legacy/
+    └── AGENTS.md          # "Ignore linting in this directory"
+```
+
+**4. Review diffs before committing:**
+```bash
+# After regenerating
+git diff AGENTS.md
+# Ensure custom sections weren't overwritten
+```
+
+**Anti-patterns:**
+- **WRONG:** Running generation without `--update`, losing all custom content
+- **WRONG:** Duplicating auto-generated content with manual edits (causes drift)
+- **WRONG:** Putting custom heuristics inside generated markers (will be overwritten)
+- **RIGHT:** Custom content outside markers, auto-content inside markers
 
 ## Directory Coverage
 
