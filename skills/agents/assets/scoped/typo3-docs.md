@@ -54,8 +54,24 @@ Documentation/
 - Use TYPO3 directives: `confval`, `versionadded`, `deprecated`, `t3-field-list-table`
 - Include code with `.. code-block:: php` or `.. literalinclude::`
 - Cross-reference with `:ref:` and proper labels
-- Screenshots in `Documentation/Images/`, reference with `.. figure::`
+- **Screenshots MANDATORY** for backend modules, config screens, UI workflows
+- Store in `Documentation/Images/`, use `.. figure::` with `:zoom: lightbox`
 <!-- AGENTS-GENERATED:END patterns -->
+
+<!-- AGENTS-GENERATED:START screenshots -->
+## Screenshots (MANDATORY for UI)
+```rst
+.. figure:: /Images/Configuration/ExtensionSettings.png
+   :alt: Extension configuration showing API settings
+   :zoom: lightbox
+   :class: with-border with-shadow
+
+   Configure the extension in Admin Tools > Settings
+```
+- Format: **PNG only**
+- Zoom modes: `lightbox` (default), `gallery` (tutorials), `inline` (diagrams)
+- Always include `:alt:` text
+<!-- AGENTS-GENERATED:END screenshots -->
 
 <!-- AGENTS-GENERATED:START code-style -->
 ## RST Style
@@ -70,7 +86,8 @@ Documentation/
 ## PR Checklist
 - [ ] RST syntax valid (renders without errors)
 - [ ] All internal links resolve
-- [ ] Images have alt text
+- [ ] Images have `:alt:` text and `:zoom: lightbox`
+- [ ] **Screenshots exist** for all backend/config/UI sections
 - [ ] Code examples are tested
 - [ ] Follows docs.typo3.org structure
 <!-- AGENTS-GENERATED:END checklist -->
