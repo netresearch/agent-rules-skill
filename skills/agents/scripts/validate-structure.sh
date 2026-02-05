@@ -121,12 +121,12 @@ check_scoped_sections() {
     # Each entry: "Display Name|pattern1|pattern2|..."
     local section_patterns=(
         "Overview|## Overview"
-        "Setup|## Setup|## Environment|## Prerequisites|## Getting Started"
-        "Build/Tests|## Build|## Tests|## Running|## Commands"
-        "Code style|## Code style|## Style|## Conventions"
+        "Setup|## Setup|## Environment|## Prerequisites|## Getting Started|## Workflow files"
+        "Build/Tests|## Build|## Tests|## Running|## Commands|## Common patterns"
+        "Code style|## Code style|## Style|## Conventions|## Workflow conventions"
         "Security|## Security"
         "Checklist|## PR|## Commit|## Checklist"
-        "Examples|## Good vs|## Examples|## Bad examples"
+        "Examples|## Good vs|## Examples|## Bad examples|## Patterns to Follow"
         "When stuck|## When stuck|## Help|## Resources|## Troubleshooting"
     )
 

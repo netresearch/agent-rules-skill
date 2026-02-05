@@ -18,7 +18,7 @@ GitHub Actions workflows and CI/CD automation
 <!-- AGENTS-GENERATED:START golden-samples -->
 ## Workflow files
 - Workflows: 2 workflow file(s)
-<!-- AGENTS-GENERATED:END setup -->
+<!-- AGENTS-GENERATED:END golden-samples -->
 
 <!-- AGENTS-GENERATED:START structure -->
 ## Directory structure
