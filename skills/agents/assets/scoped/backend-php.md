@@ -81,6 +81,12 @@
 - Check root AGENTS.md for project-wide conventions
 <!-- AGENTS-GENERATED:END help -->
 
+<!-- AGENTS-GENERATED:START skill-reference -->
+## Skill Reference
+> For PHP 8.x modernization, type safety, and PHPStan compliance:
+> **Invoke skill:** `php-modernization`
+<!-- AGENTS-GENERATED:END skill-reference -->
+
 ## House Rules (project-specific)
 <!-- This section is NOT auto-generated - add your project-specific rules here -->
 {{HOUSE_RULES}}

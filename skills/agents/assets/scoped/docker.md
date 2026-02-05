@@ -149,6 +149,12 @@ services:
 - Review root AGENTS.md for project-wide conventions
 <!-- AGENTS-GENERATED:END help -->
 
+<!-- AGENTS-GENERATED:START skill-reference -->
+## Skill Reference
+> For Dockerfile best practices, multi-stage builds, and compose patterns:
+> **Invoke skill:** `docker-development`
+<!-- AGENTS-GENERATED:END skill-reference -->
+
 ## House Rules (project-specific)
 <!-- This section is NOT auto-generated - add your project-specific rules here -->
 {{HOUSE_RULES}}

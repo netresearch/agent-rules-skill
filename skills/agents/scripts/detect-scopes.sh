@@ -99,7 +99,14 @@ case "$LANGUAGE" in
 
         [ -d "Tests" ] && {
             count=$(count_source_files "Tests" "*.php")
-            [ "$count" -ge 3 ] && add_scope "Tests" "testing" "$count"
+            if [ "$count" -ge 3 ]; then
+                # Use TYPO3-specific testing template for TYPO3 extensions
+                if [ "$PROJECT_TYPE" = "php-typo3-extension" ]; then
+                    add_scope "Tests" "typo3-testing" "$count"
+                else
+                    add_scope "Tests" "testing" "$count"
+                fi
+            fi
         }
 
         [ -d "tests" ] && {
@@ -109,7 +116,14 @@ case "$LANGUAGE" in
 
         [ -d "Documentation" ] && {
             count=$(find Documentation -type f \( -name "*.rst" -o -name "*.md" \) | wc -l)
-            [ "$count" -ge 3 ] && add_scope "Documentation" "documentation" "$count"
+            if [ "$count" -ge 3 ]; then
+                # Use TYPO3-specific docs template for TYPO3 extensions
+                if [ "$PROJECT_TYPE" = "php-typo3-extension" ]; then
+                    add_scope "Documentation" "typo3-docs" "$count"
+                else
+                    add_scope "Documentation" "documentation" "$count"
+                fi
+            fi
         }
 
         [ -d "Resources" ] && {
@@ -226,6 +240,12 @@ if [ -d "skills" ]; then
             add_scope "${skill_dir%/}" "claude-code-skill" "$count"
         fi
     done
+fi
+
+# Check for DDEV local development environment (cross-language)
+if [ -d ".ddev" ]; then
+    count=$(find .ddev -type f \( -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l)
+    [ "$count" -ge 1 ] && add_scope ".ddev" "ddev" "$count"
 fi
 
 # Check for Docker/container directories (cross-language)

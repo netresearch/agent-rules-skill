@@ -122,6 +122,12 @@ Documentation/     → RST documentation for docs.typo3.org
 - Review root AGENTS.md for project-wide conventions
 <!-- AGENTS-GENERATED:END help -->
 
+<!-- AGENTS-GENERATED:START skill-reference -->
+## Skill Reference
+> For TYPO3 extension standards, TER compliance, and conformance checks:
+> **Invoke skill:** `typo3-conformance`
+<!-- AGENTS-GENERATED:END skill-reference -->
+
 ## House Rules (project-specific)
 <!-- This section is NOT auto-generated - add your project-specific rules here -->
 {{HOUSE_RULES}}
