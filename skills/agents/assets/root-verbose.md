@@ -27,6 +27,8 @@
 - Use conventional commit format: `type(scope): subject`
 - Keep dependencies updated
 - Validate all user inputs
+- **Show test output as evidence before claiming work is complete** — never say "try again" or "should work now" without proof
+- For upstream dependency fixes: run **full** test suite, not just affected tests
 
 ### Ask First
 - Adding new dependencies
@@ -59,6 +61,7 @@
 1. **Before coding**: Read nearest `AGENTS.md` + check Golden Samples for the area you're touching
 2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
 3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
+4. **Before claiming done**: Run verification and **show output as evidence** — never say "should work" without proof
 
 ## Pre-commit Checks
 > Source: {{COMMAND_SOURCE}} — CI-sourced commands are most reliable
