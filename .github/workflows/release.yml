@@ -15,39 +15,59 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
         with:
           egress-policy: audit
 
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Get version from tag
         id: version
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: echo "version=${{GITHUB_REF#refs/tags/}}" >> $GITHUB_OUTPUT
 
-      - name: Create skill package
+      - name: Create agents skill package
         run: |
-          mkdir -p dist
-          # Copy skill files from new structure
-          cp skills/agents/SKILL.md dist/
-          cp LICENSE dist/
-          [ -d "skills/agents/references" ] && cp -r skills/agents/references dist/
-          [ -d "skills/agents/scripts" ] && cp -r skills/agents/scripts dist/
-          [ -d "skills/agents/assets" ] && cp -r skills/agents/assets dist/
-          [ -d "skills/agents/templates" ] && cp -r skills/agents/templates dist/
+          mkdir -p dist-skill
+          cp skills/agents/SKILL.md dist-skill/
+          cp LICENSE dist-skill/
+          [ -d "skills/agents/references" ] && cp -r skills/agents/references dist-skill/
+          [ -d "skills/agents/scripts" ] && cp -r skills/agents/scripts dist-skill/
+          [ -d "skills/agents/assets" ] && cp -r skills/agents/assets dist-skill/
+          [ -d "skills/agents/templates" ] && cp -r skills/agents/templates dist-skill/
+          [ -d "skills/agents/examples" ] && cp -r skills/agents/examples dist-skill/
+          [ -f "skills/agents/checkpoints.yaml" ] && cp skills/agents/checkpoints.yaml dist-skill/
+          cd dist-skill
+          zip -r ../agents-skill-${{ steps.version.outputs.version }}.zip .
+          tar -czvf ../agents-skill-${{ steps.version.outputs.version }}.tar.gz .
+
+      - name: Create agents plugin package
+        run: |
+          mkdir -p dist-plugin
+          # Include agents skill files
+          mkdir -p dist-plugin/skills/agents
+          cp skills/agents/SKILL.md dist-plugin/skills/agents/
+          [ -d "skills/agents/references" ] && cp -r skills/agents/references dist-plugin/skills/agents/
+          [ -d "skills/agents/scripts" ] && cp -r skills/agents/scripts dist-plugin/skills/agents/
+          [ -d "skills/agents/assets" ] && cp -r skills/agents/assets dist-plugin/skills/agents/
+          [ -d "skills/agents/templates" ] && cp -r skills/agents/templates dist-plugin/skills/agents/
+          [ -d "skills/agents/examples" ] && cp -r skills/agents/examples dist-plugin/skills/agents/
+          [ -f "skills/agents/checkpoints.yaml" ] && cp skills/agents/checkpoints.yaml dist-plugin/skills/agents/
+          cp LICENSE dist-plugin/
           # Include plugin manifest
-          [ -d ".claude-plugin" ] && cp -r .claude-plugin dist/
-          cd dist
-          zip -r ../agents-${{ steps.version.outputs.version }}.zip .
-          tar -czvf ../agents-${{ steps.version.outputs.version }}.tar.gz .
+          [ -d ".claude-plugin" ] && cp -r .claude-plugin dist-plugin/
+          cd dist-plugin
+          zip -r ../agents-plugin-${{ steps.version.outputs.version }}.zip .
+          tar -czvf ../agents-plugin-${{ steps.version.outputs.version }}.tar.gz .
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           files: |
-            agents-${{ steps.version.outputs.version }}.zip
-            agents-${{ steps.version.outputs.version }}.tar.gz
+            agents-skill-${{ steps.version.outputs.version }}.zip
+            agents-skill-${{ steps.version.outputs.version }}.tar.gz
+            agents-plugin-${{ steps.version.outputs.version }}.zip
+            agents-plugin-${{ steps.version.outputs.version }}.tar.gz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
