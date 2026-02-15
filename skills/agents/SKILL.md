@@ -58,13 +58,13 @@ Detailed documentation in `references/`:
 
 | File | Contents |
 |------|----------|
-| `verification-guide.md` | Verification steps, name matching, command verification, design principles |
-| `scripts-guide.md` | Script options, post-generation validation checklist |
-| `ai-tool-compatibility.md` | Claude Code shim, Codex stacking, Copilot integration |
-| `output-structure.md` | Root/scoped sections, auto-generate vs manual curation |
-| `analysis.md` | Analysis of 21 real-world AGENTS.md files |
-| `directory-coverage.md` | Coverage guidance for PHP/TYPO3, Go, TypeScript |
-| `examples/` | Complete examples (coding-agent-cli, ldap-selfservice, simple-ldap-go, t3x-rte-ckeditor-image) |
+| [`verification-guide.md`](references/verification-guide.md) | Verification steps, name matching, command verification, design principles |
+| [`scripts-guide.md`](references/scripts-guide.md) | Script options, post-generation validation checklist |
+| [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md) | Claude Code shim, Codex stacking, Copilot integration |
+| [`output-structure.md`](references/output-structure.md) | Root/scoped sections, auto-generate vs manual curation |
+| [`analysis.md`](references/analysis.md) | Analysis of 21 real-world AGENTS.md files |
+| [`directory-coverage.md`](references/directory-coverage.md) | Coverage guidance for PHP/TYPO3, Go, TypeScript |
+| [`examples/`](references/examples/) | Complete examples (coding-agent-cli, ldap-selfservice, simple-ldap-go, t3x-rte-ckeditor-image) |
 
 ## Asset Templates
 
