@@ -10,8 +10,5 @@
   },
   "skills": [
     "./skills/agents"
-  ],
-  "support": {
-    "issues": "https://github.com/netresearch/agents-skill/issues"
-  }
+  ]
 }
