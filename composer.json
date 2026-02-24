@@ -6,7 +6,6 @@
   "authors": [
     {
       "name": "Netresearch DTT GmbH",
-      "email": "info@netresearch.de",
       "homepage": "https://www.netresearch.de/",
       "role": "Manufacturer"
     }
@@ -17,5 +16,9 @@
   "keywords": [
     "ai-agent",
     "skill"
-  ]
+  ],
+  "support": {
+    "issues": "https://github.com/netresearch/agents-skill/issues",
+    "source": "https://github.com/netresearch/agents-skill"
+  }
 }

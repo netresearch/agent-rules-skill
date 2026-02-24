@@ -6,9 +6,12 @@
   "license": "GPL-2.0-or-later",
   "author": {
     "name": "Netresearch DTT GmbH",
-    "email": "info@netresearch.de"
+    "url": "https://github.com/netresearch/agents-skill"
   },
   "skills": [
     "./skills/agents"
-  ]
+  ],
+  "support": {
+    "issues": "https://github.com/netresearch/agents-skill/issues"
+  }
 }
