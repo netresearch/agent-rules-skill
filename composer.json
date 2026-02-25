@@ -13,6 +13,10 @@
   "require": {
     "netresearch/composer-agent-skill-plugin": "*"
   },
+  "replace": {
+    "netresearch/agent-agents": "self.version",
+    "netresearch/agents-skill": "self.version"
+  },
   "keywords": [
     "ai-agent",
     "skill"
