@@ -38,7 +38,7 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Create agents skill package
+      - name: Create agent-rules skill package
         run: |
           mkdir -p dist-skill
           cp skills/agent-rules/SKILL.md dist-skill/
@@ -53,11 +53,11 @@ jobs:
           zip -r ../agent-rules-skill-${{ steps.version.outputs.version }}.zip .
           tar -czvf ../agent-rules-skill-${{ steps.version.outputs.version }}.tar.gz .
 
-      - name: Create agents plugin package
+      - name: Create agent-rules plugin package
         run: |
           mkdir -p dist-plugin
-          # Include agents skill files
-          mkdir -p dist-plugin/skills/agents
+          # Include agent-rules skill files
+          mkdir -p dist-plugin/skills/agent-rules
           cp skills/agent-rules/SKILL.md dist-plugin/skills/agent-rules/
           [ -d "skills/agent-rules/references" ] && cp -r skills/agent-rules/references dist-plugin/skills/agent-rules/
           [ -d "skills/agent-rules/scripts" ] && cp -r skills/agent-rules/scripts dist-plugin/skills/agent-rules/
@@ -69,8 +69,8 @@ jobs:
           # Include plugin manifest
           [ -d ".claude-plugin" ] && cp -r .claude-plugin dist-plugin/
           cd dist-plugin
-          zip -r ../agents-plugin-${{ steps.version.outputs.version }}.zip .
-          tar -czvf ../agents-plugin-${{ steps.version.outputs.version }}.tar.gz .
+          zip -r ../agent-rules-plugin-${{ steps.version.outputs.version }}.zip .
+          tar -czvf ../agent-rules-plugin-${{ steps.version.outputs.version }}.tar.gz .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
@@ -78,8 +78,8 @@ jobs:
           files: |
             agent-rules-skill-${{ steps.version.outputs.version }}.zip
             agent-rules-skill-${{ steps.version.outputs.version }}.tar.gz
-            agents-plugin-${{ steps.version.outputs.version }}.zip
-            agents-plugin-${{ steps.version.outputs.version }}.tar.gz
+            agent-rules-plugin-${{ steps.version.outputs.version }}.zip
+            agent-rules-plugin-${{ steps.version.outputs.version }}.tar.gz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
