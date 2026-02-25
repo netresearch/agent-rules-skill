@@ -5,12 +5,12 @@ on:
     paths:
       - 'AGENTS.md'
       - '**/AGENTS.md'
-      - 'skills/agents/**'
+      - 'skills/agent-rules/**'
   pull_request:
     paths:
       - 'AGENTS.md'
       - '**/AGENTS.md'
-      - 'skills/agents/**'
+      - 'skills/agent-rules/**'
   workflow_dispatch:
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
           # Using -S error to only fail on errors, warnings are shown but don't fail
           # Some warnings are false positives (e.g., vars used via nameref, intentional patterns)
           echo "Running ShellCheck..."
-          find skills/agents/scripts -name "*.sh" -type f | while read -r script; do
+          find skills/agent-rules/scripts -name "*.sh" -type f | while read -r script; do
             echo "Checking: $script"
             shellcheck -x -S error "$script" || exit 1
           done
@@ -68,17 +68,17 @@ jobs:
           echo "Using bash: $BASH_CMD ($($BASH_CMD --version | head -1))"
 
           # Test against example fixture repos
-          for fixture in skills/agents/references/examples/*/; do
+          for fixture in skills/agent-rules/references/examples/*/; do
             echo "Testing generator on: $fixture"
 
             # Run generator (dry-run first to check for errors)
-            if ! $BASH_CMD skills/agents/scripts/generate-agents.sh "$fixture" --dry-run; then
+            if ! $BASH_CMD skills/agent-rules/scripts/generate-agents.sh "$fixture" --dry-run; then
               echo "ERROR: Generator failed dry-run on $fixture"
               exit 1
             fi
 
             # Run actual generation
-            if ! $BASH_CMD skills/agents/scripts/generate-agents.sh "$fixture" --force; then
+            if ! $BASH_CMD skills/agent-rules/scripts/generate-agents.sh "$fixture" --force; then
               echo "ERROR: Generator failed on $fixture"
               exit 1
             fi
@@ -181,8 +181,8 @@ jobs:
 
       - name: Validate AGENTS.md structure
         run: |
-          if [ -f "skills/agents/scripts/validate-structure.sh" ]; then
-            bash skills/agents/scripts/validate-structure.sh . --check-freshness
+          if [ -f "skills/agent-rules/scripts/validate-structure.sh" ]; then
+            bash skills/agent-rules/scripts/validate-structure.sh . --check-freshness
           else
             echo "Validation script not found, checking basic structure..."
             if [ ! -f "AGENTS.md" ]; then
@@ -210,8 +210,8 @@ jobs:
 
       - name: Verify commands exist
         run: |
-          if [ -f "skills/agents/scripts/verify-commands.sh" ]; then
-            bash skills/agents/scripts/verify-commands.sh . || echo "Some commands failed verification"
+          if [ -f "skills/agent-rules/scripts/verify-commands.sh" ]; then
+            bash skills/agent-rules/scripts/verify-commands.sh . || echo "Some commands failed verification"
           else
             echo "Command verification script not available"
           fi
@@ -230,7 +230,7 @@ jobs:
       - name: Run mechanical checkpoint verification
         run: |
           set -eo pipefail
-          CHECKPOINTS_FILE="skills/agents/checkpoints.yaml"
+          CHECKPOINTS_FILE="skills/agent-rules/checkpoints.yaml"
           if [ ! -f "$CHECKPOINTS_FILE" ]; then
             echo "No checkpoints.yaml found, skipping"
             exit 0

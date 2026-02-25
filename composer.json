@@ -1,6 +1,6 @@
 {
-  "name": "netresearch/agent-agents",
-  "description": "Netresearch AI skill for generating AGENTS.md files following the agents.md convention",
+  "name": "netresearch/agent-rules-skill",
+  "description": "Netresearch AI skill for generating AGENTS.md, copilot-instructions.md, and other agent rule files",
   "type": "ai-agent-skill",
   "license": "GPL-2.0-or-later",
   "authors": [
@@ -18,10 +18,10 @@
     "skill"
   ],
   "support": {
-    "issues": "https://github.com/netresearch/agents-skill/issues",
-    "source": "https://github.com/netresearch/agents-skill"
+    "issues": "https://github.com/netresearch/agent-rules-skill/issues",
+    "source": "https://github.com/netresearch/agent-rules-skill"
   },
   "extra": {
-    "ai-agent-skill": "skills/agents/SKILL.md"
+    "ai-agent-skill": "skills/agent-rules/SKILL.md"
   }
 }

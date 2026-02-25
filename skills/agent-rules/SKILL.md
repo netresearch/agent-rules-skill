@@ -1,13 +1,13 @@
 ---
-name: agents
-description: "Use when creating or updating AGENTS.md files, onboarding AI agents to a project, or standardizing agent documentation across repositories."
+name: agent-rules
+description: "Use when creating or updating AGENTS.md files, .github/copilot-instructions.md, or other AI agent rule files, onboarding AI agents to a project, or standardizing agent documentation across repositories."
 ---
 
 # AGENTS.md Generator Skill
 
 ## Overview
 
-Generate and maintain AGENTS.md files following the [public agents.md convention](https://agents.md/). AGENTS.md is FOR AGENTS, not humans -- every section exists to maximize AI coding agent efficiency.
+Generate and maintain AGENTS.md files following the [agents.md convention](https://agents.md/). AGENTS.md is FOR AGENTS, not humans.
 
 ## When to Use
 

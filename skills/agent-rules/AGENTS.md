@@ -11,25 +11,25 @@ Claude Code skill/plugin providing AI agent capabilities
 ## Key Files
 | File | Purpose |
 |------|---------|
-| `skills/agents/scripts/verify-commands.sh` | !/usr/bin/env bash |
-| `skills/agents/scripts/generate-file-map.sh` | !/usr/bin/env bash |
-| `skills/agents/scripts/analyze-git-history.sh` | !/usr/bin/env bash |
-| `skills/agents/scripts/detect-utilities.sh` | !/usr/bin/env bash |
-| `skills/agents/scripts/extract-platform-files.sh` | !/usr/bin/env bash |
+| `skills/agent-rules/scripts/verify-commands.sh` | !/usr/bin/env bash |
+| `skills/agent-rules/scripts/generate-file-map.sh` | !/usr/bin/env bash |
+| `skills/agent-rules/scripts/analyze-git-history.sh` | !/usr/bin/env bash |
+| `skills/agent-rules/scripts/detect-utilities.sh` | !/usr/bin/env bash |
+| `skills/agent-rules/scripts/extract-platform-files.sh` | !/usr/bin/env bash |
 <!-- AGENTS-GENERATED:END filemap -->
 
 <!-- AGENTS-GENERATED:START golden-samples -->
 ## Golden Samples (follow these patterns)
 | Pattern | Reference |
 |---------|-----------|
-| Standard implementation | `skills/agents/SKILL.md` |
+| Standard implementation | `skills/agent-rules/SKILL.md` |
 <!-- AGENTS-GENERATED:END golden-samples -->
 
 <!-- AGENTS-GENERATED:START setup -->
 ## Setup & environment
 - Plugin: agents v2.8.0
 - Skills: 1 skill(s) in `skills/`
-- Install: `composer require netresearch/agents-skill`
+- Install: `composer require netresearch/agent-rules-skill`
 <!-- AGENTS-GENERATED:END setup -->
 
 <!-- AGENTS-GENERATED:START structure -->

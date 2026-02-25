@@ -40,12 +40,12 @@ Then browse skills with `/plugin`.
 
 ### Option 2: Download Release
 
-Download the [latest release](https://github.com/netresearch/agents-skill/releases/latest) and extract to `~/.claude/skills/agents/`
+Download the [latest release](https://github.com/netresearch/agent-rules-skill/releases/latest) and extract to `~/.claude/skills/agent-rules/`
 
 ### Option 3: Composer (PHP projects)
 
 ```bash
-composer require netresearch/agent-agents
+composer require netresearch/agent-rules-skill
 ```
 
 **Requires:** [netresearch/composer-agent-skill-plugin](https://github.com/netresearch/composer-agent-skill-plugin)

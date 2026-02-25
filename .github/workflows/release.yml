@@ -41,30 +41,30 @@ jobs:
       - name: Create agents skill package
         run: |
           mkdir -p dist-skill
-          cp skills/agents/SKILL.md dist-skill/
+          cp skills/agent-rules/SKILL.md dist-skill/
           cp LICENSE dist-skill/
-          [ -d "skills/agents/references" ] && cp -r skills/agents/references dist-skill/
-          [ -d "skills/agents/scripts" ] && cp -r skills/agents/scripts dist-skill/
-          [ -d "skills/agents/assets" ] && cp -r skills/agents/assets dist-skill/
-          [ -d "skills/agents/templates" ] && cp -r skills/agents/templates dist-skill/
-          [ -d "skills/agents/examples" ] && cp -r skills/agents/examples dist-skill/
-          [ -f "skills/agents/checkpoints.yaml" ] && cp skills/agents/checkpoints.yaml dist-skill/
+          [ -d "skills/agent-rules/references" ] && cp -r skills/agent-rules/references dist-skill/
+          [ -d "skills/agent-rules/scripts" ] && cp -r skills/agent-rules/scripts dist-skill/
+          [ -d "skills/agent-rules/assets" ] && cp -r skills/agent-rules/assets dist-skill/
+          [ -d "skills/agent-rules/templates" ] && cp -r skills/agent-rules/templates dist-skill/
+          [ -d "skills/agent-rules/examples" ] && cp -r skills/agent-rules/examples dist-skill/
+          [ -f "skills/agent-rules/checkpoints.yaml" ] && cp skills/agent-rules/checkpoints.yaml dist-skill/
           cd dist-skill
-          zip -r ../agents-skill-${{ steps.version.outputs.version }}.zip .
-          tar -czvf ../agents-skill-${{ steps.version.outputs.version }}.tar.gz .
+          zip -r ../agent-rules-skill-${{ steps.version.outputs.version }}.zip .
+          tar -czvf ../agent-rules-skill-${{ steps.version.outputs.version }}.tar.gz .
 
       - name: Create agents plugin package
         run: |
           mkdir -p dist-plugin
           # Include agents skill files
           mkdir -p dist-plugin/skills/agents
-          cp skills/agents/SKILL.md dist-plugin/skills/agents/
-          [ -d "skills/agents/references" ] && cp -r skills/agents/references dist-plugin/skills/agents/
-          [ -d "skills/agents/scripts" ] && cp -r skills/agents/scripts dist-plugin/skills/agents/
-          [ -d "skills/agents/assets" ] && cp -r skills/agents/assets dist-plugin/skills/agents/
-          [ -d "skills/agents/templates" ] && cp -r skills/agents/templates dist-plugin/skills/agents/
-          [ -d "skills/agents/examples" ] && cp -r skills/agents/examples dist-plugin/skills/agents/
-          [ -f "skills/agents/checkpoints.yaml" ] && cp skills/agents/checkpoints.yaml dist-plugin/skills/agents/
+          cp skills/agent-rules/SKILL.md dist-plugin/skills/agent-rules/
+          [ -d "skills/agent-rules/references" ] && cp -r skills/agent-rules/references dist-plugin/skills/agent-rules/
+          [ -d "skills/agent-rules/scripts" ] && cp -r skills/agent-rules/scripts dist-plugin/skills/agent-rules/
+          [ -d "skills/agent-rules/assets" ] && cp -r skills/agent-rules/assets dist-plugin/skills/agent-rules/
+          [ -d "skills/agent-rules/templates" ] && cp -r skills/agent-rules/templates dist-plugin/skills/agent-rules/
+          [ -d "skills/agent-rules/examples" ] && cp -r skills/agent-rules/examples dist-plugin/skills/agent-rules/
+          [ -f "skills/agent-rules/checkpoints.yaml" ] && cp skills/agent-rules/checkpoints.yaml dist-plugin/skills/agent-rules/
           cp LICENSE dist-plugin/
           # Include plugin manifest
           [ -d ".claude-plugin" ] && cp -r .claude-plugin dist-plugin/
@@ -76,8 +76,8 @@ jobs:
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           files: |
-            agents-skill-${{ steps.version.outputs.version }}.zip
-            agents-skill-${{ steps.version.outputs.version }}.tar.gz
+            agent-rules-skill-${{ steps.version.outputs.version }}.zip
+            agent-rules-skill-${{ steps.version.outputs.version }}.tar.gz
             agents-plugin-${{ steps.version.outputs.version }}.zip
             agents-plugin-${{ steps.version.outputs.version }}.tar.gz
           generate_release_notes: true

@@ -69,7 +69,7 @@ LICENSE/         → project files
 
 ## Index of scoped AGENTS.md
 <!-- AGENTS-GENERATED:START scope-index -->
-- `./skills/agents/AGENTS.md` — Claude Code skill/plugin providing AI agent capabilities
+- `./skills/agent-rules/AGENTS.md` — Claude Code skill/plugin providing AI agent capabilities
 - `./.github/workflows/AGENTS.md` — GitHub Actions workflows and CI/CD automation
 <!-- AGENTS-GENERATED:END scope-index -->
 
