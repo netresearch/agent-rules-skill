@@ -20,5 +20,8 @@
   "support": {
     "issues": "https://github.com/netresearch/agents-skill/issues",
     "source": "https://github.com/netresearch/agents-skill"
+  },
+  "extra": {
+    "ai-agent-skill": "skills/agents/SKILL.md"
   }
 }
