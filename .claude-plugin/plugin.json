@@ -1,6 +1,6 @@
 {
   "name": "agent-rules",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Generate and maintain AGENTS.md, copilot-instructions.md, and other agent rule files",
   "repository": "https://github.com/netresearch/agent-rules-skill",
   "license": "GPL-2.0-or-later",
