@@ -1,6 +1,6 @@
 """User service for business logic."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.models.user import User, UserCreate, UserUpdate
 
@@ -37,7 +37,7 @@ class UserService:
             username=user_data.username,
             full_name=user_data.full_name,
             is_active=user_data.is_active,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         self._users[self._next_id] = user
         self._next_id += 1
@@ -55,7 +55,7 @@ class UserService:
         updated_user = user.model_copy(
             update={
                 **update_data,
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(UTC),
             }
         )
         self._users[user_id] = updated_user

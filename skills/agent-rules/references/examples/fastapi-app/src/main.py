@@ -1,7 +1,7 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import uvicorn
 from fastapi import FastAPI
@@ -12,7 +12,7 @@ from src.routes import health, items, users
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan context manager."""
     # Startup
     print(f"Starting {settings.app_name}...")

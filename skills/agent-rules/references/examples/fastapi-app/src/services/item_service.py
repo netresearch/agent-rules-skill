@@ -1,6 +1,6 @@
 """Item service for business logic."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.models.item import Item, ItemCreate, ItemUpdate
 
@@ -47,7 +47,7 @@ class ItemService:
             quantity=item_data.quantity,
             is_available=item_data.is_available,
             owner_id=item_data.owner_id,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         self._items[self._next_id] = item
         self._next_id += 1
@@ -63,7 +63,7 @@ class ItemService:
         updated_item = item.model_copy(
             update={
                 **update_data,
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(UTC),
             }
         )
         self._items[item_id] = updated_item
