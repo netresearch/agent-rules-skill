@@ -1,14 +1,14 @@
 {
-    "name": "agent-rules",
-    "version": "3.0.2",
-    "description": "Generate and maintain AGENTS.md, copilot-instructions.md, and other agent rule files",
-    "repository": "https://github.com/netresearch/agent-rules-skill",
-    "license": "(MIT AND CC-BY-SA-4.0)",
-    "author": {
-        "name": "Netresearch DTT GmbH",
-        "url": "https://www.netresearch.de"
-    },
-    "skills": [
-        "./skills/agent-rules"
-    ]
+  "name": "agent-rules",
+  "version": "3.1.0",
+  "description": "Generate and maintain AGENTS.md, copilot-instructions.md, and other agent rule files",
+  "repository": "https://github.com/netresearch/agent-rules-skill",
+  "license": "(MIT AND CC-BY-SA-4.0)",
+  "author": {
+    "name": "Netresearch DTT GmbH",
+    "url": "https://www.netresearch.de"
+  },
+  "skills": [
+    "./skills/agent-rules"
+  ]
 }
