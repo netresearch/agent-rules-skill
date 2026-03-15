@@ -153,6 +153,30 @@ mechanical:
     severity: info
     desc: "AGENTS.md should have Critical/Constraints section for important warnings"
 
+  # === POINTER PRINCIPLE ===
+  - id: AG-26
+    type: regex
+    target: AGENTS.md
+    pattern: "(see |refer to |defined in |located at )[`/]"
+    severity: info
+    desc: "AGENTS.md should point to files rather than duplicating content (Pointer Principle)"
+
+  # === LANGUAGE ===
+  - id: AG-27
+    type: regex
+    target: AGENTS.md
+    pattern: "^# "
+    severity: error
+    desc: "AGENTS.md must have a top-level heading in English (default language)"
+
+  # === SCOPED AGENTS.MD ===
+  - id: AG-28
+    type: regex
+    target: AGENTS.md
+    pattern: "\\|.*\\|"
+    severity: info
+    desc: "AGENTS.md should use tables for structured data (Structured over Prose principle)"
+
 llm_reviews:
   # === ACCURACY VERIFICATION ===
   - id: AG-25
