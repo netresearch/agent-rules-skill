@@ -17,14 +17,14 @@ mechanical:
   - id: AG-02
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Overview|Project|About)"
+    pattern: "^#+ (.*Overview|Project|About)"
     severity: warning
     desc: "AGENTS.md should have an Overview/Project section (recommended but not required)"
 
   - id: AG-03
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Setup|Getting Started|Prerequisites|Dev Environment)"
+    pattern: "^#+ (Setup|Getting Started|Prerequisites|Dev Environment|Development Workflow)"
     severity: warning
     desc: "AGENTS.md should have Setup/Dev Environment section (recommended but not required)"
 
