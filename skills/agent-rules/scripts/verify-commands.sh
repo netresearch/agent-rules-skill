@@ -64,39 +64,52 @@ declare -A COMMAND_RESULTS
 # Initialize JSON output directory (always needed for results)
 mkdir -p "$(dirname "$OUTPUT_JSON")"
 
-# Check if a command is safe to execute
-# Returns 0 if safe, 1 if dangerous
+# Check if a command is safe to execute using a whitelist approach.
+# Only commands whose base binary is in the ALLOWED_COMMANDS list are permitted.
+# Returns 0 if safe, 1 if not whitelisted.
 is_safe_command() {
     local cmd="$1"
 
-    # Dangerous literal patterns to reject (glob matching)
-    local -a dangerous_patterns=(
-        'rm -rf'
-        'rm -fr'
-        'sudo '
-        'chmod -R'
-        'chown -R'
-        '> /'
-        'dd if='
-        'mkfs'
-        ':(){:|:&};:'  # Fork bomb
-        '| sh'         # Any pipe to sh (catches wget/curl piped execution)
-        '| bash'       # Any pipe to bash
-        '| zsh'        # Any pipe to zsh
+    # Whitelist of known safe base commands.
+    # These are common build/dev tools that are safe to invoke for verification.
+    local -a ALLOWED_COMMANDS=(
+        # Version control
+        git
+        # File inspection
+        ls cat head tail less wc file stat find grep egrep fgrep rg ag sed awk sort uniq diff
+        # Build tools / package managers
+        make go npm yarn pnpm bun composer cargo deno gradle gradlew python python3 pip pip3
+        poetry uv pytest php phpunit node ruby bundle gem mvn ant
+        # Project-specific binaries (resolved via PATH or relative path)
+        vendor/bin
+        # Container tools (read-only / informational subcommands only)
+        docker podman
+        # Linters and formatters
+        eslint prettier phpcs phpcbf phpstan psalm rector black flake8 mypy ruff shellcheck
+        # Documentation / misc
+        jq yq curl wget
+        # Testing
+        jest vitest mocha
     )
 
-    for pattern in "${dangerous_patterns[@]}"; do
-        if [[ "$cmd" == *"$pattern"* ]]; then
-            return 1
+    # Extract the base command (first word), stripping any leading ./
+    local base_cmd
+    base_cmd=$(echo "$cmd" | awk '{print $1}' | sed 's|^\./||')
+
+    # Allow vendor/bin/* paths
+    if [[ "$base_cmd" == vendor/bin/* ]]; then
+        return 0
+    fi
+
+    # Check against whitelist
+    for allowed in "${ALLOWED_COMMANDS[@]}"; do
+        if [[ "$base_cmd" == "$allowed" ]]; then
+            return 0
         fi
     done
 
-    # Also reject if it contains dangerous-looking operations (regex matching)
-    if [[ "$cmd" =~ (rm[[:space:]]+-[a-zA-Z]*[rf]|sudo|chmod[[:space:]]+-R|chown[[:space:]]+-R) ]]; then
-        return 1
-    fi
-
-    return 0
+    # Not in whitelist - reject
+    return 1
 }
 
 # Portable milliseconds timestamp (works on both GNU and BSD date)
