@@ -30,26 +30,40 @@ This skill implements two complementary standards:
 
 ## Installation
 
-### Option 1: Via Netresearch Marketplace (Recommended)
+### Marketplace (Recommended)
+
+Add the [Netresearch marketplace](https://github.com/netresearch/claude-code-marketplace) once, then browse and install skills:
 
 ```bash
-claude mcp add-json netresearch-skills-bundle '{"type":"url","url":"https://raw.githubusercontent.com/netresearch/claude-code-marketplace/main/.claude-plugin/marketplace.json"}'
+# Claude Code
+/plugin marketplace add netresearch/claude-code-marketplace
 ```
 
-Then browse skills with `/plugin`.
+### npx ([skills.sh](https://skills.sh))
 
-### Option 2: Download Release
+Install with any [Agent Skills](https://agentskills.io)-compatible agent:
 
-Download the [latest release](https://github.com/netresearch/agent-rules-skill/releases/latest) and extract to `~/.claude/skills/agent-rules/`
+```bash
+npx skills add https://github.com/netresearch/agent-rules-skill --skill agent-rules
+```
 
-### Option 3: Composer (PHP projects)
+### Download Release
+
+Download the [latest release](https://github.com/netresearch/agent-rules-skill/releases/latest) and extract to your agent's skills directory.
+
+### Git Clone
+
+```bash
+git clone https://github.com/netresearch/agent-rules-skill.git
+```
+
+### Composer (PHP Projects)
 
 ```bash
 composer require netresearch/agent-rules-skill
 ```
 
-**Requires:** [netresearch/composer-agent-skill-plugin](https://github.com/netresearch/composer-agent-skill-plugin)
-
+Requires [netresearch/composer-agent-skill-plugin](https://github.com/netresearch/composer-agent-skill-plugin).
 ## Usage
 
 The skill triggers on keywords like:
