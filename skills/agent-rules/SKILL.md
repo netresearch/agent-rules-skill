@@ -69,7 +69,7 @@ Detailed documentation in `references/`:
 
 Root templates in `assets/`: `root-thin.md` (~30 lines, default), `root-verbose.md` (~100 lines).
 
-Scoped templates in `assets/scoped/`: `backend-go.md`, `backend-php.md`, `typo3.md`, `oro.md`, `cli.md`, `frontend-typescript.md`.
+Scoped templates in `assets/scoped/`: `backend-go.md`, `backend-php.md`, `backend-python.md`, `python-modern.md`, `typo3.md`, `oro.md`, `cli.md`, `frontend-typescript.md`, `symfony.md`, `skill-repo.md`, `claude-code-skill.md`.
 
 ## Supported Project Types
 
@@ -79,6 +79,9 @@ Scoped templates in `assets/scoped/`: `backend-go.md`, `backend-php.md`, `typo3.
 | PHP | Composer packages, Laravel/Symfony |
 | PHP/TYPO3 | TYPO3 extensions (auto-detected via `ext_emconf.php`) |
 | PHP/Oro | OroCommerce, OroPlatform, OroCRM bundles |
+| PHP/Symfony | Symfony apps (Doctrine, Twig, console commands) |
 | TypeScript | React, Next.js, Vue, Node.js |
-| Python | pip, poetry, Django, Flask, FastAPI |
+| Python | pip, poetry, uv, Django, Flask, FastAPI |
+| Python (modern) | pyproject.toml, ruff, mypy, pytest |
+| Skill repos | Claude Code plugins/skills (plugin.json, SKILL.md, checkpoints) |
 | Hybrid | Multi-language projects (auto-creates scoped files per stack) |

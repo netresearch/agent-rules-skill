@@ -31,6 +31,16 @@ Comprehensive AGENTS.md coverage means creating files in ALL key directories, no
 | `internal/` | Private packages, no export |
 | `pkg/` | Public API patterns |
 
+### Python Projects
+
+| Directory | AGENTS.md Content |
+|-----------|-------------------|
+| Root | Project overview, pyproject.toml config |
+| `src/` | Source code patterns, type hints |
+| `tests/` | pytest conventions, fixtures, markers |
+| `scripts/` | CLI scripts, entry points |
+| `docs/` | Sphinx/MkDocs documentation standards |
+
 ### TypeScript/Node Projects
 
 | Directory | AGENTS.md Content |
@@ -39,6 +49,16 @@ Comprehensive AGENTS.md coverage means creating files in ALL key directories, no
 | `src/` | Source patterns, imports |
 | `components/` | UI component patterns |
 | `tests/` or `__tests__/` | Testing patterns |
+
+### Skill Repos (Claude Code Plugins)
+
+| Directory | AGENTS.md Content |
+|-----------|-------------------|
+| Root | Project overview, plugin.json, licensing |
+| `skills/<name>/` | Skill-specific patterns, SKILL.md rules |
+| `skills/<name>/scripts/` | Shell script conventions |
+| `skills/<name>/references/` | Extended documentation patterns |
+| `.github/workflows/` | CI workflow patterns (validate, auto-merge) |
 
 ## Precedence Rules
 

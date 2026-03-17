@@ -85,6 +85,8 @@
 ## Skill Reference
 > For PHP 8.x modernization, type safety, and PHPStan compliance:
 > **Invoke skill:** `php-modernization`
+>
+> For Symfony projects, use the dedicated `symfony.md` scoped template instead of this generic PHP template.
 <!-- AGENTS-GENERATED:END skill-reference -->
 
 ## House Rules (project-specific)

@@ -1957,6 +1957,108 @@ else
                 scope_vars[SCOPE_GOLDEN_SAMPLES]=""
                 scope_vars[HOUSE_RULES]=""
                 ;;
+
+            "python-modern")
+                scope_vars[PYTHON_VERSION]="$VERSION"
+                BUILD_TOOL=$(echo "$PROJECT_INFO" | jq -r '.build_tool')
+                scope_vars[PACKAGE_MANAGER]="$BUILD_TOOL"
+                scope_vars[ENV_VARS]="See .env or .env.example"
+
+                # Extract commands from detected commands
+                scope_vars[INSTALL_CMD]=$(echo "$COMMANDS" | jq -r '.install // empty')
+                scope_vars[LINT_CMD]=$(echo "$COMMANDS" | jq -r '.lint // empty')
+                scope_vars[FORMAT_CMD]=$(echo "$COMMANDS" | jq -r '.format // empty')
+                scope_vars[TEST_CMD]=$(echo "$COMMANDS" | jq -r '.test // empty')
+                scope_vars[TYPECHECK_CMD]=$(echo "$COMMANDS" | jq -r '.typecheck // empty')
+                scope_vars[BUILD_CMD]=$(echo "$COMMANDS" | jq -r '.build // empty')
+
+                # Set ruff/mypy-aware defaults
+                case "$BUILD_TOOL" in
+                    "poetry")
+                        [ -z "${scope_vars[INSTALL_CMD]}" ] && scope_vars[INSTALL_CMD]="poetry install"
+                        [ -z "${scope_vars[LINT_CMD]}" ] && scope_vars[LINT_CMD]="poetry run ruff check ."
+                        [ -z "${scope_vars[FORMAT_CMD]}" ] && scope_vars[FORMAT_CMD]="poetry run ruff format ."
+                        [ -z "${scope_vars[TEST_CMD]}" ] && scope_vars[TEST_CMD]="poetry run pytest"
+                        [ -z "${scope_vars[TYPECHECK_CMD]}" ] && scope_vars[TYPECHECK_CMD]="poetry run mypy ."
+                        scope_vars[VENV_CMD]="poetry shell"
+                        ;;
+                    "uv")
+                        [ -z "${scope_vars[INSTALL_CMD]}" ] && scope_vars[INSTALL_CMD]="uv sync"
+                        [ -z "${scope_vars[LINT_CMD]}" ] && scope_vars[LINT_CMD]="uv run ruff check ."
+                        [ -z "${scope_vars[FORMAT_CMD]}" ] && scope_vars[FORMAT_CMD]="uv run ruff format ."
+                        [ -z "${scope_vars[TEST_CMD]}" ] && scope_vars[TEST_CMD]="uv run pytest"
+                        [ -z "${scope_vars[TYPECHECK_CMD]}" ] && scope_vars[TYPECHECK_CMD]="uv run mypy ."
+                        scope_vars[VENV_CMD]="Managed by uv (auto-creates .venv)"
+                        ;;
+                    "hatch")
+                        [ -z "${scope_vars[INSTALL_CMD]}" ] && scope_vars[INSTALL_CMD]="hatch env create"
+                        [ -z "${scope_vars[LINT_CMD]}" ] && scope_vars[LINT_CMD]="hatch run lint:check"
+                        [ -z "${scope_vars[FORMAT_CMD]}" ] && scope_vars[FORMAT_CMD]="hatch run lint:fmt"
+                        [ -z "${scope_vars[TEST_CMD]}" ] && scope_vars[TEST_CMD]="hatch run test"
+                        [ -z "${scope_vars[TYPECHECK_CMD]}" ] && scope_vars[TYPECHECK_CMD]="hatch run types:check"
+                        scope_vars[VENV_CMD]="Managed by hatch"
+                        ;;
+                    *)
+                        [ -z "${scope_vars[LINT_CMD]}" ] && scope_vars[LINT_CMD]="ruff check ."
+                        [ -z "${scope_vars[FORMAT_CMD]}" ] && scope_vars[FORMAT_CMD]="ruff format ."
+                        [ -z "${scope_vars[TEST_CMD]}" ] && scope_vars[TEST_CMD]="pytest"
+                        [ -z "${scope_vars[TYPECHECK_CMD]}" ] && scope_vars[TYPECHECK_CMD]="mypy ."
+                        scope_vars[VENV_CMD]="python -m venv .venv && source .venv/bin/activate"
+                        ;;
+                esac
+
+                # Build whole-line placeholders for setup
+                [ -n "${scope_vars[PYTHON_VERSION]:-}" ] && [ "${scope_vars[PYTHON_VERSION]}" != "unknown" ] && \
+                    scope_vars[PYTHON_VERSION_LINE]="- Python: ${scope_vars[PYTHON_VERSION]}"
+                [ -n "${scope_vars[PACKAGE_MANAGER]:-}" ] && [ "${scope_vars[PACKAGE_MANAGER]}" != "unknown" ] && \
+                    scope_vars[PACKAGE_MANAGER_LINE]="- Package manager: ${scope_vars[PACKAGE_MANAGER]}"
+                [ -n "${scope_vars[VENV_CMD]:-}" ] && \
+                    scope_vars[VENV_LINE]="- Virtual env: \`${scope_vars[VENV_CMD]}\`"
+                scope_vars[ENV_VARS_LINE]="- Environment: see \`.env\` or \`.env.example\`"
+
+                # Build command table lines
+                [ -n "${scope_vars[LINT_CMD]:-}" ] && \
+                    scope_vars[RUFF_CHECK_LINE]="| \`${scope_vars[LINT_CMD]}\` | Lint (ruff) | ~5s |"
+                [ -n "${scope_vars[FORMAT_CMD]:-}" ] && \
+                    scope_vars[RUFF_FORMAT_LINE]="| \`${scope_vars[FORMAT_CMD]} --check\` | Format check | ~3s |"
+                [ -n "${scope_vars[TYPECHECK_CMD]:-}" ] && \
+                    scope_vars[MYPY_LINE]="| \`${scope_vars[TYPECHECK_CMD]}\` | Type check (mypy) | ~15s |"
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[PYTEST_LINE]="| \`${scope_vars[TEST_CMD]}\` | Run tests | ~30s |"
+                [ -n "${scope_vars[TEST_CMD]:-}" ] && \
+                    scope_vars[PYTEST_COV_LINE]="| \`${scope_vars[TEST_CMD]} --cov=src\` | Tests + coverage | ~45s |"
+                [ -n "${scope_vars[BUILD_CMD]:-}" ] && \
+                    scope_vars[BUILD_LINE]="| \`${scope_vars[BUILD_CMD]}\` | Build | ~10s |"
+
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "py")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "py")
+                scope_vars[HOUSE_RULES]=""
+                ;;
+
+            "skill-repo")
+                # Extract plugin info (if plugin.json exists)
+                plugin_name=$(jq -r '.name // "unknown"' .claude-plugin/plugin.json 2>/dev/null || echo "unknown")
+                plugin_version=$(jq -r '.version // "unknown"' .claude-plugin/plugin.json 2>/dev/null || echo "unknown")
+                skill_count=$(find skills -maxdepth 2 -name "SKILL.md" -type f 2>/dev/null | wc -l)
+
+                # Build whole-line placeholders
+                if [ -f ".claude-plugin/plugin.json" ]; then
+                    scope_vars[PLUGIN_JSON_LINE]="- Plugin: $plugin_name v$plugin_version"
+                fi
+                scope_vars[SKILLS_LINE]="- Skills: $skill_count skill(s) in \`skills/\`"
+
+                # Build command lines if shell scripts exist
+                sh_count=$(find . -maxdepth 5 -name "*.sh" -type f 2>/dev/null | wc -l)
+                if [ "$sh_count" -gt 0 ]; then
+                    scope_vars[LINT_LINE]="- Lint scripts: \`shellcheck skills/*/scripts/*.sh\`"
+                    scope_vars[SHELLCHECK_LINE]="- ShellCheck: \`shellcheck skills/*/scripts/*.sh\`"
+                fi
+                scope_vars[VALIDATE_LINE]="- Validate plugin: \`jq . .claude-plugin/plugin.json\`"
+
+                scope_vars[SCOPE_FILE_MAP]=$(generate_scope_file_map "$SCOPE_PATH" "sh")
+                scope_vars[SCOPE_GOLDEN_SAMPLES]=$(generate_scope_golden_samples "$SCOPE_PATH" "md")
+                scope_vars[HOUSE_RULES]=""
+                ;;
         esac
 
         # Render template (smart mode respects --update flag)

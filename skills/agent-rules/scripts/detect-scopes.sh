@@ -186,10 +186,18 @@ case "$LANGUAGE" in
         ;;
 
     "python")
+        # Determine Python template: use python-modern if pyproject.toml with ruff/mypy
+        PYTHON_TEMPLATE="backend-python"
+        if [ -f "pyproject.toml" ]; then
+            if grep -q 'ruff' pyproject.toml 2>/dev/null || grep -q 'mypy' pyproject.toml 2>/dev/null; then
+                PYTHON_TEMPLATE="python-modern"
+            fi
+        fi
+
         # Check common Python directories
         [ -d "src" ] && {
             count=$(count_source_files "src" "*.py")
-            [ "$count" -ge "$MIN_FILES" ] && add_scope "src" "backend-python" "$count"
+            [ "$count" -ge "$MIN_FILES" ] && add_scope "src" "$PYTHON_TEMPLATE" "$count"
         }
 
         [ -d "tests" ] && {
