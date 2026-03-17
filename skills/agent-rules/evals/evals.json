@@ -16,7 +16,8 @@
         "Contains go.mod Go version reference",
         "File paths mentioned in AGENTS.md reference files that actually exist",
         "Uses tables or structured format (not just prose paragraphs)",
-        "Does not duplicate content from README.md"
+        "Does not duplicate content from README.md",
+        "Contains CI quality gates from GitHub Actions workflows"
       ]
     },
     {
@@ -97,7 +98,8 @@
         "Listed commands actually exist in respective config files",
         "Root AGENTS.md stays thin and organized (not a wall of text)",
         "If scoped files are created, they contain stack-specific details",
-        "Does not conflate PHP and JS testing commands"
+        "Does not conflate PHP and JS testing commands",
+        "References CI checks from both PHP and JS test pipelines"
       ]
     },
     {
@@ -165,6 +167,52 @@
         "No contradictions between the two files (e.g., different Go versions)",
         "Both files reference the actual project structure",
         "copilot-instructions.md does not just copy AGENTS.md verbatim"
+      ]
+    },
+    {
+      "id": 11,
+      "eval_name": "ci-rules-extraction",
+      "prompt": "Generate AGENTS.md for this Go project. Make sure to include CI quality gates, required checks, and version requirements from the GitHub Actions workflows.",
+      "expected_output": "AGENTS.md includes CI/Quality Gates section extracted from .github/workflows/ with specific PHPStan levels, test matrix versions, required checks.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Contains CI quality gates or required checks section",
+        "Lists Go version from CI matrix or go.mod",
+        "References specific CI workflow files",
+        "Mentions golangci-lint or linting configuration",
+        "Includes coverage requirements if present in CI",
+        "Does not fabricate CI rules that don't exist in workflows"
+      ]
+    },
+    {
+      "id": 12,
+      "eval_name": "architecture-boundaries-extraction",
+      "prompt": "Generate AGENTS.md for this Go project. Include module boundaries and architectural constraints from the codebase structure.",
+      "expected_output": "AGENTS.md includes architecture section noting internal/ packages, hexagonal architecture boundaries, ports/adapters pattern.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Documents internal/ package boundaries",
+        "Identifies the hexagonal architecture pattern (ports/adapters)",
+        "Notes which packages should not import each other",
+        "References actual directory structure as evidence",
+        "Does not fabricate architectural rules"
+      ]
+    },
+    {
+      "id": 13,
+      "eval_name": "adr-extraction",
+      "prompt": "Generate AGENTS.md for this project. Include any architectural decision records found in docs/adr/.",
+      "expected_output": "AGENTS.md includes Key Decisions section listing ADR titles with one-line summaries and file links.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Contains a Key Decisions or ADR section",
+        "Lists ADR titles from actual files (ADR-001, ADR-002, ADR-003)",
+        "Includes status (Accepted/Deprecated) for each",
+        "Links to the ADR files in docs/adr/",
+        "Does not fabricate decisions that don't exist"
       ]
     }
   ]
