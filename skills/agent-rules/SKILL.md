@@ -1,6 +1,6 @@
 ---
 name: agent-rules
-description: "Use when creating or updating AGENTS.md files, .github/copilot-instructions.md, or other AI agent rule files, onboarding AI agents to a project, or standardizing agent documentation across repositories."
+description: "Use when creating or updating AGENTS.md files, .github/copilot-instructions.md, or other AI agent rule files, onboarding AI agents to a project, standardizing agent documentation, or when anyone mentions AGENTS.md, agent rules, project onboarding, or codebase documentation for AI agents."
 license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
 compatibility: "Requires bash 4.3+, jq 1.5+, git 2.0+."
 metadata:
@@ -36,6 +36,10 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 | `scripts/detect-project.sh PATH` | Detect language, version, build tools |
 | `scripts/detect-scopes.sh PATH` | Identify directories needing scoped files |
 | `scripts/extract-commands.sh PATH` | Extract commands from build configs |
+| `scripts/extract-ci-rules.sh PATH` | Extract CI quality gates and version matrix |
+| `scripts/extract-architecture-rules.sh PATH` | Extract module boundaries (phpat, deptrac, Go internal/) |
+| `scripts/extract-adrs.sh PATH` | Extract architectural decision records |
+| `scripts/extract-github-rulesets.sh PATH` | Extract GitHub rulesets and merge rules |
 
 See `references/scripts-guide.md` for full options and validation checklist.
 
@@ -46,6 +50,7 @@ See `references/scripts-guide.md` for full options and validation checklist.
 - **Pointer Principle** -- point to files, don't duplicate content
 - **Golden Samples** -- one example file beats pages of explanation
 - **Audit Before Generating** -- discover existing docs and pain points before running scripts
+- **Extract Everything** -- mine CI workflows, architecture tests, ADRs, and rulesets for implicit rules
 
 ## Language Choice
 
