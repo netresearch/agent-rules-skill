@@ -65,23 +65,10 @@ Detailed documentation in `references/`:
 | [`directory-coverage.md`](references/directory-coverage.md) | Coverage guidance for PHP/TYPO3, Go, TypeScript |
 | [`examples/`](references/examples/) | Complete examples (coding-agent-cli, ldap-selfservice, simple-ldap-go, t3x-rte-ckeditor-image) |
 
-## Asset Templates
+## Templates
 
-Root templates in `assets/`: `root-thin.md` (~30 lines, default), `root-verbose.md` (~100 lines).
+Root: `assets/root-thin.md` (default), `root-verbose.md`. Scoped: `assets/scoped/` — `backend-go.md`, `backend-php.md`, `python-modern.md`, `typo3.md`, `symfony.md`, `skill-repo.md`, `cli.md`, `frontend-typescript.md`, `oro.md`.
 
-Scoped templates in `assets/scoped/`: `backend-go.md`, `backend-php.md`, `backend-python.md`, `python-modern.md`, `typo3.md`, `oro.md`, `cli.md`, `frontend-typescript.md`, `symfony.md`, `skill-repo.md`, `claude-code-skill.md`.
+## Supported Projects
 
-## Supported Project Types
-
-| Language | Project Types |
-|----------|---------------|
-| Go | Libraries, web apps (Fiber/Echo/Gin), CLI (Cobra/urfave) |
-| PHP | Composer packages, Laravel/Symfony |
-| PHP/TYPO3 | TYPO3 extensions (auto-detected via `ext_emconf.php`) |
-| PHP/Oro | OroCommerce, OroPlatform, OroCRM bundles |
-| PHP/Symfony | Symfony apps (Doctrine, Twig, console commands) |
-| TypeScript | React, Next.js, Vue, Node.js |
-| Python | pip, poetry, uv, Django, Flask, FastAPI |
-| Python (modern) | pyproject.toml, ruff, mypy, pytest |
-| Skill repos | Claude Code plugins/skills (plugin.json, SKILL.md, checkpoints) |
-| Hybrid | Multi-language projects (auto-creates scoped files per stack) |
+Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), Python (pip/poetry/ruff/mypy), Skill repos, Hybrid (multi-stack with auto-scoping).
