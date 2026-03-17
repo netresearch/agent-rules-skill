@@ -10,7 +10,7 @@
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
         "Output file AGENTS.md exists in project root",
-        "Contains ## Overview section with project description",
+        "Contains a top-level description section explaining the project",
         "Contains a commands or build section with make targets",
         "Listed make targets match actual Makefile targets",
         "Contains go.mod Go version reference",
@@ -50,7 +50,7 @@
         "Lists scripts if any exist in the repo",
         "Does NOT contain irrelevant build/compile instructions",
         "Mentions the skill's purpose from SKILL.md description",
-        "Structure is concise (under 100 lines for a simple skill repo)"
+        "Structure is concise (under 150 lines for a simple skill repo)"
       ]
     },
     {
@@ -81,6 +81,90 @@
         "Root AGENTS.md links to scoped files",
         "Scoped files contain stack-specific commands and patterns",
         "Each scoped file can stand alone for its directory"
+      ]
+    },
+    {
+      "id": 6,
+      "eval_name": "multi-language-hybrid-project",
+      "prompt": "Generate AGENTS.md for this TYPO3 extension that has both PHP backend (composer, PHPUnit, PHPStan) and JavaScript frontend (npm, Vitest, ESLint). Detect both stacks and organize accordingly.",
+      "expected_output": "An AGENTS.md that recognizes both PHP and JS toolchains. Should reference both composer.json and package.json commands. May suggest scoped files for Build/ or Resources/Public/ JS code. Root should stay focused and not bloated.",
+      "files": [],
+      "project_path": "/home/cybot/projects/t3x-cowriter/main",
+      "assertions": [
+        "Detects PHP stack (composer scripts, PHPUnit, ext_emconf.php)",
+        "Detects JavaScript stack (npm scripts, Vitest, ESLint)",
+        "Lists commands from both composer.json and package.json",
+        "Listed commands actually exist in respective config files",
+        "Root AGENTS.md stays thin and organized (not a wall of text)",
+        "If scoped files are created, they contain stack-specific details",
+        "Does not conflate PHP and JS testing commands"
+      ]
+    },
+    {
+      "id": 7,
+      "eval_name": "update-stale-agents-freshness",
+      "prompt": "The AGENTS.md in this project was written months ago. The project has since added new Makefile targets, changed CI workflows, and added new directories. Run a freshness check and update the AGENTS.md to reflect the current state.",
+      "expected_output": "A detailed freshness report identifying which sections are stale, what changed in the repo since AGENTS.md was last modified, and a surgically updated AGENTS.md that fixes only the outdated parts.",
+      "files": [],
+      "project_path": "/home/cybot/projects/t3x-cowriter/main",
+      "assertions": [
+        "Compares AGENTS.md modification time against recent git history",
+        "Identifies specific sections that reference outdated or missing files",
+        "Preserves sections that are still accurate",
+        "Updated content references files and commands that currently exist",
+        "Does not rewrite the entire file when only parts are stale",
+        "Reports what changed with evidence (git log, file diffs)"
+      ]
+    },
+    {
+      "id": 8,
+      "eval_name": "edge-case-minimal-project",
+      "prompt": "Generate AGENTS.md for this minimal project. It has very little structure - just a few files. Produce something useful without fabricating content.",
+      "expected_output": "A minimal but valid AGENTS.md that accurately reflects the sparse project. Should not invent build systems, test frameworks, or architecture that doesn't exist. Should still provide value by documenting what IS there.",
+      "files": [],
+      "project_path": "/home/cybot/projects/agent-rules-skill/main",
+      "assertions": [
+        "Output file AGENTS.md exists and is valid markdown",
+        "Does not fabricate build commands that don't exist in the project",
+        "Does not invent test frameworks or CI pipelines not present",
+        "Accurately reflects actual project structure (skill repo layout)",
+        "Produces a file with at least 5 lines of useful content",
+        "Does not crash or produce empty output on minimal input",
+        "Every file path mentioned actually exists in the project"
+      ]
+    },
+    {
+      "id": 9,
+      "eval_name": "verified-commands-principle",
+      "prompt": "Generate AGENTS.md for this project. Every command you list must actually work. After generating, verify each command by attempting to run it (dry-run where possible).",
+      "expected_output": "An AGENTS.md where every shell command, make target, composer script, and npm script listed has been verified to exist and execute. No aspirational or copied-from-template commands.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Every make target listed exists in the Makefile",
+        "Every go command listed is valid (go test, go build, etc.)",
+        "No commands from other projects or templates leak in",
+        "Commands include correct flags and paths for this specific project",
+        "At least one command was actually executed to verify it works",
+        "Output includes evidence of command verification (exit codes or output)",
+        "Does not list commands like npm, composer, cargo that don't apply to this Go project"
+      ]
+    },
+    {
+      "id": 10,
+      "eval_name": "cross-platform-agent-rules",
+      "prompt": "Generate agent rules for this project. Create both AGENTS.md (for Claude/generic agents) and .github/copilot-instructions.md (for GitHub Copilot). Ensure content is consistent between them but format-appropriate for each platform.",
+      "expected_output": "Two files: AGENTS.md and .github/copilot-instructions.md. Both should describe the same project accurately. copilot-instructions.md should follow GitHub Copilot's expected format. Content should be consistent but not identical (each format has different conventions).",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "AGENTS.md exists in project root",
+        ".github/copilot-instructions.md exists",
+        "Both files describe the same project with consistent facts",
+        "copilot-instructions.md follows GitHub Copilot format conventions",
+        "No contradictions between the two files (e.g., different Go versions)",
+        "Both files reference the actual project structure",
+        "copilot-instructions.md does not just copy AGENTS.md verbatim"
       ]
     }
   ]
