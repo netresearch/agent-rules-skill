@@ -63,6 +63,10 @@
 {{REPO_SETTINGS}}
 <!-- AGENTS-GENERATED:END repo-settings -->
 
+<!-- AGENTS-GENERATED:START ci-rules -->
+{{CI_RULES_SECTION}}
+<!-- AGENTS-GENERATED:END ci-rules -->
+
 ## Key Decisions
 <!-- AGENTS-GENERATED:START key-decisions -->
 {{KEY_DECISIONS}}

@@ -511,6 +511,94 @@ build_quality_standards() {
     echo -e "$standards"
 }
 
+# Helper: Build CI/Quality Gates section from CI rules
+build_ci_rules_section() {
+    local ci_json="$1"
+    local section=""
+
+    local platform
+    platform=$(echo "$ci_json" | jq -r '.ci_platform // empty')
+    [[ -z "$platform" ]] && return 0
+
+    section="## CI/Quality Gates\n"
+    section="${section}> Platform: ${platform}\n\n"
+
+    # Version matrix
+    local versions_block=""
+    local php_versions
+    php_versions=$(echo "$ci_json" | jq -r '.php_versions // [] | if length > 0 then "PHP " + join(", ") else "" end')
+    [[ -n "$php_versions" ]] && versions_block="${versions_block}- ${php_versions}\n"
+
+    local node_versions
+    node_versions=$(echo "$ci_json" | jq -r '.node_versions // [] | if length > 0 then "Node " + join(", ") else "" end')
+    [[ -n "$node_versions" ]] && versions_block="${versions_block}- ${node_versions}\n"
+
+    local go_version
+    go_version=$(echo "$ci_json" | jq -r '.go_version // empty')
+    [[ -n "$go_version" ]] && versions_block="${versions_block}- Go ${go_version}\n"
+
+    local python_versions
+    python_versions=$(echo "$ci_json" | jq -r '.python_versions // [] | if length > 0 then "Python " + join(", ") else "" end')
+    [[ -n "$python_versions" ]] && versions_block="${versions_block}- ${python_versions}\n"
+
+    if [[ -n "$versions_block" ]]; then
+        section="${section}### Version Matrix\n${versions_block}\n"
+    fi
+
+    # Quality gates
+    local gates
+    gates=$(echo "$ci_json" | jq -r '.quality_gates // [] | if length > 0 then .[] else empty end')
+    if [[ -n "$gates" ]]; then
+        section="${section}### Quality Gates (must pass before merge)\n"
+        while IFS= read -r gate; do
+            section="${section}- \`${gate}\`\n"
+        done <<< "$gates"
+        section="${section}\n"
+    fi
+
+    # Coverage threshold
+    local coverage
+    coverage=$(echo "$ci_json" | jq -r '.coverage_threshold // empty')
+    [[ -n "$coverage" ]] && section="${section}### Coverage\n- Minimum threshold: ${coverage}\n\n"
+
+    # Security workflows
+    local sec_wfs
+    sec_wfs=$(echo "$ci_json" | jq -r '.security_workflows // [] | if length > 0 then .[] else empty end')
+    if [[ -n "$sec_wfs" ]]; then
+        section="${section}### Security Workflows\n"
+        while IFS= read -r wf; do
+            section="${section}- \`${wf}\`\n"
+        done <<< "$sec_wfs"
+        section="${section}\n"
+    fi
+
+    # Pinned actions
+    local pinned
+    pinned=$(echo "$ci_json" | jq -r '.pinned_actions // empty')
+    if [[ "$pinned" == "true" ]]; then
+        section="${section}### Constraints\n- Actions are SHA-pinned — maintain pinning when updating\n"
+    fi
+
+    # Linter configs
+    local linters
+    linters=$(echo "$ci_json" | jq -r '.linter_configs // [] | if length > 0 then .[] else empty end')
+    if [[ -n "$linters" ]]; then
+        section="${section}- Linter configs: "
+        local first=true
+        while IFS= read -r cfg; do
+            if $first; then
+                section="${section}\`${cfg}\`"
+                first=false
+            else
+                section="${section}, \`${cfg}\`"
+            fi
+        done <<< "$linters"
+        section="${section}\n"
+    fi
+
+    echo -e "$section"
+}
+
 # Helper: Build module boundaries section from architecture rules
 build_module_boundaries() {
     local arch_json="$1"
@@ -846,6 +934,9 @@ ${workflow_heuristics}"
 
     # Module boundaries (from architecture rules)
     vars[MODULE_BOUNDARIES]=$(build_module_boundaries "$ARCH_RULES")
+
+    # CI/Quality Gates section (from CI rules)
+    vars[CI_RULES_SECTION]=$(build_ci_rules_section "$CI_RULES")
 
     # Key Decisions (from ADRs)
     build_key_decisions() {
