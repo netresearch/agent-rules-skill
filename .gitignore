@@ -22,3 +22,9 @@ main/
 # Test output
 test-output/
 *.test.md
+
+# Generated eval workspace
+agent-rules-workspace/
+
+# Completed plans
+docs/
