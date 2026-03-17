@@ -1,6 +1,13 @@
 ---
 name: agent-rules
 description: "Use when creating or updating AGENTS.md files, .github/copilot-instructions.md, or other AI agent rule files, onboarding AI agents to a project, or standardizing agent documentation across repositories."
+license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
+compatibility: "Requires bash 4.3+, jq 1.5+, git 2.0+."
+metadata:
+  author: Netresearch DTT GmbH
+  version: "3.1.0"
+  repository: https://github.com/netresearch/agent-rules-skill
+allowed-tools: Bash(git:*) Bash(jq:*) Bash(grep:*) Bash(find:*) Bash(bash:*) Read Glob Grep
 ---
 
 # AGENTS.md Generator Skill
@@ -43,14 +50,6 @@ See `references/scripts-guide.md` for full options and validation checklist.
 ## Language Choice
 
 Default to English. Exception: match your code's naming language to prevent agents mixing languages.
-
-## Prerequisites
-
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| Bash | 4.3+ | Nameref variables (`local -n`). macOS: `brew install bash` |
-| jq | 1.5+ | JSON processing |
-| git | 2.0+ | For git history analysis |
 
 ## References
 
