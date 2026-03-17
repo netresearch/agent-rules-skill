@@ -1,0 +1,56 @@
+{
+  "assertion_results": [
+    {
+      "text": "Output file AGENTS.md exists in project root",
+      "passed": true,
+      "evidence": "File exists at without_skill/outputs/AGENTS.md (57 lines)"
+    },
+    {
+      "text": "Contains ## Overview section with project description",
+      "passed": false,
+      "evidence": "No ## Overview section. Opens with '# AGENTS.md (root)' and a one-line description ('This file explains repo-wide conventions and where to find scoped rules') but no dedicated Overview section with project description."
+    },
+    {
+      "text": "Contains a commands or build section with make targets",
+      "passed": false,
+      "evidence": "Has '## Minimal pre-commit checks' with 5 commands (gofmt, go vet, go test, make lint, make security-check) but this is not a comprehensive commands/build section. Missing most Makefile targets (build, docker-build, test-race, test-integration, test-smoke, mutation-test, setup, dev-check, fmt-check, etc.)."
+    },
+    {
+      "text": "Listed make targets match actual Makefile targets",
+      "passed": false,
+      "evidence": "Only lists 'make lint' and 'make security-check' from the Makefile. Missing 28+ other targets (build, test, test-race, test-integration, test-smoke, test-coverage, docker-build, setup, dev-check, fmt, fmt-check, mutation-test, etc.)."
+    },
+    {
+      "text": "Contains go.mod Go version reference",
+      "passed": true,
+      "evidence": "Dependencies section: 'Go version tracked in `go.mod` -- CI reads from `go-version-file: go.mod`'. References go.mod but does not state the actual version (1.26.1)."
+    },
+    {
+      "text": "File paths mentioned in AGENTS.md reference files that actually exist (spot-check 5 paths)",
+      "passed": true,
+      "evidence": "Referenced paths: cli/AGENTS.md, core/AGENTS.md, web/AGENTS.md, middlewares/AGENTS.md, test/AGENTS.md, web/server.go, vendor/ -- these are scoped AGENTS.md references and general paths. The directories (cli/, core/, web/, middlewares/, test/) all exist."
+    },
+    {
+      "text": "Uses tables or structured format (not just prose paragraphs)",
+      "passed": false,
+      "evidence": "Uses only bullet lists and code blocks. No tables. No structured file map. The 'pre-commit checks' are a simple bullet list, 'Index of scoped AGENTS.md' is a bullet list. No tabular command reference."
+    },
+    {
+      "text": "Does not duplicate content from README.md",
+      "passed": true,
+      "evidence": "Content is brief and convention-focused. Does not duplicate README's user-facing content (features, usage, configuration). The JSON serialization note and merge queue info are agent-specific."
+    }
+  ],
+  "qualitative": {
+    "structure_quality": "Adequate. Has clear sections but minimal structure. Missing file map, golden samples, utilities, heuristics, boundaries, terminology sections.",
+    "conciseness": "Very concise at 57 lines but sacrifices completeness. Missing critical information about build targets, project structure, and development patterns.",
+    "accuracy": "Good. What it does state is accurate (merge queue, JSON serialization, go-cron dependency). But incomplete.",
+    "usefulness_for_agents": "Limited. An agent would need to explore the codebase extensively to discover patterns, utilities, and available commands. No golden samples or heuristics to guide decisions."
+  },
+  "summary": {
+    "passed": 4,
+    "failed": 4,
+    "total": 8,
+    "pass_rate": 0.50
+  }
+}

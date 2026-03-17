@@ -1,0 +1,56 @@
+{
+  "assertion_results": [
+    {
+      "text": "Output file AGENTS.md exists in project root",
+      "passed": true,
+      "evidence": "File exists at with_skill/outputs/AGENTS.md (189 lines)"
+    },
+    {
+      "text": "Contains ## Overview section with project description",
+      "passed": false,
+      "evidence": "No ## Overview section. Has ## File Map and ## Codebase State sections that contain project context, but no dedicated Overview heading with a project description paragraph."
+    },
+    {
+      "text": "Contains a commands or build section with make targets",
+      "passed": true,
+      "evidence": "## Commands (verified) section with table listing 14 make targets including vet, fmt-check, lint, test, build, docker-build, setup, dev-check, security-check, mutation-test"
+    },
+    {
+      "text": "Listed make targets match actual Makefile targets",
+      "passed": true,
+      "evidence": "All 14 listed targets (vet, fmt-check, fmt, lint, test, test-race, test-integration, test-smoke, build, docker-build, setup, dev-check, security-check, mutation-test) verified to exist in Makefile. Also includes 'go test -v ./core/...' which is valid though not a Makefile target."
+    },
+    {
+      "text": "Contains go.mod Go version reference",
+      "passed": true,
+      "evidence": "Codebase State section: 'Go 1.26.1 (`go.mod`)' -- matches actual go.mod content 'go 1.26.1'"
+    },
+    {
+      "text": "File paths mentioned in AGENTS.md reference files that actually exist (spot-check 5 paths)",
+      "passed": true,
+      "evidence": "All 18 directory paths in File Map verified (ofelia.go, cli/, core/, core/adapters/, core/domain/, core/ports/, config/, middlewares/, etc.). All 16 Golden Samples + Utilities paths verified (core/runjob.go, core/resilient_job.go, core/adapters/docker/client.go, etc.). 0 missing."
+    },
+    {
+      "text": "Uses tables or structured format (not just prose paragraphs)",
+      "passed": true,
+      "evidence": "Uses markdown tables extensively: Commands table (14 rows), Golden Samples table (7 rows), Utilities table (9 rows), Heuristics table (8 rows), Terminology table (8 rows). Also uses code blocks for File Map."
+    },
+    {
+      "text": "Does not duplicate content from README.md",
+      "passed": true,
+      "evidence": "README.md covers user-facing documentation (badges, features, usage, environment variables, configuration). AGENTS.md covers agent-specific concerns (commands, file map, golden samples, utilities, heuristics, boundaries). No content overlap detected."
+    }
+  ],
+  "qualitative": {
+    "structure_quality": "Excellent. Well-organized with AGENTS-GENERATED markers, clear section hierarchy, consistent formatting. Includes workflow, heuristics, boundaries (always/ask/never), terminology, and scoped AGENTS.md index.",
+    "conciseness": "Good. 189 lines is reasonable for a complex Go project with ~30 Makefile targets. Information is dense and actionable, not padded.",
+    "accuracy": "Excellent. All file paths, make targets, Go version, and dependency references verified against actual project. Go 1.26.1 matches go.mod.",
+    "usefulness_for_agents": "Excellent. Golden Samples provide pattern references. Utilities prevent reinvention. Heuristics give quick decision trees. Boundaries are clear. JSON serialization note is a real gotcha that would save agent time."
+  },
+  "summary": {
+    "passed": 7,
+    "failed": 1,
+    "total": 8,
+    "pass_rate": 0.88
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "skill_name": "agent-rules",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "generate-agents-go-project",
+      "prompt": "Generate AGENTS.md for this Go project. It's a Docker job scheduler called Ofelia with go-cron integration, integration tests, and GitHub Actions CI.",
+      "expected_output": "A root AGENTS.md with Overview, Setup, Commands (make targets, go test), Architecture sections. Commands should be verified against the actual Makefile/go.mod. File paths should reference real files.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Output file AGENTS.md exists in project root",
+        "Contains ## Overview section with project description",
+        "Contains a commands or build section with make targets",
+        "Listed make targets match actual Makefile targets",
+        "Contains go.mod Go version reference",
+        "File paths mentioned in AGENTS.md reference files that actually exist",
+        "Uses tables or structured format (not just prose paragraphs)",
+        "Does not duplicate content from README.md"
+      ]
+    },
+    {
+      "id": 2,
+      "eval_name": "generate-agents-typo3-extension",
+      "prompt": "Create AGENTS.md for this TYPO3 extension. It's a CKEditor plugin for image handling in the RTE.",
+      "expected_output": "A root AGENTS.md with TYPO3-specific sections. Should detect ext_emconf.php, composer.json with typo3-cms-extension type, Classes/ directory structure. Should list composer scripts and CI commands.",
+      "files": [],
+      "project_path": "/home/cybot/projects/t3x-cowriter/main",
+      "assertions": [
+        "Output file AGENTS.md exists in project root",
+        "Detects TYPO3 extension type",
+        "References ext_emconf.php or composer.json type",
+        "Lists composer scripts that exist in composer.json",
+        "Contains testing or CI section",
+        "Directory references match actual project structure",
+        "Uses Pointer Principle (references files, doesn't duplicate content)"
+      ]
+    },
+    {
+      "id": 3,
+      "eval_name": "generate-agents-skill-repo",
+      "prompt": "Generate AGENTS.md for this skill repository. It provides CLI tool management for AI agents.",
+      "expected_output": "An AGENTS.md appropriate for a skill repo - covering skill structure, SKILL.md location, scripts, references. Should NOT include setup/build sections typical of application projects since skills have no build step.",
+      "files": [],
+      "project_path": "/home/cybot/projects/cli-tools-skill/main",
+      "assertions": [
+        "Output file AGENTS.md exists in project root",
+        "Identifies project as a skill repository",
+        "References skills/cli-tools/SKILL.md",
+        "Lists scripts if any exist in the repo",
+        "Does NOT contain irrelevant build/compile instructions",
+        "Mentions the skill's purpose from SKILL.md description",
+        "Structure is concise (under 100 lines for a simple skill repo)"
+      ]
+    },
+    {
+      "id": 4,
+      "eval_name": "update-outdated-agents",
+      "prompt": "Check if the AGENTS.md in this project is current with the codebase. The project has changed since it was last updated. Identify what's outdated and fix it.",
+      "expected_output": "A freshness analysis identifying outdated sections, followed by an updated AGENTS.md. Should detect new files, changed commands, or removed components.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Runs freshness check before modifying",
+        "Identifies specific outdated sections with evidence",
+        "Updated AGENTS.md preserves correct existing content",
+        "New content references files that actually exist",
+        "Commands listed in updated file actually execute"
+      ]
+    },
+    {
+      "id": 5,
+      "eval_name": "detect-scoped-files-needed",
+      "prompt": "This is a multi-language project with Go backend and TypeScript frontend. Determine if scoped AGENTS.md files are needed and create them if so.",
+      "expected_output": "Detection of distinct tech stacks requiring scoped files. Root AGENTS.md should be thin with pointers. Scoped files should have stack-specific details.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Detects multiple tech stacks or distinct subsystems",
+        "Root AGENTS.md stays thin (under 40 lines)",
+        "Root AGENTS.md links to scoped files",
+        "Scoped files contain stack-specific commands and patterns",
+        "Each scoped file can stand alone for its directory"
+      ]
+    }
+  ]
+}

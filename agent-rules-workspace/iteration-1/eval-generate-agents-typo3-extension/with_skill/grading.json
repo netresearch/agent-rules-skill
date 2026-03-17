@@ -1,0 +1,51 @@
+{
+  "assertion_results": [
+    {
+      "text": "Output file AGENTS.md exists in project root",
+      "passed": true,
+      "evidence": "File exists at with_skill/outputs/AGENTS.md (202 lines)"
+    },
+    {
+      "text": "Detects TYPO3 extension type",
+      "passed": true,
+      "evidence": "Repository Settings section: 'CI matrix: PHP 8.2, 8.3, 8.4, 8.5 x TYPO3 ^13.4, ^14.0'. Heuristics reference TYPO3-specific patterns (AJAX routes, CKEditor, Services.yaml, ext_localconf.php). Codebase State references ext_localconf.php."
+    },
+    {
+      "text": "References ext_emconf.php or composer.json type",
+      "passed": true,
+      "evidence": "Codebase State: 'Hardcodes `Typo3DatabaseBackend` for `cowriter_ratelimit` cache -- should be removed to respect instance cache config' (references ext_localconf.php). Commands source note: 'Source: composer.json, package.json, Makefile'. Golden Samples reference Configuration/ files. Note: does not explicitly reference ext_emconf.php or 'type: typo3-cms-extension' from composer.json, but TYPO3 extension type is clearly detected."
+    },
+    {
+      "text": "Lists composer scripts that exist in composer.json",
+      "passed": true,
+      "evidence": "Commands table lists: ci:test:php:lint, ci:test:php:phpstan, ci:test:php:cgl, ci:cgl, ci:test:php:rector, ci:rector, ci:test, ci:test:php:unit, ci:test:php:integration, ci:test:php:e2e, ci:test:all, ci:test:php:phpstan:baseline, ci:security. All verified to exist in composer.json scripts section."
+    },
+    {
+      "text": "Contains testing or CI section",
+      "passed": true,
+      "evidence": "Repository Settings includes CI matrix info. Commands section covers all test commands. Heuristics include 'PHPStan error from baseline' and 'Code style fails' entries. Boundaries section includes test-related Always Do items."
+    },
+    {
+      "text": "Directory references match actual project structure",
+      "passed": true,
+      "evidence": "File Map references Classes/, Classes/Controller/, Classes/Domain/DTO/, Configuration/, Configuration/Backend/, Resources/Public/JavaScript/, Tests/Unit/, Tests/Integration/, Tests/E2E/, Tests/JavaScript/, Build/, .github/workflows/ -- all verified to exist in actual project."
+    },
+    {
+      "text": "Uses Pointer Principle (references files, doesn't duplicate content)",
+      "passed": true,
+      "evidence": "Golden Samples reference specific files (e.g., 'Classes/Controller/AjaxController.php') with key patterns noted but no code duplicated. Utilities point to service files. File Map describes purpose without reproducing file contents. No README content duplicated."
+    }
+  ],
+  "qualitative": {
+    "structure_quality": "Excellent. Uses AGENTS-GENERATED markers, structured tables for all major sections, clear hierarchy. Includes scoped AGENTS.md index for sub-directories.",
+    "conciseness": "Good. 202 lines for a complex TYPO3 extension with dual PHP/JS stacks is reasonable. Dense, actionable content.",
+    "accuracy": "Excellent. Composer scripts verified. File paths verified. TYPO3 version matrix matches composer.json constraints. Codebase state notes (hardcoded cache backend, empty functional tests) are real project issues.",
+    "usefulness_for_agents": "Excellent. Heuristics cover common TYPO3 extension tasks (adding AJAX endpoint, controller, DTO, service). Golden Samples provide pattern references. Boundaries clearly separate always/ask/never. Terminology explains domain concepts."
+  },
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.00
+  }
+}

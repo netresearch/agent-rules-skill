@@ -1,0 +1,92 @@
+{
+  "iteration": 1,
+  "date": "2026-03-17",
+  "evals": {
+    "eval-generate-agents-go-project": {
+      "with_skill": {
+        "passed": 7,
+        "failed": 1,
+        "total": 8,
+        "pass_rate": 0.88,
+        "lines": 189,
+        "failed_assertions": ["Contains ## Overview section with project description"]
+      },
+      "without_skill": {
+        "passed": 4,
+        "failed": 4,
+        "total": 8,
+        "pass_rate": 0.50,
+        "lines": 57,
+        "failed_assertions": [
+          "Contains ## Overview section with project description",
+          "Contains a commands or build section with make targets",
+          "Listed make targets match actual Makefile targets",
+          "Uses tables or structured format"
+        ]
+      },
+      "delta": 0.38
+    },
+    "eval-generate-agents-typo3-extension": {
+      "with_skill": {
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "pass_rate": 1.00,
+        "lines": 202,
+        "failed_assertions": []
+      },
+      "without_skill": {
+        "passed": 6,
+        "failed": 1,
+        "total": 7,
+        "pass_rate": 0.86,
+        "lines": 466,
+        "failed_assertions": ["Uses Pointer Principle (references files, doesn't duplicate content)"]
+      },
+      "delta": 0.14
+    },
+    "eval-generate-agents-skill-repo": {
+      "with_skill": {
+        "passed": 6,
+        "failed": 1,
+        "total": 7,
+        "pass_rate": 0.86,
+        "lines": 153,
+        "failed_assertions": ["Structure is concise (under 100 lines for a simple skill repo)"]
+      },
+      "without_skill": {
+        "passed": 6,
+        "failed": 1,
+        "total": 7,
+        "pass_rate": 0.86,
+        "lines": 137,
+        "failed_assertions": ["Structure is concise (under 100 lines for a simple skill repo)"]
+      },
+      "delta": 0.00
+    }
+  },
+  "aggregate": {
+    "with_skill": {
+      "total_passed": 20,
+      "total_failed": 2,
+      "total_assertions": 22,
+      "pass_rate": 0.91
+    },
+    "without_skill": {
+      "total_passed": 16,
+      "total_failed": 6,
+      "total_assertions": 22,
+      "pass_rate": 0.73
+    },
+    "overall_delta": 0.18
+  },
+  "qualitative_notes": {
+    "structure": "with_skill produces consistent AGENTS-GENERATED sections (commands, filemap, golden-samples, utilities, heuristics, repo-settings, codebase-state, scope-index). without_skill varies widely: sparse 57-line output for Go project vs bloated 466-line output for TYPO3.",
+    "pointer_principle": "with_skill consistently references files without duplicating code. without_skill TYPO3 output includes ~200 lines of code examples that belong in documentation.",
+    "actionability": "with_skill outputs include heuristics tables, golden samples, and utilities -- enabling agents to make quick decisions. without_skill outputs describe architecture but lack decision-support structures.",
+    "consistency": "with_skill outputs follow a uniform template across all 3 project types. without_skill outputs have different structures for each project type.",
+    "accuracy": "Both variants achieve high accuracy for stated facts. with_skill verifies more paths and commands, providing more opportunities for correctness (or error).",
+    "biggest_win": "Go project eval shows the largest delta (+38%). without_skill produced only 57 lines missing most Makefile targets and all structured tables.",
+    "shared_weakness": "Neither variant includes a ## Overview section with a project description paragraph (Go project). Both exceed 100-line limit for skill repo (though the repo is complex enough to justify it)."
+  }
+}

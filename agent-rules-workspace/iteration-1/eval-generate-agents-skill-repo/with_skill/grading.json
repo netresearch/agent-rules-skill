@@ -1,0 +1,51 @@
+{
+  "assertion_results": [
+    {
+      "text": "Output file AGENTS.md exists in project root",
+      "passed": true,
+      "evidence": "File exists at with_skill/outputs/AGENTS.md (153 lines)"
+    },
+    {
+      "text": "Identifies project as a skill repository",
+      "passed": true,
+      "evidence": "Repository Settings: 'License: MIT (code) + CC-BY-SA-4.0 (content)', 'Entity name: Netresearch DTT GmbH', 'Release: Tag-triggered via netresearch/skill-repo-skill reusable workflow'. Terminology: 'Skill | Agent Skills specification package -- portable AI agent knowledge'. File Map references '.claude-plugin/plugin.json -> Skill plugin metadata'."
+    },
+    {
+      "text": "References skills/cli-tools/SKILL.md",
+      "passed": true,
+      "evidence": "File Map: 'skills/cli-tools/SKILL.md -> Skill definition: triggers, capabilities, workflows, script/reference index'"
+    },
+    {
+      "text": "Lists scripts if any exist in the repo",
+      "passed": true,
+      "evidence": "Commands table lists 6 scripts: install_tool.sh, check_environment.sh, detect_project_type.sh, auto_update.sh, detect_missing_tool.py. File Map details scripts/installers/ and scripts/lib/ directories."
+    },
+    {
+      "text": "Does NOT contain irrelevant build/compile instructions",
+      "passed": true,
+      "evidence": "Commands section focuses on linting (markdownlint, yamllint, shellcheck) and skill-specific scripts (install_tool.sh, check_environment.sh). No build/compile instructions present. No 'make build', no 'go build', no 'npm run build'."
+    },
+    {
+      "text": "Mentions the skill's purpose from SKILL.md description",
+      "passed": true,
+      "evidence": "Heuristics section describes skill purpose through actions: 'Adding a new tool -> Create catalog/<tool>.json', 'Tool has GitHub releases -> Set install_method: auto', 'Adding installer -> Create skills/cli-tools/scripts/installers/<method>.sh'. Codebase State: 'PostToolUse hook auto-detects command not found errors via Python script', 'Reconciliation system tries methods by priority until one succeeds'."
+    },
+    {
+      "text": "Structure is concise (under 100 lines for a simple skill repo)",
+      "passed": false,
+      "evidence": "153 lines. This is a complex skill repo (74+ catalog entries, 9 installers, 8 libraries, Python hook), so 153 lines is reasonable for the content. However, it exceeds the 100-line threshold specified in the assertion."
+    }
+  ],
+  "qualitative": {
+    "structure_quality": "Excellent. Uses all the standard AGENTS-GENERATED sections: commands, file map, golden samples, utilities, heuristics, repo settings, boundaries, codebase state, terminology.",
+    "conciseness": "Good for the complexity. 153 lines covers a substantial skill repo with catalog system, installers, hooks, and shared libraries. Each section is dense and actionable.",
+    "accuracy": "Excellent. Script paths, catalog counts (74+), installer counts (9), library counts (8) all verifiable. License split (MIT + CC-BY-SA-4.0) and entity name (Netresearch DTT GmbH) are correct per project conventions.",
+    "usefulness_for_agents": "Excellent. Golden samples point to specific reference files (ripgrep.json, ruff.json, github_release_binary.sh). Heuristics cover the most common tasks (adding tool, adding installer, modifying detection hook). Boundaries prevent common mistakes."
+  },
+  "summary": {
+    "passed": 6,
+    "failed": 1,
+    "total": 7,
+    "pass_rate": 0.86
+  }
+}
