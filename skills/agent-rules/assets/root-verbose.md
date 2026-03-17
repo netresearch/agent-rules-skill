@@ -95,6 +95,11 @@
 - Run full suite in CI: {{TEST_FULL_CMD}}
 <!-- AGENTS-GENERATED:END testing -->
 
+## Key Decisions
+<!-- AGENTS-GENERATED:START key-decisions -->
+{{KEY_DECISIONS}}
+<!-- AGENTS-GENERATED:END key-decisions -->
+
 ## Index of Scoped AGENTS.md
 <!-- AGENTS-GENERATED:START scope-index -->
 {{SCOPE_INDEX}}

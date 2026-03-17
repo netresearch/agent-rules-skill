@@ -378,10 +378,30 @@ log "Extracting CI commands..."
 CI_INFO=$("$SCRIPT_DIR/extract-ci-commands.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
 [ "$VERBOSE" = true ] && echo "$CI_INFO" | jq . >&2
 
+# Extract CI rules (version matrices, quality gates, coverage thresholds)
+log "Extracting CI rules..."
+CI_RULES=$("$SCRIPT_DIR/extract-ci-rules.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
+[ "$VERBOSE" = true ] && echo "$CI_RULES" | jq . >&2
+
 # Extract GitHub repository settings
 log "Extracting GitHub settings..."
 GITHUB_SETTINGS=$("$SCRIPT_DIR/extract-github-settings.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
 [ "$VERBOSE" = true ] && echo "$GITHUB_SETTINGS" | jq . >&2
+
+# Extract GitHub rulesets
+log "Extracting GitHub rulesets..."
+GITHUB_RULESETS=$("$SCRIPT_DIR/extract-github-rulesets.sh" "$PROJECT_DIR" 2>/dev/null || echo '{"rulesets":[],"merge_queue":false,"required_checks":[],"signed_commits":false}')
+[ "$VERBOSE" = true ] && echo "$GITHUB_RULESETS" | jq . >&2
+
+# Extract ADRs
+log "Extracting ADRs..."
+ADR_INFO=$("$SCRIPT_DIR/extract-adrs.sh" "$PROJECT_DIR" 2>/dev/null || echo '{"adr_count":0,"adr_directory":null,"adrs":[]}')
+[ "$VERBOSE" = true ] && echo "$ADR_INFO" | jq . >&2
+
+# Extract architecture / module boundary rules
+log "Extracting architecture rules..."
+ARCH_RULES=$("$SCRIPT_DIR/extract-architecture-rules.sh" "$PROJECT_DIR" 2>/dev/null || echo '{}')
+[ "$VERBOSE" = true ] && echo "$ARCH_RULES" | jq . >&2
 
 # Determine command source confidence
 # Priority: CI > Makefile > package.json/composer.json > fallback defaults
@@ -489,6 +509,74 @@ build_quality_standards() {
     [ -z "$standards" ] && standards="- Follow project linting and formatting rules\n- Write tests for new functionality\n- Keep functions focused and well-documented\n"
 
     echo -e "$standards"
+}
+
+# Helper: Build module boundaries section from architecture rules
+build_module_boundaries() {
+    local arch_json="$1"
+    local section=""
+
+    # Check if we have any data
+    local framework
+    framework=$(echo "$arch_json" | jq -r '.framework // empty' 2>/dev/null)
+    [ -z "$framework" ] && return 0
+
+    local rule_count
+    rule_count=$(echo "$arch_json" | jq -r '.rules | length // 0' 2>/dev/null)
+    local internal_count
+    internal_count=$(echo "$arch_json" | jq -r '.internal_packages | length // 0' 2>/dev/null)
+    local has_layers
+    has_layers=$(echo "$arch_json" | jq -r '.layer_definitions | length > 0' 2>/dev/null)
+
+    [ "$rule_count" = "0" ] && [ "$internal_count" = "0" ] && [ "$has_layers" != "true" ] && return 0
+
+    section="## Module Boundaries\n"
+    section="${section}> Source: ${framework}\n\n"
+
+    # Internal packages (Go)
+    if [ "$internal_count" -gt 0 ]; then
+        section="${section}### Internal Packages (compiler-enforced)\n"
+        while IFS= read -r pkg; do
+            section="${section}- \`${pkg}\`\n"
+        done < <(echo "$arch_json" | jq -r '.internal_packages[]' 2>/dev/null)
+        section="${section}\n"
+    fi
+
+    # Layer definitions
+    if [ "$has_layers" = "true" ]; then
+        local arch_pattern
+        arch_pattern=$(echo "$arch_json" | jq -r '.layer_definitions.architecture_pattern // empty' 2>/dev/null)
+        if [ -n "$arch_pattern" ]; then
+            section="${section}### Architecture Pattern\n"
+            section="${section}- ${arch_pattern}\n\n"
+        fi
+
+        # Non-pattern layer definitions (deptrac etc.)
+        local layer_keys
+        layer_keys=$(echo "$arch_json" | jq -r '.layer_definitions | keys[] | select(. != "architecture_pattern")' 2>/dev/null)
+        if [ -n "$layer_keys" ]; then
+            section="${section}### Layers\n"
+            while IFS= read -r layer; do
+                local values
+                values=$(echo "$arch_json" | jq -r --arg l "$layer" '.layer_definitions[$l] | if type == "array" then join(", ") else tostring end' 2>/dev/null)
+                section="${section}- **${layer}**: ${values}\n"
+            done <<< "$layer_keys"
+            section="${section}\n"
+        fi
+    fi
+
+    # Dependency rules
+    if [ "$rule_count" -gt 0 ]; then
+        section="${section}### Dependency Rules\n"
+        section="${section}| Source | Target | Rule | Reason |\n"
+        section="${section}|--------|--------|------|--------|\n"
+        while IFS= read -r rule_line; do
+            section="${section}${rule_line}\n"
+        done < <(echo "$arch_json" | jq -r '.rules[] |
+            "| " + .source + " | `" + .target + "` | " + .type + " | " + (.reason // "-") + " |"' 2>/dev/null)
+    fi
+
+    echo -e "$section"
 }
 
 # Helper: Build workflow section from git history
@@ -723,7 +811,72 @@ ${workflow_heuristics}"
 
         printf '%b' "$content"
     }
+
+    # Append ruleset information to repo settings
+    build_ruleset_settings() {
+        local rulesets_json="$1"
+        local ruleset_count
+        ruleset_count=$(echo "$rulesets_json" | jq '.rulesets | length')
+
+        [ "$ruleset_count" -eq 0 ] && return 0
+
+        local content=""
+        local merge_queue signed_commits required_checks
+
+        merge_queue=$(echo "$rulesets_json" | jq -r '.merge_queue')
+        signed_commits=$(echo "$rulesets_json" | jq -r '.signed_commits')
+        required_checks=$(echo "$rulesets_json" | jq -r 'if .required_checks | length > 0 then .required_checks | map("`" + . + "`") | join(", ") else "" end')
+
+        [ "$merge_queue" = "true" ] && content="${content}- **Merge queue:** enabled — PRs merge via queue, not direct merge\n"
+        [ "$signed_commits" = "true" ] && content="${content}- **Signed commits:** required\n"
+        [ -n "$required_checks" ] && content="${content}- **Required checks (rulesets):** $required_checks\n"
+
+        # List active rulesets
+        local ruleset_names
+        ruleset_names=$(echo "$rulesets_json" | jq -r '[.rulesets[].name] | join(", ")')
+        [ -n "$ruleset_names" ] && content="${content}- **Active rulesets:** $ruleset_names\n"
+
+        printf '%b' "$content"
+    }
     vars[REPO_SETTINGS]=$(build_repo_settings "$GITHUB_SETTINGS")
+    ruleset_settings=$(build_ruleset_settings "$GITHUB_RULESETS")
+    if [ -n "$ruleset_settings" ]; then
+        vars[REPO_SETTINGS]="${vars[REPO_SETTINGS]}${vars[REPO_SETTINGS]:+$'\n'}${ruleset_settings}"
+    fi
+
+    # Module boundaries (from architecture rules)
+    vars[MODULE_BOUNDARIES]=$(build_module_boundaries "$ARCH_RULES")
+
+    # Key Decisions (from ADRs)
+    build_key_decisions() {
+        local adr_json="$1"
+        local adr_count
+        adr_count=$(echo "$adr_json" | jq -r '.adr_count')
+
+        [ "$adr_count" -eq 0 ] || [ "$adr_count" = "null" ] && return 0
+
+        local adr_dir content=""
+        adr_dir=$(echo "$adr_json" | jq -r '.adr_directory')
+
+        for i in $(seq 0 $((adr_count - 1))); do
+            local title status summary file
+            file=$(echo "$adr_json" | jq -r ".adrs[$i].file")
+            title=$(echo "$adr_json" | jq -r ".adrs[$i].title")
+            status=$(echo "$adr_json" | jq -r ".adrs[$i].status")
+            summary=$(echo "$adr_json" | jq -r ".adrs[$i].summary")
+
+            # Show status badge only for non-Accepted (Accepted is the norm)
+            local status_badge=""
+            if [ "$status" != "Accepted" ] && [ "$status" != "Unknown" ]; then
+                status_badge=" [$status]"
+            fi
+
+            content="${content}- **${title}**${status_badge} — ${summary} → [\`${file}\`](${adr_dir}/${file})\n"
+        done
+
+        printf '%b' "$content"
+    }
+    vars[KEY_DECISIONS]=$(build_key_decisions "$ADR_INFO")
 
     # Codebase state - detect migrations, deprecations
     codebase_state=""
