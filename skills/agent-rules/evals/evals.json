@@ -160,11 +160,11 @@
       "files": [],
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
-        "AGENTS.md exists in project root",
-        ".github/copilot-instructions.md exists",
+        "AGENTS.md exists in outputs",
+        "copilot-instructions.md exists in outputs",
         "Both files describe the same project with consistent facts",
-        "copilot-instructions.md follows GitHub Copilot format conventions",
-        "No contradictions between the two files (e.g., different Go versions)",
+        "copilot-instructions.md follows GitHub Copilot prose format",
+        "No contradictions between the two files",
         "Both files reference the actual project structure",
         "copilot-instructions.md does not just copy AGENTS.md verbatim"
       ]
@@ -193,9 +193,9 @@
       "files": [],
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
-        "Documents internal/ package boundaries",
-        "Identifies the hexagonal architecture pattern (ports/adapters)",
-        "Notes which packages should not import each other",
+        "Documents module or package boundaries from the codebase",
+        "Identifies architecture pattern from directory structure (e.g., ports/adapters, core/domain)",
+        "Notes dependency restrictions from linter config (depguard, forbidigo) if present",
         "References actual directory structure as evidence",
         "Does not fabricate architectural rules"
       ]
