@@ -96,6 +96,12 @@
 - Delete migration files or schema changes
 {{LANGUAGE_SPECIFIC_NEVER}}
 
+## Contributing (for AI agents)
+{{CONTRIBUTION_RULES}}
+- **Comprehension**: Understand the problem before submitting code. Read the linked issue, understand *why* the change is needed, not just *what* to change.
+- **Context**: Every PR must explain the trade-offs considered and link to the issue it addresses. Disclose AI assistance if the project requires it.
+- **Continuity**: Respond to review feedback. Drive-by PRs without follow-up will be closed.
+
 <!-- AGENTS-GENERATED:START module-boundaries -->
 {{MODULE_BOUNDARIES}}
 <!-- AGENTS-GENERATED:END module-boundaries -->

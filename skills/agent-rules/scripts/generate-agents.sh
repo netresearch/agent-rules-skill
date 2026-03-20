@@ -976,6 +976,39 @@ ${workflow_heuristics}"
     }
     vars[KEY_DECISIONS]=$(build_key_decisions "$ADR_INFO")
 
+    # Contribution rules — detect issue-before-PR, AI disclosure, PR templates
+    build_contribution_rules() {
+        local rules=""
+
+        # Check CONTRIBUTING.md for issue-before-PR
+        if [ -f "CONTRIBUTING.md" ]; then
+            if grep -qi "open an issue\|issue first\|issue before\|create an issue" CONTRIBUTING.md 2>/dev/null; then
+                rules="$rules\n- **Issue first**: Open an issue and get approval before submitting a PR"
+            fi
+            if grep -qi "AI\|artificial intelligence\|copilot\|generated\|LLM\|disclose" CONTRIBUTING.md 2>/dev/null; then
+                rules="$rules\n- **AI disclosure**: This project requires disclosure of AI-assisted contributions in PR descriptions"
+            fi
+        fi
+
+        # Check PR template for issue linking
+        for tmpl in .github/pull_request_template.md .github/PULL_REQUEST_TEMPLATE/*.md; do
+            if [ -f "$tmpl" ] && grep -qi "Fixes #\|Closes #\|Related issue\|Issue number" "$tmpl" 2>/dev/null; then
+                rules="$rules\n- **Link issues**: PR template requires linking to an issue (Fixes #NNN)"
+                break
+            fi
+        done
+
+        # Check branch protection for linked issues requirement
+        local protection
+        protection=$(echo "$GITHUB_SETTINGS" | jq -r '.required_linked_issues // false' 2>/dev/null)
+        if [ "$protection" = "true" ]; then
+            rules="$rules\n- **Linked issues required**: Branch protection requires PRs to reference an issue"
+        fi
+
+        [ -n "$rules" ] && printf '%b' "$rules"
+    }
+    vars[CONTRIBUTION_RULES]=$(build_contribution_rules)
+
     # Codebase state - detect migrations, deprecations
     codebase_state=""
     [ -d "migrations" ] || [ -d "db/migrate" ] && codebase_state="$codebase_state\n- Database migrations present in migrations/"
