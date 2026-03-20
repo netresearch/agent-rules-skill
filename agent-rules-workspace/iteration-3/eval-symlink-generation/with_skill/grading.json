@@ -1,0 +1,51 @@
+{
+  "eval_id": 14,
+  "eval_name": "symlink-generation",
+  "variant": "with_skill",
+  "iteration": 3,
+  "date": "2026-03-20",
+  "description": "Verify --symlinks flag creates CLAUDE.md and GEMINI.md symlinks at every AGENTS.md level for cross-agent compatibility",
+  "assertions": [
+    {
+      "assertion": "Root CLAUDE.md symlink points to AGENTS.md",
+      "check": "test -L $PROJECT/CLAUDE.md && test $(readlink $PROJECT/CLAUDE.md) = 'AGENTS.md'",
+      "rationale": "Claude Code auto-loads root CLAUDE.md at session start"
+    },
+    {
+      "assertion": "Root GEMINI.md symlink points to AGENTS.md",
+      "check": "test -L $PROJECT/GEMINI.md && test $(readlink $PROJECT/GEMINI.md) = 'AGENTS.md'",
+      "rationale": "Gemini CLI auto-loads root GEMINI.md at session start"
+    },
+    {
+      "assertion": "Every subdirectory AGENTS.md has a matching CLAUDE.md symlink",
+      "check": "find $PROJECT -name AGENTS.md -not -path '*/.git/*' | while read f; do dir=$(dirname \"$f\"); test -L \"$dir/CLAUDE.md\" || echo \"MISSING: $dir/CLAUDE.md\"; done",
+      "rationale": "Claude Code loads subdirectory CLAUDE.md on demand when working in that directory. Without symlinks, subdirectory AGENTS.md is never loaded."
+    },
+    {
+      "assertion": "Every subdirectory AGENTS.md has a matching GEMINI.md symlink",
+      "check": "find $PROJECT -name AGENTS.md -not -path '*/.git/*' | while read f; do dir=$(dirname \"$f\"); test -L \"$dir/GEMINI.md\" || echo \"MISSING: $dir/GEMINI.md\"; done",
+      "rationale": "Gemini CLI loads subdirectory GEMINI.md hierarchically"
+    },
+    {
+      "assertion": "All symlinks are relative (portable across machines)",
+      "check": "find $PROJECT \\( -name CLAUDE.md -o -name GEMINI.md \\) -type l | while read f; do target=$(readlink \"$f\"); echo \"$f -> $target\"; [[ \"$target\" != /* ]] || echo \"ABSOLUTE: $f\"; done",
+      "rationale": "Absolute symlinks break when the repo is cloned to a different path"
+    },
+    {
+      "assertion": "Root AGENTS.md contains 'MUST read' instruction for scoped files",
+      "check": "grep -q 'MUST read' $PROJECT/AGENTS.md || grep -q 'must.*load' $PROJECT/AGENTS.md",
+      "rationale": "Fallback for agents without on-demand loading — explicit instruction to read subdirectory files"
+    },
+    {
+      "assertion": "Symlinks are not in .gitignore",
+      "check": "! grep -q 'CLAUDE.md' $PROJECT/.gitignore 2>/dev/null && ! grep -q 'GEMINI.md' $PROJECT/.gitignore 2>/dev/null",
+      "rationale": "Symlinks must be committed to git for all contributors to benefit"
+    },
+    {
+      "assertion": "--symlinks does not overwrite existing non-symlink CLAUDE.md",
+      "check": "Create a real CLAUDE.md file, run --symlinks, verify it was NOT replaced (unless --force)",
+      "rationale": "Safety: don't destroy user's custom CLAUDE.md with import directives or overrides"
+    }
+  ],
+  "notes": "These evals test the generation output. Testing whether agents actually load the files requires live agent runtimes (Claude Code subagents, Gemini CLI, etc.) which is outside the scope of static evals. See references/ai-tool-compatibility.md for verified loading behavior from March 2026 testing."
+}
