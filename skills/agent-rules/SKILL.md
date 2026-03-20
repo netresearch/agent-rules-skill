@@ -28,20 +28,16 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/generate-agents.sh PATH` | Generate AGENTS.md files |
-| `scripts/validate-structure.sh PATH` | Validate structure compliance |
-| `scripts/check-freshness.sh PATH` | Check if files are outdated vs git commits |
-| `scripts/verify-content.sh PATH` | Verify documented files/commands match codebase |
-| `scripts/verify-commands.sh PATH` | Verify documented commands execute |
-| `scripts/detect-project.sh PATH` | Detect language, version, build tools |
-| `scripts/detect-scopes.sh PATH` | Identify directories needing scoped files |
-| `scripts/extract-commands.sh PATH` | Extract commands from build configs |
-| `scripts/extract-ci-rules.sh PATH` | Extract CI quality gates and version matrix |
-| `scripts/extract-architecture-rules.sh PATH` | Extract module boundaries (phpat, deptrac, Go internal/) |
-| `scripts/extract-adrs.sh PATH` | Extract architectural decision records |
-| `scripts/extract-github-rulesets.sh PATH` | Extract GitHub rulesets and merge rules |
+| `scripts/generate-agents.sh PATH` | Generate AGENTS.md (main entry point) |
+| `scripts/validate-structure.sh PATH` | Validate compliance |
+| `scripts/check-freshness.sh PATH` | Check if outdated |
+| `scripts/verify-commands.sh PATH` | Verify commands execute |
+| `scripts/extract-ci-rules.sh PATH` | CI quality gates, version matrix |
+| `scripts/extract-architecture-rules.sh PATH` | Module boundaries (phpat, Go internal/) |
+| `scripts/extract-adrs.sh PATH` | Architectural decision records |
+| `scripts/extract-github-rulesets.sh PATH` | GitHub rulesets, merge rules |
 
-See `references/scripts-guide.md` for full options and validation checklist.
+See `references/scripts-guide.md` for all scripts and options.
 
 ## Core Principles
 
@@ -58,43 +54,13 @@ Default to English. Exception: match your code's naming language to prevent agen
 
 ## Cross-Agent Compatibility
 
-AGENTS.md is not natively supported by all coding agents. After generating AGENTS.md files, **always create symlinks** for agents that use their own instruction file format:
+After generating, **always create symlinks** for agents that don't read AGENTS.md natively:
 
 ```bash
-# Recommended: use --symlinks flag during generation
 scripts/generate-agents.sh /path/to/project --symlinks
-
-# Or create manually at every level with an AGENTS.md:
-ln -s AGENTS.md CLAUDE.md    # Claude Code (on-demand loading)
-ln -s AGENTS.md GEMINI.md    # Gemini CLI (hierarchical loading)
 ```
 
-**Why symlinks are critical for Claude Code**: Claude Code loads subdirectory CLAUDE.md files on demand when working in that directory. Without CLAUDE.md symlinks, subdirectory AGENTS.md files are **never loaded** — even if the root file links to them. Root-level instructions to "read nearest AGENTS.md" are insufficient; agents acknowledge them but don't act. (Verified March 2026.)
-
-**Commit symlinks to git.** They are 9 bytes each and work on all platforms.
-
-### Runtime agent detection
-
-When this skill runs, check the environment to detect the current coding agent and warn about compatibility:
-
-| Variable / Signal | Agent | Action needed |
-|---|---|---|
-| `CLAUDE_CODE` set, or parent is `claude` | Claude Code | Create CLAUDE.md symlinks if missing |
-| `CURSOR_*` env vars, or `.cursor/` exists | Cursor | None (native AGENTS.md support) |
-| `WINDSURF_*` env vars | Windsurf | None (native support) |
-| `GEMINI_CLI` set, or `GEMINI.md` exists | Gemini CLI | Create GEMINI.md symlinks if missing |
-| `.aider.conf.yml` exists | Aider | Warn: add `read: AGENTS.md` to config |
-| `.continue/` exists | Continue.dev | Warn: copy/link into `.continue/rules/` |
-| `.amazonq/` exists | Amazon Q | Warn: copy into `.amazonq/rules/` |
-| `.clinerules/` exists | Cline | Warn: copy/link into `.clinerules/` |
-
-After generation, **auto-create missing symlinks** for Claude Code and Gemini CLI. For other agents, print a warning with the required manual step.
-
-### .gitignore guidance
-
-CLAUDE.md and GEMINI.md symlinks should be **committed**, not ignored. If a project's `.gitignore` excludes them, warn the user. These are the primary mechanism for cross-agent compatibility and must be in the repo for all contributors.
-
-See [`references/ai-tool-compatibility.md`](references/ai-tool-compatibility.md) for the full 16-agent compatibility matrix.
+This creates `CLAUDE.md` and `GEMINI.md` symlinks (critical — Claude Code won't load subdirectory AGENTS.md without CLAUDE.md symlinks). Commit symlinks to git. See `references/ai-tool-compatibility.md` for the full 16-agent compatibility matrix and per-agent mitigations.
 
 ## References
 
