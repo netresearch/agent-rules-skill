@@ -1,5 +1,6 @@
 ---
 name: agent-rules
+version: "3.3.0"
 description: "Use when creating or updating AGENTS.md files, .github/copilot-instructions.md, or other AI agent rule files, onboarding AI agents to a project, or standardizing agent documentation across repositories."
 ---
 
