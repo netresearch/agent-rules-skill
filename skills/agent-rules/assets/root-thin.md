@@ -63,6 +63,15 @@
 {{REPO_SETTINGS}}
 <!-- AGENTS-GENERATED:END repo-settings -->
 
+<!-- AGENTS-GENERATED:START ci-rules -->
+{{CI_RULES_SECTION}}
+<!-- AGENTS-GENERATED:END ci-rules -->
+
+## Key Decisions
+<!-- AGENTS-GENERATED:START key-decisions -->
+{{KEY_DECISIONS}}
+<!-- AGENTS-GENERATED:END key-decisions -->
+
 ## Boundaries
 
 ### Always Do
@@ -86,6 +95,10 @@
 - Push directly to main/master branch
 - Delete migration files or schema changes
 {{LANGUAGE_SPECIFIC_NEVER}}
+
+<!-- AGENTS-GENERATED:START module-boundaries -->
+{{MODULE_BOUNDARIES}}
+<!-- AGENTS-GENERATED:END module-boundaries -->
 
 ## Codebase State
 <!-- AGENTS-GENERATED:START codebase-state -->

@@ -36,6 +36,10 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 | `scripts/detect-project.sh PATH` | Detect language, version, build tools |
 | `scripts/detect-scopes.sh PATH` | Identify directories needing scoped files |
 | `scripts/extract-commands.sh PATH` | Extract commands from build configs |
+| `scripts/extract-ci-rules.sh PATH` | Extract CI quality gates and version matrix |
+| `scripts/extract-architecture-rules.sh PATH` | Extract module boundaries (phpat, deptrac, Go internal/) |
+| `scripts/extract-adrs.sh PATH` | Extract architectural decision records |
+| `scripts/extract-github-rulesets.sh PATH` | Extract GitHub rulesets and merge rules |
 
 See `references/scripts-guide.md` for full options and validation checklist.
 
@@ -46,18 +50,11 @@ See `references/scripts-guide.md` for full options and validation checklist.
 - **Pointer Principle** -- point to files, don't duplicate content
 - **Golden Samples** -- one example file beats pages of explanation
 - **Audit Before Generating** -- discover existing docs and pain points before running scripts
+- **Extract Everything** -- mine CI workflows, architecture tests, ADRs, and rulesets for implicit rules
 
 ## Language Choice
 
 Default to English. Exception: match your code's naming language to prevent agents mixing languages.
-
-## Prerequisites
-
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| Bash | 4.3+ | Nameref variables (`local -n`). macOS: `brew install bash` |
-| jq | 1.5+ | JSON processing |
-| git | 2.0+ | For git history analysis |
 
 ## Cross-Agent Compatibility
 
@@ -113,20 +110,10 @@ Detailed documentation in `references/`:
 | [`directory-coverage.md`](references/directory-coverage.md) | Coverage guidance for PHP/TYPO3, Go, TypeScript |
 | [`examples/`](references/examples/) | Complete examples (coding-agent-cli, ldap-selfservice, simple-ldap-go, t3x-rte-ckeditor-image) |
 
-## Asset Templates
+## Templates
 
-Root templates in `assets/`: `root-thin.md` (~30 lines, default), `root-verbose.md` (~100 lines).
+Root: `assets/root-thin.md` (default), `root-verbose.md`. Scoped: `assets/scoped/` — `backend-go.md`, `backend-php.md`, `python-modern.md`, `typo3.md`, `symfony.md`, `skill-repo.md`, `cli.md`, `frontend-typescript.md`, `oro.md`.
 
-Scoped templates in `assets/scoped/`: `backend-go.md`, `backend-php.md`, `typo3.md`, `oro.md`, `cli.md`, `frontend-typescript.md`.
+## Supported Projects
 
-## Supported Project Types
-
-| Language | Project Types |
-|----------|---------------|
-| Go | Libraries, web apps (Fiber/Echo/Gin), CLI (Cobra/urfave) |
-| PHP | Composer packages, Laravel/Symfony |
-| PHP/TYPO3 | TYPO3 extensions (auto-detected via `ext_emconf.php`) |
-| PHP/Oro | OroCommerce, OroPlatform, OroCRM bundles |
-| TypeScript | React, Next.js, Vue, Node.js |
-| Python | pip, poetry, Django, Flask, FastAPI |
-| Hybrid | Multi-language projects (auto-creates scoped files per stack) |
+Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), Python (pip/poetry/ruff/mypy), Skill repos, Hybrid (multi-stack with auto-scoping).

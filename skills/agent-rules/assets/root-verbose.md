@@ -48,6 +48,10 @@
 - Hardcode environment-specific values
 {{LANGUAGE_SPECIFIC_NEVER}}
 
+<!-- AGENTS-GENERATED:START module-boundaries -->
+{{MODULE_BOUNDARIES}}
+<!-- AGENTS-GENERATED:END module-boundaries -->
+
 ## Development Workflow
 1. Create feature branch: `git checkout -b feature/description`
 2. Make changes with tests
@@ -80,6 +84,10 @@
 {{QUALITY_STANDARDS}}
 <!-- AGENTS-GENERATED:END quality-standards -->
 
+<!-- AGENTS-GENERATED:START ci-rules -->
+{{CI_RULES_SECTION}}
+<!-- AGENTS-GENERATED:END ci-rules -->
+
 ## Security & Safety
 - Never commit secrets, credentials, or PII
 - Validate all user inputs
@@ -94,6 +102,11 @@
 - Run fast tests locally: {{TEST_FAST_CMD}}
 - Run full suite in CI: {{TEST_FULL_CMD}}
 <!-- AGENTS-GENERATED:END testing -->
+
+## Key Decisions
+<!-- AGENTS-GENERATED:START key-decisions -->
+{{KEY_DECISIONS}}
+<!-- AGENTS-GENERATED:END key-decisions -->
 
 ## Scoped AGENTS.md (MUST read when working in these directories)
 <!-- AGENTS-GENERATED:START scope-index -->
