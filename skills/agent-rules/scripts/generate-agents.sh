@@ -29,6 +29,7 @@ UPDATE_ONLY=false
 FORCE=false
 VERBOSE=false
 CLAUDE_SHIM=false
+CREATE_SYMLINKS=false
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -57,6 +58,10 @@ while [[ $# -gt 0 ]]; do
             CLAUDE_SHIM=true
             shift
             ;;
+        --symlinks)
+            CREATE_SYMLINKS=true
+            shift
+            ;;
         --help|-h)
             cat <<EOF
 Usage: generate-agents.sh [PROJECT_DIR] [OPTIONS]
@@ -68,7 +73,8 @@ Options:
   --dry-run               Preview what will be created
   --update                Update existing files only
   --force                 Force regeneration of existing files
-  --claude-shim           Generate CLAUDE.md that imports AGENTS.md
+  --claude-shim           Generate CLAUDE.md that imports AGENTS.md (root only)
+  --symlinks              Create CLAUDE.md and GEMINI.md symlinks (root + subdirectories)
   --verbose, -v           Verbose output
   --help, -h              Show this help message
 
@@ -77,7 +83,8 @@ Examples:
   generate-agents.sh . --dry-run          # Preview changes
   generate-agents.sh . --style=verbose    # Use verbose root template
   generate-agents.sh . --update           # Update existing files
-  generate-agents.sh . --claude-shim      # Also generate CLAUDE.md shim
+  generate-agents.sh . --symlinks         # Create CLAUDE.md/GEMINI.md symlinks everywhere
+  generate-agents.sh . --claude-shim      # Generate CLAUDE.md @import shim (root only)
 EOF
             exit 0
             ;;
@@ -1217,6 +1224,29 @@ CLAUDESHIM
     fi
 fi
 
+# Create compatibility symlinks if requested (root level)
+# Subdirectory symlinks are created after scoped files are generated (see below).
+if [ "$CREATE_SYMLINKS" = true ] && [ "$CLAUDE_SHIM" = false ]; then
+    for symlink_name in CLAUDE.md GEMINI.md; do
+        SYMLINK_FILE="$PROJECT_DIR/$symlink_name"
+        if [ -L "$SYMLINK_FILE" ] || [ ! -e "$SYMLINK_FILE" ]; then
+            if [ "$DRY_RUN" = true ]; then
+                echo "[DRY-RUN] Would symlink: $SYMLINK_FILE → AGENTS.md"
+            else
+                ln -sf AGENTS.md "$SYMLINK_FILE"
+                echo "✅ Symlinked: $SYMLINK_FILE → AGENTS.md"
+            fi
+        else
+            log "$symlink_name already exists (not a symlink), skipping (use --force to replace)"
+            if [ "$FORCE" = true ]; then
+                rm -f "$SYMLINK_FILE"
+                ln -s AGENTS.md "$SYMLINK_FILE"
+                echo "✅ Replaced: $SYMLINK_FILE → AGENTS.md (--force)"
+            fi
+        fi
+    done
+fi
+
 # Generate scoped AGENTS.md files
 SCOPE_COUNT=$(echo "$SCOPES_INFO" | jq '.scopes | length')
 
@@ -2315,6 +2345,25 @@ else
             echo "✅ Updated: $SCOPE_FILE"
         else
             echo "✅ Created: $SCOPE_FILE"
+        fi
+
+        # Create subdirectory symlinks for cross-agent compatibility
+        if [ "$CREATE_SYMLINKS" = true ]; then
+            for symlink_name in CLAUDE.md GEMINI.md; do
+                SYMLINK_FILE="$PROJECT_DIR/$SCOPE_PATH/$symlink_name"
+                if [ -L "$SYMLINK_FILE" ] || [ ! -e "$SYMLINK_FILE" ]; then
+                    if [ "$DRY_RUN" = true ]; then
+                        echo "[DRY-RUN] Would symlink: $SYMLINK_FILE → AGENTS.md"
+                    else
+                        ln -sf AGENTS.md "$SYMLINK_FILE"
+                        echo "   ↳ Symlinked: $SCOPE_PATH/$symlink_name → AGENTS.md"
+                    fi
+                elif [ "$FORCE" = true ]; then
+                    rm -f "$SYMLINK_FILE"
+                    ln -s AGENTS.md "$SYMLINK_FILE"
+                    echo "   ↳ Replaced: $SCOPE_PATH/$symlink_name → AGENTS.md (--force)"
+                fi
+            done
         fi
 
     done < <(echo "$SCOPES_INFO" | jq -c '.scopes[]')

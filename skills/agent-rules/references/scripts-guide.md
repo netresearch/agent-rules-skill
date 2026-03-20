@@ -14,7 +14,8 @@ Options:
 - `--style=thin` - Use thin root template (~30 lines, default)
 - `--style=verbose` - Use verbose root template (~100-200 lines)
 - `--update` - Update existing files only (preserves human edits outside generated markers)
-- `--claude-shim` - Generate CLAUDE.md that imports AGENTS.md for Claude Code compatibility
+- `--claude-shim` - Generate CLAUDE.md that imports AGENTS.md (root only, use `--symlinks` instead)
+- `--symlinks` - Create CLAUDE.md and GEMINI.md symlinks at every level (root + subdirectories). Enables Claude Code on-demand loading and Gemini CLI native loading. **Recommended** for cross-agent compatibility.
 - `--force` - Regenerate even if files exist
 
 ## Validating Structure

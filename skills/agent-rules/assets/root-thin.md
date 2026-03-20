@@ -63,15 +63,6 @@
 {{REPO_SETTINGS}}
 <!-- AGENTS-GENERATED:END repo-settings -->
 
-<!-- AGENTS-GENERATED:START ci-rules -->
-{{CI_RULES_SECTION}}
-<!-- AGENTS-GENERATED:END ci-rules -->
-
-## Key Decisions
-<!-- AGENTS-GENERATED:START key-decisions -->
-{{KEY_DECISIONS}}
-<!-- AGENTS-GENERATED:END key-decisions -->
-
 ## Boundaries
 
 ### Always Do
@@ -96,10 +87,6 @@
 - Delete migration files or schema changes
 {{LANGUAGE_SPECIFIC_NEVER}}
 
-<!-- AGENTS-GENERATED:START module-boundaries -->
-{{MODULE_BOUNDARIES}}
-<!-- AGENTS-GENERATED:END module-boundaries -->
-
 ## Codebase State
 <!-- AGENTS-GENERATED:START codebase-state -->
 {{CODEBASE_STATE}}
@@ -110,10 +97,12 @@
 |------|-------|
 {{TERMINOLOGY}}
 
-## Index of scoped AGENTS.md
+## Scoped AGENTS.md (MUST read when working in these directories)
 <!-- AGENTS-GENERATED:START scope-index -->
 {{SCOPE_INDEX}}
 <!-- AGENTS-GENERATED:END scope-index -->
+
+> **Agents**: When you read or edit files in a listed directory, you **must** load its AGENTS.md first. It contains directory-specific conventions that override this root file.
 
 ## When instructions conflict
 The nearest `AGENTS.md` wins. Explicit user prompts override files.
