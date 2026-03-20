@@ -214,6 +214,55 @@
         "Links to the ADR files in docs/adr/",
         "Does not fabricate decisions that don't exist"
       ]
+    },
+    {
+      "id": 14,
+      "eval_name": "symlink-cross-agent-compatibility",
+      "prompt": "Generate AGENTS.md for this Go+TypeScript project with scoped subdirectory files. Use --symlinks to create CLAUDE.md and GEMINI.md symlinks for cross-agent compatibility. Verify symlinks are correct at every level.",
+      "expected_output": "Root and scoped AGENTS.md files plus CLAUDE.md and GEMINI.md symlinks at every directory that has an AGENTS.md. Symlinks must be relative, pointing to AGENTS.md.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
+      "assertions": [
+        "Root CLAUDE.md exists and is a symlink to AGENTS.md",
+        "Root GEMINI.md exists and is a symlink to AGENTS.md",
+        "Every subdirectory with AGENTS.md also has CLAUDE.md symlink to AGENTS.md",
+        "Every subdirectory with AGENTS.md also has GEMINI.md symlink to AGENTS.md",
+        "All symlinks use relative paths (not absolute)",
+        "Symlinks are not listed in .gitignore",
+        "Root AGENTS.md contains 'MUST read' or equivalent instruction for scoped files",
+        "Root AGENTS.md lists all scoped AGENTS.md paths in an index section"
+      ]
+    },
+    {
+      "id": 15,
+      "eval_name": "symlink-safety-no-overwrite",
+      "prompt": "This project already has a CLAUDE.md with custom content (not a symlink). Generate AGENTS.md with --symlinks. Verify that the existing CLAUDE.md is NOT overwritten unless --force is used.",
+      "expected_output": "The existing non-symlink CLAUDE.md should be preserved. A warning should be logged that CLAUDE.md exists and is not a symlink. With --force, it should be replaced.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
+      "assertions": [
+        "Existing non-symlink CLAUDE.md is preserved when running without --force",
+        "A log message warns that CLAUDE.md exists and is not a symlink",
+        "GEMINI.md symlink is still created (it didn't exist before)",
+        "With --force flag, existing CLAUDE.md IS replaced with symlink",
+        "AGENTS.md itself is not affected by --symlinks flag"
+      ]
+    },
+    {
+      "id": 16,
+      "eval_name": "on-demand-loading-claude-code",
+      "prompt": "Verify that CLAUDE.md symlinks enable on-demand loading in Claude Code. Create AGENTS.md with unique content in a subdirectory, symlink CLAUDE.md to it, then spawn a subagent that works in that directory and check if it has the subdirectory instructions loaded.",
+      "expected_output": "A subagent working in the subdirectory should have the AGENTS.md content auto-loaded via the CLAUDE.md symlink. Without the symlink, it should NOT have the content.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
+      "assertions": [
+        "Subagent without file access does NOT have subdirectory AGENTS.md content",
+        "Subagent after reading a file in the subdirectory DOES have AGENTS.md content via CLAUDE.md symlink",
+        "Content comes from on-demand CLAUDE.md loading, not from root instructions",
+        "Without CLAUDE.md symlink, subdirectory AGENTS.md is never auto-loaded",
+        "Root AGENTS.md instructions to read subdirectory files are NOT sufficient alone"
+      ],
+      "notes": "This is a live eval requiring Claude Code subagent spawning. Cannot be verified with static file checks alone. See references/ai-tool-compatibility.md for March 2026 test results."
     }
   ]
 }
