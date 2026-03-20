@@ -1,8 +1,13 @@
 ---
 name: agent-rules
-version: "3.3.0"
 description: "Use when creating or updating AGENTS.md files, .github/copilot-instructions.md, or other AI agent rule files, onboarding AI agents to a project, standardizing agent documentation, or when anyone mentions AGENTS.md, agent rules, project onboarding, or codebase documentation for AI agents."
 license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
+compatibility: "Requires bash 4.3+, jq 1.5+, git 2.0+."
+metadata:
+  author: Netresearch DTT GmbH
+  version: "3.3.0"
+  repository: https://github.com/netresearch/agent-rules-skill
+allowed-tools: Bash(git:*) Bash(jq:*) Bash(grep:*) Bash(find:*) Bash(bash:*) Read Glob Grep
 ---
 
 # AGENTS.md Generator Skill
