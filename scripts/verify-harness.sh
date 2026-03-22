@@ -131,7 +131,7 @@ check_agents_md_commands() {
         fail 1 "Commands section check skipped (AGENTS.md missing)"
         return
     fi
-    if grep -qi '^## *commands' "AGENTS.md"; then
+    if grep -qi '^## *\(available \)\?commands' "AGENTS.md"; then
         pass 1 "Commands section found"
     else
         fail 1 "AGENTS.md missing ## Commands section"
@@ -219,7 +219,13 @@ check_commands() {
     if [[ -f "composer.json" ]]; then
         found_any=true
         local has_composer_issue=false
+        # Built-in composer commands that are NOT user-defined scripts
+        local composer_builtins="install|update|require|remove|dump-autoload|dumpautoload|clear-cache|clearcache|config|create-project|exec|global|init|outdated|prohibits|why|why-not|search|self-update|selfupdate|show|status|validate|archive|browse|check-platform-reqs|diagnose|fund|licenses|run-script|suggests|upgrade"
         while IFS= read -r script; do
+            # Skip built-in composer commands
+            if echo "$script" | grep -qE "^(${composer_builtins})$"; then
+                continue
+            fi
             # Look for the script name in composer.json's scripts section
             # Using grep since jq is optional
             if ! grep -qE "\"${script}\"" "composer.json"; then
