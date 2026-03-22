@@ -319,11 +319,32 @@ check_hooks_autosetup() {
 }
 
 check_pr_template() {
+    # Check local repo first
     if [[ -f ".github/pull_request_template.md" ]]; then
-        pass 3 "PR template exists"
-    else
-        warn 3 "PR template missing (.github/pull_request_template.md)"
+        pass 3 "PR template exists (repo-level)"
+        return
     fi
+
+    # Check for templates in subdirectory form
+    if [[ -d ".github/PULL_REQUEST_TEMPLATE" ]]; then
+        pass 3 "PR template exists (directory form)"
+        return
+    fi
+
+    # Try to detect org-level template via GitHub API (graceful fallback)
+    local org=""
+    org=$(git remote get-url origin 2>/dev/null | sed -n 's|.*github\.com[:/]\([^/]*\)/.*|\1|p')
+    if [[ -n "$org" ]]; then
+        # Try GitHub API — if accessible, check org .github repo for template
+        local api_result=""
+        api_result=$(gh api "repos/${org}/.github/contents/pull_request_template.md" --jq '.name' 2>/dev/null || true)
+        if [[ "$api_result" == "pull_request_template.md" ]]; then
+            pass 3 "PR template exists (org-level via ${org}/.github)"
+            return
+        fi
+    fi
+
+    warn 3 "PR template missing (.github/pull_request_template.md or org-level)"
 }
 
 check_drift() {
