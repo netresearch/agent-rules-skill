@@ -46,6 +46,7 @@ See `references/scripts-guide.md` for full options.
 - **Verified Commands** -- commands that don't work waste tokens debugging
 - **Pointer Principle** -- point to files, don't duplicate content
 - **Audit Before Generating** -- discover existing docs before running scripts
+- **Hooks Before Commits** -- before first commit, verify git hooks are installed (`make setup`, `lefthook install`, or equivalent). Check for `lefthook.yml`, `captainhook.json`, `.husky/`, or `.pre-commit-config.yaml`. See [`references/git-hooks-setup.md`](references/git-hooks-setup.md).
 
 ## Cross-Agent Compatibility
 
@@ -68,6 +69,7 @@ See [`references/ai-tool-compatibility.md`](references/ai-tool-compatibility.md)
 | [`scripts-guide.md`](references/scripts-guide.md) | Script options, validation checklist |
 | [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md) | 16-agent compatibility matrix |
 | [`output-structure.md`](references/output-structure.md) | Root/scoped sections |
+| [`git-hooks-setup.md`](references/git-hooks-setup.md) | Hook framework detection and setup |
 | [`examples/`](references/examples/) | Complete examples |
 
 ## Templates

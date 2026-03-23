@@ -169,6 +169,18 @@ mechanical:
     severity: error
     desc: "AGENTS.md must have a top-level heading in English (default language)"
 
+  # === GIT HOOKS ===
+  - id: AG-29
+    type: file_exists_any
+    paths:
+      - lefthook.yml
+      - .lefthook.yml
+      - captainhook.json
+      - .husky/pre-commit
+      - .pre-commit-config.yaml
+    severity: warning
+    desc: "Repository should have a git hooks framework configured"
+
   # === SCOPED AGENTS.MD ===
   - id: AG-28
     type: regex
@@ -244,3 +256,16 @@ llm_reviews:
       Report any inconsistencies or contradictions found.
     severity: warning
     desc: "AGENTS.md must be consistent with other documentation"
+
+  - id: AG-30
+    domain: repo-health
+    prompt: |
+      Check if git hooks are properly configured and cover key quality gates:
+      1. Is a hook framework present (lefthook.yml, captainhook.json, .husky/, .pre-commit-config.yaml)?
+      2. Do hooks cover at minimum: linting/formatting and commit message validation?
+      3. Are hook configs consistent with CI checks (e.g., same linters run locally and in CI)?
+      4. If no hooks exist, flag this as a gap and recommend adding them.
+
+      Report which hooks are configured, what they cover, and any gaps.
+    severity: warning
+    desc: "Repository should have git hooks covering linting, formatting, and commit validation"
