@@ -1,0 +1,17 @@
+{
+  "skill_name": "agent-rules",
+  "evals": [
+    {
+      "id": 1,
+      "name": "detect-hooks-go",
+      "prompt": "I'm about to start working on /home/cybot/projects/ofelia/main/ — what git hooks does this project use and are they set up?",
+      "expected_output": "Should detect lefthook.yml and explain how to install (make setup or lefthook install)"
+    },
+    {
+      "id": 2,
+      "name": "detect-hooks-missing",
+      "prompt": "I'm starting work on /home/cybot/projects/assetpicker/main/ — are git hooks configured?",
+      "expected_output": "Should detect NO hook framework and suggest adding one"
+    }
+  ]
+}
