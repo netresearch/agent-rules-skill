@@ -46,7 +46,7 @@ See `references/scripts-guide.md` for full options.
 - **Verified Commands** -- commands that don't work waste tokens debugging
 - **Pointer Principle** -- point to files, don't duplicate content
 - **Audit Before Generating** -- discover existing docs before running scripts
-- **Hooks Before Commits** -- before first commit, verify git hooks are installed (`make setup`, `lefthook install`, or equivalent). Check for `lefthook.yml`, `captainhook.json`, `.husky/`, or `.pre-commit-config.yaml`. See [`references/git-hooks-setup.md`](references/git-hooks-setup.md).
+- **Hooks Before Commits** -- detect and install: `ls lefthook.yml captainhook.json .pre-commit-config.yaml .husky/pre-commit 2>/dev/null || echo "No hooks — add one"`. Then `make setup` or framework-specific install. See [`references/git-hooks-setup.md`](references/git-hooks-setup.md).
 
 ## Cross-Agent Compatibility
 
