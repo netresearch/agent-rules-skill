@@ -29,7 +29,7 @@ UPDATE_ONLY=false
 FORCE=false
 VERBOSE=false
 CLAUDE_SHIM=false
-CREATE_SYMLINKS=false
+CREATE_SYMLINKS=true
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -58,8 +58,8 @@ while [[ $# -gt 0 ]]; do
             CLAUDE_SHIM=true
             shift
             ;;
-        --symlinks)
-            CREATE_SYMLINKS=true
+        --no-symlinks)
+            CREATE_SYMLINKS=false
             shift
             ;;
         --help|-h)
@@ -73,8 +73,8 @@ Options:
   --dry-run               Preview what will be created
   --update                Update existing files only
   --force                 Force regeneration of existing files
-  --claude-shim           Generate CLAUDE.md that imports AGENTS.md (root only)
-  --symlinks              Create CLAUDE.md and GEMINI.md symlinks (root + subdirectories)
+  --claude-shim           Generate CLAUDE.md that imports AGENTS.md (root only, legacy)
+  --no-symlinks           Skip creating CLAUDE.md/GEMINI.md symlinks (default: create them)
   --verbose, -v           Verbose output
   --help, -h              Show this help message
 
@@ -83,8 +83,8 @@ Examples:
   generate-agents.sh . --dry-run          # Preview changes
   generate-agents.sh . --style=verbose    # Use verbose root template
   generate-agents.sh . --update           # Update existing files
-  generate-agents.sh . --symlinks         # Create CLAUDE.md/GEMINI.md symlinks everywhere
-  generate-agents.sh . --claude-shim      # Generate CLAUDE.md @import shim (root only)
+  generate-agents.sh . --no-symlinks      # Skip CLAUDE.md/GEMINI.md symlinks
+  generate-agents.sh . --claude-shim      # Generate CLAUDE.md @import shim instead of symlink
 EOF
             exit 0
             ;;

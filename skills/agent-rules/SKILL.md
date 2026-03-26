@@ -40,6 +40,24 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 
 See `references/scripts-guide.md` for full options.
 
+## CLAUDE.md Symlinks (automatic)
+
+The generator creates `CLAUDE.md -> AGENTS.md` symlinks by default alongside every AGENTS.md file. This is **required** because Claude Code reads `CLAUDE.md`, not `AGENTS.md`. Symlinks keep AGENTS.md as the single source of truth.
+
+```
+project/
+├── AGENTS.md              # Source of truth
+├── CLAUDE.md -> AGENTS.md # Symlink for Claude Code
+├── Classes/
+│   ├── AGENTS.md
+│   └── CLAUDE.md -> AGENTS.md
+└── Tests/
+    ├── AGENTS.md
+    └── CLAUDE.md -> AGENTS.md
+```
+
+Use `--no-symlinks` to skip. The validation script checks for missing symlinks.
+
 ## Core Principles
 
 - **Structured over Prose** -- tables and maps parse faster than paragraphs

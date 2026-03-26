@@ -203,6 +203,34 @@ check_scope_links() {
     fi
 }
 
+# Check CLAUDE.md symlink exists alongside an AGENTS.md file
+check_claude_symlink() {
+    local agents_file="$1"
+    local dir
+    dir=$(dirname "$agents_file")
+    local claude_file="$dir/CLAUDE.md"
+    local rel_dir="${dir#"$PROJECT_DIR"}"
+    [ -z "$rel_dir" ] && rel_dir="(root)"
+
+    if [ -L "$claude_file" ]; then
+        local target
+        target=$(readlink "$claude_file")
+        if [ "$target" = "AGENTS.md" ]; then
+            success "CLAUDE.md symlink correct: $rel_dir"
+            return 0
+        else
+            error "CLAUDE.md symlink points to '$target', expected 'AGENTS.md': $rel_dir"
+            return 1
+        fi
+    elif [ -f "$claude_file" ]; then
+        warning "CLAUDE.md is a regular file, not a symlink to AGENTS.md: $rel_dir"
+        return 1
+    else
+        error "Missing CLAUDE.md symlink to AGENTS.md: $rel_dir (Claude Code won't read AGENTS.md without it)"
+        return 1
+    fi
+}
+
 # Main validation
 echo "Validating AGENTS.md structure in: $PROJECT_DIR"
 echo ""
@@ -220,6 +248,23 @@ else
     check_scope_links "$ROOT_FILE"
     echo ""
 fi
+
+# Check CLAUDE.md symlinks
+echo "=== CLAUDE.md Symlinks ==="
+ALL_AGENTS_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
+    -not -path "*/references/examples/*" \
+    -not -path "*/examples/*" \
+    -not -path "*/.git/*" \
+    -not -path "*/vendor/*" \
+    -not -path "*/node_modules/*" \
+    2>/dev/null || true)
+
+if [ -n "$ALL_AGENTS_FILES" ]; then
+    while read -r file; do
+        check_claude_symlink "$file"
+    done <<< "$ALL_AGENTS_FILES"
+fi
+echo ""
 
 # Check scoped AGENTS.md files (exclude reference examples)
 SCOPED_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
