@@ -181,6 +181,14 @@ mechanical:
     severity: warning
     desc: "Repository should have a git hooks framework configured"
 
+  # === CLAUDE CODE COMPATIBILITY ===
+  - id: AG-31
+    type: conditional
+    severity: warning
+    desc: "CLAUDE.md must exist when Claude Code environment detected (.claude/ directory present)"
+    check_command: "test -d .claude && test -f CLAUDE.md"
+    tags: [claude-code, compatibility]
+
   # === SCOPED AGENTS.MD ===
   - id: AG-28
     type: regex

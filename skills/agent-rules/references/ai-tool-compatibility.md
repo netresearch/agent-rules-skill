@@ -16,7 +16,7 @@ How AGENTS.md integrates with different AI coding tools, and what mitigations ar
 | **JetBrains Junie** | Yes | Needs config path | `.junie/guidelines.md` | Set Guidelines path for monorepos |
 | **Gemini CLI** | Via config | Yes (excellent) | `GEMINI.md` | Symlink or settings.json config |
 | **Aider** | Via config | No auto-discovery | `CONVENTIONS.md` | `.aider.conf.yml` config |
-| **Claude Code** | **No** | On-demand (CLAUDE.md only) | `CLAUDE.md` | **Symlinks required** |
+| **Claude Code** | **No** | On-demand (CLAUDE.md only) | `CLAUDE.md` | **Auto-created when `.claude/` detected** |
 | **Continue.dev** | **No** | No | `.continue/rules/` | Copy/link into rules dir |
 | **Amazon Q** | **No** | No | `.amazonq/rules/` | Copy into rules dir |
 | **Cline** | **No** | No | `.clinerules/` | Copy/link into dir |
@@ -75,7 +75,17 @@ Claude Code only reads `CLAUDE.md` files natively. AGENTS.md is not recognized.
 - **Subdirectory CLAUDE.md**: Loaded on demand when agent reads/edits files in that directory
 - **AGENTS.md**: Never loaded natively — requires symlink
 
-### Mitigation: symlinks at every level
+### Auto-detection (default behavior)
+
+When `generate-agents.sh` detects a `.claude/` directory in the project, it **automatically creates
+CLAUDE.md symlinks** at every level where an AGENTS.md is generated. No flags required.
+
+This means Claude Code users get working agent instructions out of the box, without needing to
+remember `--symlinks` or `--claude-shim` flags.
+
+To opt out, pass `--no-symlinks` explicitly.
+
+### Manual symlinks (if not using the generator)
 
 ```bash
 # Root
@@ -87,7 +97,7 @@ ln -s AGENTS.md internal/CLAUDE.md
 ln -s AGENTS.md internal/web/CLAUDE.md
 ```
 
-### Alternative: @import shim (root only)
+### Alternative: @import shim (root only, legacy)
 
 If you need Claude-specific overrides on top of AGENTS.md:
 
@@ -199,14 +209,15 @@ Feature requests are open for most of these tools.
 
 ## Generation Script Integration
 
-When running `generate-agents.sh`, use `--symlinks` to auto-create compatibility symlinks:
+`generate-agents.sh` creates `CLAUDE.md` and `GEMINI.md` symlinks **by default** at every
+level where an AGENTS.md is generated. Additionally, when a `.claude/` directory is detected
+in the project (indicating a Claude Code environment), CLAUDE.md symlink creation is
+**automatically enabled** even if `--no-symlinks` was passed.
 
 ```bash
-scripts/generate-agents.sh /path/to/project --symlinks
+scripts/generate-agents.sh /path/to/project              # Symlinks created by default
+scripts/generate-agents.sh /path/to/project --no-symlinks # Skip symlinks (unless .claude/ detected)
 ```
 
-This creates `CLAUDE.md → AGENTS.md` and `GEMINI.md → AGENTS.md` symlinks at every
-level where an AGENTS.md is generated.
-
-The `--claude-shim` flag creates a root-only CLAUDE.md with `@import`. Use `--symlinks`
-instead for full subdirectory support.
+The `--claude-shim` flag creates a root-only CLAUDE.md with `@import` (legacy behavior).
+Use the default symlink behavior instead for full subdirectory support.
