@@ -58,8 +58,8 @@ while [[ $# -gt 0 ]]; do
             CLAUDE_SHIM=true
             shift
             ;;
-        --no-symlinks)
-            CREATE_SYMLINKS=false
+        --no-symlinks) # DEPRECATED: symlinks are always created now
+            echo "Warning: --no-symlinks is deprecated. CLAUDE.md symlinks are always created."
             shift
             ;;
         --help|-h)
@@ -1258,13 +1258,6 @@ CLAUDESHIM
 fi
 
 # Auto-detect Claude Code environment and ensure CLAUDE.md symlinks exist
-# When .claude/ directory is present, CLAUDE.md symlinks are essential for
-# Claude Code to read agent instructions (it only loads CLAUDE.md, not AGENTS.md).
-if [ -d "$PROJECT_DIR/.claude" ] && [ "$CREATE_SYMLINKS" = false ]; then
-    echo "ℹ️  Detected .claude/ directory (Claude Code environment)"
-    echo "   Auto-enabling CLAUDE.md symlink creation for compatibility"
-    CREATE_SYMLINKS=true
-fi
 
 # Create compatibility symlinks if requested (root level)
 # Subdirectory symlinks are created after scoped files are generated (see below).
