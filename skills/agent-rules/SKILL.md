@@ -40,44 +40,12 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 
 See `references/scripts-guide.md` for full options.
 
-## CLAUDE.md Symlinks (automatic)
-
-The generator creates `CLAUDE.md -> AGENTS.md` symlinks by default alongside every AGENTS.md file. This is **required** because Claude Code reads `CLAUDE.md`, not `AGENTS.md`. Symlinks keep AGENTS.md as the single source of truth.
-
-```
-project/
-├── AGENTS.md              # Source of truth
-├── CLAUDE.md -> AGENTS.md # Symlink for Claude Code
-├── Classes/
-│   ├── AGENTS.md
-│   └── CLAUDE.md -> AGENTS.md
-└── Tests/
-    ├── AGENTS.md
-    └── CLAUDE.md -> AGENTS.md
-```
-
-Use `--no-symlinks` to skip. The validation script checks for missing symlinks.
-
 ## Core Principles
 
-- **Structured over Prose** -- tables and maps parse faster than paragraphs
-- **Verified Commands** -- commands that don't work waste tokens debugging
+- **Structured over Prose** -- tables parse faster than paragraphs
+- **Verified Commands** -- commands that don't work waste tokens
 - **Pointer Principle** -- point to files, don't duplicate content
-- **Audit Before Generating** -- discover existing docs before running scripts
-- **Hooks Before Commits** -- detect and install: `ls lefthook.yml captainhook.json .pre-commit-config.yaml .husky/pre-commit 2>/dev/null || echo "No hooks — add one"`. Then `make setup` or framework-specific install. See [`references/git-hooks-setup.md`](references/git-hooks-setup.md).
-
-## Cross-Agent Compatibility
-
-After generating AGENTS.md, **create symlinks** for agents using their own format:
-
-```bash
-scripts/generate-agents.sh /path/to/project --symlinks
-# Or manually: ln -s AGENTS.md CLAUDE.md && ln -s AGENTS.md GEMINI.md
-```
-
-Claude Code loads subdirectory CLAUDE.md on demand -- without symlinks, subdirectory AGENTS.md files are never loaded. Commit symlinks to git (9 bytes each).
-
-See [`references/ai-tool-compatibility.md`](references/ai-tool-compatibility.md) for the full 16-agent compatibility matrix.
+- **Auto Symlinks** -- CLAUDE.md/GEMINI.md symlinks created by default (see [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md))
 
 ## References
 
