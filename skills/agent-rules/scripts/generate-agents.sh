@@ -1005,7 +1005,7 @@ ${workflow_heuristics}"
             rules="$rules\n- **Linked issues required**: Branch protection requires PRs to reference an issue"
         fi
 
-        [ -n "$rules" ] && printf '%b' "$rules"
+        [ -n "$rules" ] && printf '%b' "$rules" || true
     }
     vars[CONTRIBUTION_RULES]=$(build_contribution_rules)
 
