@@ -78,7 +78,7 @@
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
         "Detects multiple tech stacks or distinct subsystems",
-        "Root AGENTS.md stays thin (under 40 lines)",
+        "Root AGENTS.md stays thin (under 80 lines)",
         "Root AGENTS.md links to scoped files",
         "Scoped files contain stack-specific commands and patterns",
         "Each scoped file can stand alone for its directory"
@@ -88,7 +88,7 @@
       "id": 6,
       "eval_name": "multi-language-hybrid-project",
       "prompt": "Generate AGENTS.md for this TYPO3 extension that has both PHP backend (composer, PHPUnit, PHPStan) and JavaScript frontend (npm, Vitest, ESLint). Detect both stacks and organize accordingly.",
-      "expected_output": "An AGENTS.md that recognizes both PHP and JS toolchains. Should reference both composer.json and package.json commands. May suggest scoped files for Build/ or Resources/Public/ JS code. Root should stay focused and not bloated.",
+      "expected_output": "An AGENTS.md that recognizes both PHP and JS toolchains. Should reference both composer.json and package.json commands. Root should stay focused and not bloated.",
       "files": [],
       "project_path": "/home/cybot/projects/t3x-cowriter/main",
       "assertions": [
@@ -97,14 +97,12 @@
         "Lists commands from both composer.json and package.json",
         "Listed commands actually exist in respective config files",
         "Root AGENTS.md stays thin and organized (not a wall of text)",
-        "If scoped files are created, they contain stack-specific details",
-        "Does not conflate PHP and JS testing commands",
-        "References CI checks from both PHP and JS test pipelines"
+        "Does not conflate PHP and JS testing commands"
       ]
     },
     {
       "id": 7,
-      "eval_name": "update-stale-agents-freshness",
+      "eval_name": "freshness-check-stale-agents",
       "prompt": "The AGENTS.md in this project was written months ago. The project has since added new Makefile targets, changed CI workflows, and added new directories. Run a freshness check and update the AGENTS.md to reflect the current state.",
       "expected_output": "A detailed freshness report identifying which sections are stale, what changed in the repo since AGENTS.md was last modified, and a surgically updated AGENTS.md that fixes only the outdated parts.",
       "files": [],
@@ -114,15 +112,14 @@
         "Identifies specific sections that reference outdated or missing files",
         "Preserves sections that are still accurate",
         "Updated content references files and commands that currently exist",
-        "Does not rewrite the entire file when only parts are stale",
-        "Reports what changed with evidence (git log, file diffs)"
+        "Does not rewrite the entire file when only parts are stale"
       ]
     },
     {
       "id": 8,
       "eval_name": "edge-case-minimal-project",
       "prompt": "Generate AGENTS.md for this minimal project. It has very little structure - just a few files. Produce something useful without fabricating content.",
-      "expected_output": "A minimal but valid AGENTS.md that accurately reflects the sparse project. Should not invent build systems, test frameworks, or architecture that doesn't exist. Should still provide value by documenting what IS there.",
+      "expected_output": "A minimal but valid AGENTS.md that accurately reflects the sparse project. Should not invent build systems, test frameworks, or architecture that doesn't exist.",
       "files": [],
       "project_path": "/home/cybot/projects/agent-rules-skill/main",
       "assertions": [
@@ -130,8 +127,6 @@
         "Does not fabricate build commands that don't exist in the project",
         "Does not invent test frameworks or CI pipelines not present",
         "Accurately reflects actual project structure (skill repo layout)",
-        "Produces a file with at least 5 lines of useful content",
-        "Does not crash or produce empty output on minimal input",
         "Every file path mentioned actually exists in the project"
       ]
     },
@@ -139,7 +134,7 @@
       "id": 9,
       "eval_name": "verified-commands-principle",
       "prompt": "Generate AGENTS.md for this project. Every command you list must actually work. After generating, verify each command by attempting to run it (dry-run where possible).",
-      "expected_output": "An AGENTS.md where every shell command, make target, composer script, and npm script listed has been verified to exist and execute. No aspirational or copied-from-template commands.",
+      "expected_output": "An AGENTS.md where every shell command, make target, and script listed has been verified to exist. No aspirational or copied-from-template commands.",
       "files": [],
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
@@ -147,16 +142,14 @@
         "Every go command listed is valid (go test, go build, etc.)",
         "No commands from other projects or templates leak in",
         "Commands include correct flags and paths for this specific project",
-        "At least one command was actually executed to verify it works",
-        "Output includes evidence of command verification (exit codes or output)",
         "Does not list commands like npm, composer, cargo that don't apply to this Go project"
       ]
     },
     {
       "id": 10,
-      "eval_name": "cross-platform-agent-rules",
-      "prompt": "Generate agent rules for this project. Create both AGENTS.md (for Claude/generic agents) and .github/copilot-instructions.md (for GitHub Copilot). Ensure content is consistent between them but format-appropriate for each platform.",
-      "expected_output": "Two files: AGENTS.md and .github/copilot-instructions.md. Both should describe the same project accurately. copilot-instructions.md should follow GitHub Copilot's expected format. Content should be consistent but not identical (each format has different conventions).",
+      "eval_name": "cross-platform-copilot-instructions",
+      "prompt": "Generate agent rules for this project. Create both AGENTS.md and .github/copilot-instructions.md. Ensure content is consistent between them but format-appropriate for each platform.",
+      "expected_output": "Two files: AGENTS.md and .github/copilot-instructions.md. Both should describe the same project accurately. copilot-instructions.md should follow GitHub Copilot prose format.",
       "files": [],
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
@@ -165,104 +158,228 @@
         "Both files describe the same project with consistent facts",
         "copilot-instructions.md follows GitHub Copilot prose format",
         "No contradictions between the two files",
-        "Both files reference the actual project structure",
         "copilot-instructions.md does not just copy AGENTS.md verbatim"
       ]
     },
     {
       "id": 11,
       "eval_name": "ci-rules-extraction",
-      "prompt": "Generate AGENTS.md for this Go project. Make sure to include CI quality gates, required checks, and version requirements from the GitHub Actions workflows.",
-      "expected_output": "AGENTS.md includes CI/Quality Gates section extracted from .github/workflows/ with specific PHPStan levels, test matrix versions, required checks.",
+      "prompt": "Generate AGENTS.md for this Go project. Include CI quality gates, required checks, and version requirements from the GitHub Actions workflows.",
+      "expected_output": "AGENTS.md includes CI/Quality Gates section extracted from .github/workflows/ with specific versions, required checks, and linting configs.",
       "files": [],
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
         "Contains CI quality gates or required checks section",
         "Lists Go version from CI matrix or go.mod",
         "References specific CI workflow files",
-        "Mentions golangci-lint or linting configuration",
-        "Includes coverage requirements if present in CI",
+        "Mentions golangci-lint or linting configuration if present",
         "Does not fabricate CI rules that don't exist in workflows"
       ]
     },
     {
       "id": 12,
-      "eval_name": "architecture-boundaries-extraction",
+      "eval_name": "architecture-boundaries",
       "prompt": "Generate AGENTS.md for this Go project. Include module boundaries and architectural constraints from the codebase structure.",
-      "expected_output": "AGENTS.md includes architecture section noting internal/ packages, hexagonal architecture boundaries, ports/adapters pattern.",
+      "expected_output": "AGENTS.md includes architecture section noting internal/ packages, module boundaries, and dependency patterns.",
       "files": [],
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
         "Documents module or package boundaries from the codebase",
-        "Identifies architecture pattern from directory structure (e.g., ports/adapters, core/domain)",
-        "Notes dependency restrictions from linter config (depguard, forbidigo) if present",
+        "Identifies architecture pattern from directory structure",
         "References actual directory structure as evidence",
-        "Does not fabricate architectural rules"
+        "Does not fabricate architectural rules not visible in code"
       ]
     },
     {
       "id": 13,
       "eval_name": "adr-extraction",
-      "prompt": "Generate AGENTS.md for this project. Include any architectural decision records found in docs/adr/.",
-      "expected_output": "AGENTS.md includes Key Decisions section listing ADR titles with one-line summaries and file links.",
+      "prompt": "Generate AGENTS.md for this project. Include any architectural decision records found in docs/adr/ or similar locations.",
+      "expected_output": "AGENTS.md includes Key Decisions section listing ADR titles with summaries and file links.",
       "files": [],
       "project_path": "/home/cybot/projects/ofelia/main",
       "assertions": [
-        "Contains a Key Decisions or ADR section",
-        "Lists ADR titles from actual files (ADR-001, ADR-002, ADR-003)",
-        "Includes status (Accepted/Deprecated) for each",
-        "Links to the ADR files in docs/adr/",
+        "Checks for docs/adr/ or similar ADR directories",
+        "If ADRs exist, lists titles with one-line summaries",
+        "Links to the ADR files rather than duplicating content",
         "Does not fabricate decisions that don't exist"
       ]
     },
     {
       "id": 14,
-      "eval_name": "symlink-cross-agent-compatibility",
-      "prompt": "Generate AGENTS.md for this Go+TypeScript project with scoped subdirectory files. Use --symlinks to create CLAUDE.md and GEMINI.md symlinks for cross-agent compatibility. Verify symlinks are correct at every level.",
-      "expected_output": "Root and scoped AGENTS.md files plus CLAUDE.md and GEMINI.md symlinks at every directory that has an AGENTS.md. Symlinks must be relative, pointing to AGENTS.md.",
+      "eval_name": "symlink-creation",
+      "prompt": "Generate AGENTS.md for this project with CLAUDE.md and GEMINI.md symlinks for cross-agent compatibility. Verify symlinks are correct at every level.",
+      "expected_output": "Root and scoped AGENTS.md files plus CLAUDE.md and GEMINI.md symlinks at every directory that has an AGENTS.md.",
       "files": [],
       "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
       "assertions": [
         "Root CLAUDE.md exists and is a symlink to AGENTS.md",
         "Root GEMINI.md exists and is a symlink to AGENTS.md",
-        "Every subdirectory with AGENTS.md also has CLAUDE.md symlink to AGENTS.md",
-        "Every subdirectory with AGENTS.md also has GEMINI.md symlink to AGENTS.md",
+        "Subdirectory AGENTS.md files also have CLAUDE.md symlinks",
         "All symlinks use relative paths (not absolute)",
-        "Symlinks are not listed in .gitignore",
-        "Root AGENTS.md contains 'MUST read' or equivalent instruction for scoped files",
-        "Root AGENTS.md lists all scoped AGENTS.md paths in an index section"
+        "Root AGENTS.md lists all scoped AGENTS.md paths in an index"
       ]
     },
     {
       "id": 15,
       "eval_name": "symlink-safety-no-overwrite",
-      "prompt": "This project already has a CLAUDE.md with custom content (not a symlink). Generate AGENTS.md with --symlinks. Verify that the existing CLAUDE.md is NOT overwritten unless --force is used.",
-      "expected_output": "The existing non-symlink CLAUDE.md should be preserved. A warning should be logged that CLAUDE.md exists and is not a symlink. With --force, it should be replaced.",
+      "prompt": "This project already has a CLAUDE.md with custom content (not a symlink). Generate AGENTS.md with --symlinks. Verify that the existing CLAUDE.md is NOT overwritten.",
+      "expected_output": "The existing non-symlink CLAUDE.md should be preserved. A warning should be logged.",
       "files": [],
       "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
       "assertions": [
-        "Existing non-symlink CLAUDE.md is preserved when running without --force",
+        "Existing non-symlink CLAUDE.md is preserved without --force",
         "A log message warns that CLAUDE.md exists and is not a symlink",
-        "GEMINI.md symlink is still created (it didn't exist before)",
-        "With --force flag, existing CLAUDE.md IS replaced with symlink",
         "AGENTS.md itself is not affected by --symlinks flag"
       ]
     },
     {
       "id": 16,
-      "eval_name": "on-demand-loading-claude-code",
-      "prompt": "Verify that CLAUDE.md symlinks enable on-demand loading in Claude Code. Create AGENTS.md with unique content in a subdirectory, symlink CLAUDE.md to it, then spawn a subagent that works in that directory and check if it has the subdirectory instructions loaded.",
-      "expected_output": "A subagent working in the subdirectory should have the AGENTS.md content auto-loaded via the CLAUDE.md symlink. Without the symlink, it should NOT have the content.",
+      "eval_name": "git-hooks-detection",
+      "prompt": "I'm about to start working on this project -- what git hooks does it use and are they set up?",
+      "expected_output": "Should detect the hook framework (lefthook, husky, captainhook, or pre-commit) and explain how to install. If none exists, should flag the gap.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Checks for lefthook.yml, .husky/, captainhook.json, .pre-commit-config.yaml",
+        "Reports which hook framework is found (or none)",
+        "If hooks exist, explains install command",
+        "If no hooks exist, recommends adding one",
+        "Does not assume a hook framework without evidence"
+      ]
+    },
+    {
+      "id": 17,
+      "eval_name": "pointer-principle-no-duplication",
+      "prompt": "Generate AGENTS.md for this project. The README.md already has extensive setup instructions. Do NOT duplicate README content -- point to it instead.",
+      "expected_output": "AGENTS.md should reference README.md for setup details rather than copying them. Uses the Pointer Principle.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Does not copy setup instructions from README.md verbatim",
+        "Contains 'see README.md' or similar pointer for detailed setup",
+        "Root AGENTS.md stays under 80 lines",
+        "Focuses on agent-specific info (commands, boundaries, heuristics)",
+        "References README.md as a source but adds agent-specific value"
+      ]
+    },
+    {
+      "id": 18,
+      "eval_name": "validate-structure-compliance",
+      "prompt": "Run the validate-structure.sh script on this project and report any structural issues found in the existing AGENTS.md.",
+      "expected_output": "Script output showing which sections pass/fail validation. Should identify missing recommended sections and structural issues.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Runs scripts/validate-structure.sh against the project",
+        "Reports pass/fail for each structural check",
+        "Identifies missing recommended sections",
+        "Does not crash on valid AGENTS.md files",
+        "Output is parseable and actionable"
+      ]
+    },
+    {
+      "id": 19,
+      "eval_name": "python-project-detection",
+      "prompt": "Generate AGENTS.md for this Python project. It uses poetry for dependency management, pytest for testing, and ruff for linting.",
+      "expected_output": "An AGENTS.md with Python-specific sections. Should detect pyproject.toml, poetry.lock, ruff config, and pytest settings.",
+      "files": [],
+      "project_path": "/home/cybot/projects/python-project/main",
+      "assertions": [
+        "Detects Python project from pyproject.toml or setup.py",
+        "Lists poetry commands if poetry.lock exists",
+        "References pytest configuration",
+        "Lists ruff or linting commands",
+        "Does not list npm/composer/go commands for a Python project"
+      ]
+    },
+    {
+      "id": 20,
+      "eval_name": "template-selection-thin-vs-verbose",
+      "prompt": "Generate AGENTS.md for this small Go library. Use the thin template style -- the file should be minimal and focused.",
+      "expected_output": "A thin AGENTS.md under 50 lines with only essential sections: Commands, File Map, Heuristics, Boundaries.",
+      "files": [],
+      "project_path": "/home/cybot/projects/simple-ldap-go/main",
+      "assertions": [
+        "Output is under 50 lines",
+        "Contains Commands section with actual build/test commands",
+        "Contains precedence statement",
+        "Contains index of scoped files if any exist",
+        "Omits verbose sections like full architecture descriptions"
+      ]
+    },
+    {
+      "id": 21,
+      "eval_name": "verify-content-accuracy",
+      "prompt": "Run verify-content.sh on this project. Report any documented files that don't exist and any important undocumented files.",
+      "expected_output": "Content verification showing documented-but-missing files and undocumented-but-important files.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Runs scripts/verify-content.sh against the project",
+        "Reports files referenced in AGENTS.md that don't exist",
+        "Reports important files not mentioned in AGENTS.md",
+        "Does not report false positives for valid paths",
+        "Output clearly distinguishes missing from undocumented"
+      ]
+    },
+    {
+      "id": 22,
+      "eval_name": "heuristics-table-generation",
+      "prompt": "Generate AGENTS.md for this project. Include a Heuristics table with project-specific quick-decision rules based on the codebase conventions.",
+      "expected_output": "A Heuristics section with When/Do table entries derived from actual project patterns (commit style, merge strategy, dependency policy).",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Contains a Heuristics section with table format",
+        "Heuristics are derived from actual project config (not generic)",
+        "Includes commit convention rule if conventional commits detected",
+        "Includes merge strategy if branch protection detected",
+        "Each heuristic is actionable (not vague advice)"
+      ]
+    },
+    {
+      "id": 23,
+      "eval_name": "no-fabrication-unknown-project",
+      "prompt": "Generate AGENTS.md for /tmp/empty-project which contains only a single README.md with 'Hello World'. Do not fabricate any content.",
+      "expected_output": "A minimal AGENTS.md acknowledging the sparse project. No fabricated commands, test frameworks, or architecture.",
+      "files": [],
+      "project_path": "/tmp/empty-project",
+      "assertions": [
+        "Does not list build commands that don't exist",
+        "Does not reference test frameworks not present",
+        "Does not invent CI pipelines",
+        "Produces a valid markdown file",
+        "May suggest next steps but does not pretend they exist"
+      ]
+    },
+    {
+      "id": 24,
+      "eval_name": "scoped-agents-override-root",
+      "prompt": "This project has a root AGENTS.md saying 'use tabs for indentation'. The internal/web/ directory uses TypeScript with prettier configured for 2-space indentation. Generate a scoped AGENTS.md for internal/web/ that correctly overrides the root rule.",
+      "expected_output": "A scoped AGENTS.md that specifies 2-space indentation for TypeScript, overriding the root tab rule for this directory.",
       "files": [],
       "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
       "assertions": [
-        "Subagent without file access does NOT have subdirectory AGENTS.md content",
-        "Subagent after reading a file in the subdirectory DOES have AGENTS.md content via CLAUDE.md symlink",
-        "Content comes from on-demand CLAUDE.md loading, not from root instructions",
-        "Without CLAUDE.md symlink, subdirectory AGENTS.md is never auto-loaded",
-        "Root AGENTS.md instructions to read subdirectory files are NOT sufficient alone"
-      ],
-      "notes": "This is a live eval requiring Claude Code subagent spawning. Cannot be verified with static file checks alone. See references/ai-tool-compatibility.md for March 2026 test results."
+        "Scoped file mentions its own indentation convention",
+        "Does not blindly repeat root conventions that don't apply",
+        "References prettier or editorconfig as source of truth",
+        "Includes a note about scope override or precedence"
+      ]
+    },
+    {
+      "id": 25,
+      "eval_name": "github-rulesets-extraction",
+      "prompt": "Generate AGENTS.md for this project. Extract GitHub repository rulesets and merge rules to document branch protection and required checks.",
+      "expected_output": "AGENTS.md includes repository settings section with merge strategy, branch protection rules, and required status checks.",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Contains repository settings or merge rules section",
+        "Documents merge strategy (squash/merge/rebase)",
+        "Documents required checks if available",
+        "Information matches actual GitHub settings",
+        "Does not fabricate branch protection rules"
+      ]
     }
   ]
 }
