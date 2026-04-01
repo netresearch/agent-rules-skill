@@ -40,12 +40,21 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 
 See `references/scripts-guide.md` for full options.
 
+## Workflow
+
+1. **Detect**: `detect-project.sh` + `detect-scopes.sh` to identify stacks and subsystems
+2. **Extract**: `extract-commands.sh`, `extract-ci-rules.sh`, etc. to gather facts
+3. **Generate**: `generate-agents.sh` with `--style=thin` (default) or `--verbose`
+4. **Verify**: `verify-content.sh` + `verify-commands.sh` -- MANDATORY before done
+
+Use `--update` to preserve human-curated content outside `<!-- GENERATED -->` markers.
+
 ## Core Principles
 
 - **Structured over Prose** -- tables parse faster than paragraphs
-- **Verified Commands** -- commands that don't work waste tokens
+- **Never Fabricate** -- only document what exists; verify every command and path
 - **Pointer Principle** -- point to files, don't duplicate content
-- **Auto Symlinks** -- CLAUDE.md/GEMINI.md symlinks created by default (see [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md))
+- **Auto Symlinks** -- CLAUDE.md/GEMINI.md symlinks by default (see [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md))
 
 ## References
 
