@@ -1,0 +1,13 @@
+name: Eval Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  eval-validate:
+    uses: netresearch/skill-repo-skill/.github/workflows/eval-validate.yml@main
