@@ -12,7 +12,8 @@
 <!-- AGENTS-GENERATED:START commands -->
 | Task | Command | ~Time |
 |------|---------|-------|
-| Test (all) | vendor/bin/phpunit | ~30s |
+| Lint | `bash -n skills/agent-rules/scripts/*.sh` | ~5s |
+| Validate | `skills/agent-rules/scripts/validate-structure.sh .` | ~10s |
 <!-- AGENTS-GENERATED:END commands -->
 
 > If commands fail, verify against Makefile/package.json/composer.json or ask user to update.
