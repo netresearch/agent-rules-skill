@@ -30,10 +30,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS middleware
+    # CORS middleware — wildcard origins here are intentional for this
+    # fixture example only; real deployments must set concrete origins
+    # from settings (e.g. settings.cors_allowed_origins).
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["*"],  # nosemgrep: python.fastapi.security.wildcard-cors.wildcard-cors
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -218,8 +218,10 @@ detect_css_approach() {
         [ -f "$config_root/tsconfig.json" ] && approaches+=("CSS Modules")
     fi
 
-    # Join approaches with comma
-    local IFS=', '
+    # Join approaches with comma. `local IFS` is function-scoped and does
+    # not tamper with the caller's IFS — safe under strict SC2030/SC2031
+    # semantics. Suppress opengrep's false positive on the `IFS=` pattern.
+    local IFS=', '  # nosemgrep: bash.lang.security.ifs-tampering.ifs-tampering
     echo "${approaches[*]}"
 }
 

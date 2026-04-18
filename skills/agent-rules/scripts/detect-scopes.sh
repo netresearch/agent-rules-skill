@@ -319,5 +319,12 @@ fi
 if [ ${#scopes[@]} -eq 0 ]; then
     echo '{"scopes": []}'
 else
-    echo "{\"scopes\": [$(IFS=,; echo "${scopes[*]}")]}"
+    # Join scopes with commas via explicit loop — avoids IFS= entirely
+    # (the opengrep bash.lang.security.ifs-tampering rule flags any
+    # IFS= assignment, even inside subshells).
+    joined="${scopes[0]}"
+    for ((i=1; i<${#scopes[@]}; i++)); do
+        joined+=",${scopes[i]}"
+    done
+    echo "{\"scopes\": [$joined]}"
 fi

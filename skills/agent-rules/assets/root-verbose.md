@@ -14,9 +14,15 @@
 **Type**: {{PROJECT_TYPE}}
 <!-- AGENTS-GENERATED:END project-overview -->
 
+## Response Style
+- Answer first, elaborate only if needed. No sycophantic openers ("Great question!", "Absolutely!").
+- Lead with the answer for yes/no or status questions. Skip preamble.
+- Match response length to task complexity.
+
 ## Global Rules
 - Keep PRs small (~≤300 net LOC)
 - Conventional Commits: `type(scope): subject`
+- Atomic commits (one logical change per commit) — never squash unless explicitly asked
 {{LANGUAGE_CONVENTIONS}}
 
 ## Boundaries
@@ -27,8 +33,10 @@
 - Use conventional commit format: `type(scope): subject`
 - Keep dependencies updated
 - Validate all user inputs
-- **Show test output as evidence before claiming work is complete** — never say "try again" or "should work now" without proof
+- **Show test output as evidence before claiming work is complete** — never say "try again", "should work now", "tested", "verified", or "all green" without pasted command output in the same turn
+- Before any edit, verify `pwd` resolves inside the intended repo worktree — not `.bare/`, not `~/.claude/skills/…`, not `~/.claude/plugins/cache/…` (those are read-only caches that get clobbered on update)
 - For upstream dependency fixes: run **full** test suite, not just affected tests
+- Force-push only with `--force-with-lease`
 
 ### Ask First
 - Adding new dependencies
@@ -38,14 +46,20 @@
 - Repo-wide refactoring or rewrites
 - Modifying security-sensitive code
 - Changing database schemas
+- Any operation that touches >3 repos — produce a dry-run plan first
 
 ### Never Do
 - Commit secrets, credentials, API keys, or PII
 - Modify vendor/, node_modules/, or generated files
-- Push directly to main/master branch
+- Push directly to main/master branch — open a PR
+- Merge a PR before all review threads are resolved
+- Squash commits during merge/rebase unless the user explicitly asked
+- Edit installed skill/plugin cache paths (`~/.claude/skills/`, `~/.claude/plugins/cache/`, `**/.bare/**`)
+- Reply to review comments with bare "Addressed" or "Fixed" — cite the resolving commit SHA
 - Delete migration files or schema changes
 - Disable security features or linting rules
 - Hardcode environment-specific values
+- Use `secrets: inherit` in reusable GitHub Actions workflows (pass secrets explicitly)
 {{LANGUAGE_SPECIFIC_NEVER}}
 
 <!-- AGENTS-GENERATED:START module-boundaries -->
@@ -65,7 +79,7 @@
 1. **Before coding**: Read nearest `AGENTS.md` + check Golden Samples for the area you're touching
 2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
 3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
-4. **Before claiming done**: Run verification and **show output as evidence** — never say "try again" or "should work now" without proof
+4. **Before claiming done**: Run verification and **show output as evidence** — never say "try again", "should work now", "tested", or "verified" without pasted command output
 
 ## Pre-commit Checks
 > Source: {{COMMAND_SOURCE}} — CI-sourced commands are most reliable
