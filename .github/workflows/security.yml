@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [main, master]
 
+# Principle of least privilege: top-level grants the minimum every job
+# needs. Jobs that need more expand their own permissions block below.
+permissions:
+  contents: read
+
 jobs:
   gitleaks:
     uses: netresearch/.github/.github/workflows/gitleaks.yml@main
+    permissions:
+      contents: read
     secrets:
       GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
@@ -21,3 +28,6 @@ jobs:
 
   composer-audit:
     uses: netresearch/typo3-ci-workflows/.github/workflows/security.yml@main
+    permissions:
+      contents: read
+      security-events: write  # SARIF upload for SAST scan
