@@ -85,7 +85,7 @@
 - Use conventional commit format: `type(scope): subject`
 - Use **atomic commits** (one logical change per commit); preserve signatures, keep bisection useful
 - **Show test output as evidence before claiming work is complete** — never say "try again", "should work now", "tested", "verified", or "all green" without pasted command output
-- Before any edit, verify `pwd` is inside the intended repo worktree
+- Before any edit, verify `pwd` resolves inside the intended repo worktree — not `.bare/`, not `~/.claude/skills/…`, not `~/.claude/plugins/cache/…` (those are read-only caches that get clobbered on update)
 - For upstream dependency fixes: run **full** test suite, not just affected tests
 - Force-push only with `--force-with-lease`
 {{LANGUAGE_CONVENTIONS}}
