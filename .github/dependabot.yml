@@ -8,3 +8,48 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  # npm ecosystem entries for fixture projects. Dependabot security updates
+  # need a declared ecosystem+directory path or the updater errors out when
+  # trying to open PRs for vulnerable packages (see CVE-2026-39365 on vite).
+  # Schedule is weekly so non-security routine bumps don't flood PRs on
+  # fixtures that aren't actively built.
+  - package-ecosystem: npm
+    directory: /skills/agent-rules/references/examples/go-api-with-react-admin/admin
+    schedule:
+      interval: weekly
+    groups:
+      fixture-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /skills/agent-rules/references/examples/go-with-internal-web-tsx
+    schedule:
+      interval: weekly
+    groups:
+      fixture-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /skills/agent-rules/references/examples/go-with-internal-web-tsx/internal/web
+    schedule:
+      interval: weekly
+    groups:
+      fixture-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /skills/agent-rules/references/examples/php-with-frontend
+    schedule:
+      interval: weekly
+    groups:
+      fixture-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /skills/agent-rules/references/examples/php-with-frontend/web
+    schedule:
+      interval: weekly
+    groups:
+      fixture-deps:
+        patterns: ["*"]
