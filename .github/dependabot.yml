@@ -9,45 +9,23 @@ updates:
         patterns:
           - "*"
 
-  # npm ecosystem entries for fixture projects. Dependabot security updates
-  # need a declared ecosystem+directory path or the updater errors out when
-  # trying to open PRs for vulnerable packages (see CVE-2026-39365 on vite).
-  # Schedule is weekly so non-security routine bumps don't flood PRs on
-  # fixtures that aren't actively built.
+  # Single npm entry covering all fixture projects via Dependabot's plural
+  # `directories:` syntax. Using one entry (instead of five) means the
+  # `fixture-deps` group consolidates routine updates across all fixtures
+  # into a single grouped PR — without this, each `package-ecosystem +
+  # directory` pair has its own group scope and Dependabot opens one PR
+  # per directory (copilot/gemini flagged this on PR #35).
+  #
+  # Dependabot security updates also need a matching ecosystem+directory
+  # entry, or the updater errors when trying to open PRs for vulnerable
+  # packages (see CVE-2026-39365 on vite, which motivated adding this).
   - package-ecosystem: npm
-    directory: /skills/agent-rules/references/examples/go-api-with-react-admin/admin
-    schedule:
-      interval: weekly
-    groups:
-      fixture-deps:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: /skills/agent-rules/references/examples/go-with-internal-web-tsx
-    schedule:
-      interval: weekly
-    groups:
-      fixture-deps:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: /skills/agent-rules/references/examples/go-with-internal-web-tsx/internal/web
-    schedule:
-      interval: weekly
-    groups:
-      fixture-deps:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: /skills/agent-rules/references/examples/php-with-frontend
-    schedule:
-      interval: weekly
-    groups:
-      fixture-deps:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: /skills/agent-rules/references/examples/php-with-frontend/web
+    directories:
+      - /skills/agent-rules/references/examples/go-api-with-react-admin/admin
+      - /skills/agent-rules/references/examples/go-with-internal-web-tsx
+      - /skills/agent-rules/references/examples/go-with-internal-web-tsx/internal/web
+      - /skills/agent-rules/references/examples/php-with-frontend
+      - /skills/agent-rules/references/examples/php-with-frontend/web
     schedule:
       interval: weekly
     groups:
