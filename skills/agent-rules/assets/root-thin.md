@@ -22,11 +22,16 @@
 
 > If commands fail, verify against Makefile/package.json/composer.json or ask user to update.
 
+## Response Style
+- Answer first, elaborate only if needed. No sycophantic openers ("Great question!", "Absolutely!").
+- For yes/no or status questions, lead with the answer.
+- Skip preamble. Match response length to task complexity.
+
 ## Workflow
 1. **Before coding**: Read nearest `AGENTS.md` + check Golden Samples for the area you're touching
 2. **After each change**: Run the smallest relevant check (lint → typecheck → single test)
 3. **Before committing**: Run full test suite if changes affect >2 files or touch shared code
-4. **Before claiming done**: Run verification and **show output as evidence** — never say "try again" or "should work now" without proof
+4. **Before claiming done**: Run verification and **show output as evidence** — never say "try again", "should work now", "tested", "verified", or "all green" without pasted command output in the same turn
 
 ## File Map
 <!-- AGENTS-GENERATED:START filemap -->
@@ -78,8 +83,11 @@
 - Run pre-commit checks before committing
 - Add tests for new code paths
 - Use conventional commit format: `type(scope): subject`
-- **Show test output as evidence before claiming work is complete** — never say "try again" or "should work now" without proof
+- Use **atomic commits** (one logical change per commit); preserve signatures, keep bisection useful
+- **Show test output as evidence before claiming work is complete** — never say "try again", "should work now", "tested", "verified", or "all green" without pasted command output
+- Before any edit, verify `pwd` is inside the intended repo worktree
 - For upstream dependency fixes: run **full** test suite, not just affected tests
+- Force-push only with `--force-with-lease`
 {{LANGUAGE_CONVENTIONS}}
 
 ### Ask First
@@ -88,12 +96,18 @@
 - Changing public API signatures
 - Running full e2e test suites
 - Repo-wide refactoring or rewrites
+- Operations that touch >3 repos (produce a dry-run plan first)
 
 ### Never Do
 - Commit secrets, credentials, or sensitive data
 - Modify vendor/, node_modules/, or generated files
-- Push directly to main/master branch
+- Push directly to main/master branch — open a PR
+- Merge a PR before all review threads are resolved
+- Squash commits during merge or rebase unless the user explicitly asked
+- Edit installed skill/plugin cache paths (`~/.claude/skills/`, `~/.claude/plugins/cache/`, `**/.bare/**`) — always the source worktree
+- Reply to review comments with bare "Addressed" or "Fixed" — cite the resolving commit SHA
 - Delete migration files or schema changes
+- Use `secrets: inherit` in reusable GitHub Actions workflows (pass secrets explicitly)
 {{LANGUAGE_SPECIFIC_NEVER}}
 
 ## Contributing (for AI agents)
