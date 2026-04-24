@@ -91,9 +91,9 @@ mechanical:
   - id: AG-13
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Commands|Commands \\(verified)"
+    pattern: '^#+ Commands( \(verified[^)]*\))?'
     severity: warning
-    desc: "AGENTS.md should have Commands section with verification status"
+    desc: "AGENTS.md should have Commands section (optionally with '(verified)' or '(verified DATE)' suffix for trust scoring)"
 
   - id: AG-14
     type: regex
