@@ -5,7 +5,7 @@ license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
 compatibility: "Requires bash 4.3+, jq 1.5+, git 2.0+."
 metadata:
   author: Netresearch DTT GmbH
-  version: "3.9.0"
+  version: "3.9.1"
   repository: https://github.com/netresearch/agent-rules-skill
 allowed-tools: Bash(git:*) Bash(jq:*) Bash(grep:*) Bash(find:*) Bash(bash:*) Read Glob Grep
 ---
