@@ -74,3 +74,8 @@ Root: `assets/root-thin.md` (default), `root-verbose.md`. Scoped: `assets/scoped
 ## Supported Projects
 
 Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), Python (pip/poetry/ruff/mypy), Skill repos, Hybrid (multi-stack with auto-scoping).
+
+## See Also
+
+- [`agent-harness-skill`](https://github.com/netresearch/agent-harness-skill) — broader agent-readiness harness (CI verification, enforcement). Invokes this skill when AGENTS.md is missing.
+- [`skill-repo-skill`](https://github.com/netresearch/skill-repo-skill) — skill-repo structure (plugin.json, split licensing, release workflows).
