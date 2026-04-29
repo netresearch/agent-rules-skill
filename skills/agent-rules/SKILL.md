@@ -77,5 +77,5 @@ Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), 
 
 ## See Also
 
-- **`agent-harness-skill`** — broader agent-readiness harness (CI verification, enforcement). Invokes this skill when AGENTS.md is missing.
-- **`skill-repo-skill`** — skill-repo structure (plugin.json, split licensing, release workflows).
+- [`agent-harness-skill`](https://github.com/netresearch/agent-harness-skill) — broader agent-readiness harness (CI verification, enforcement). Invokes this skill when AGENTS.md is missing.
+- [`skill-repo-skill`](https://github.com/netresearch/skill-repo-skill) — skill-repo structure (plugin.json, split licensing, release workflows).
