@@ -1,0 +1,34 @@
+{
+  "name": "@netresearch/agent-rules-skill",
+  "version": "0.0.0-source",
+  "description": "Netresearch AI skill for generating AGENTS.md, copilot-instructions.md, and other agent rule files.",
+  "license": "(MIT AND CC-BY-SA-4.0)",
+  "author": "Netresearch DTT GmbH (https://www.netresearch.de/)",
+  "homepage": "https://github.com/netresearch/agent-rules-skill",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/netresearch/agent-rules-skill.git"
+  },
+  "bugs": {
+    "url": "https://github.com/netresearch/agent-rules-skill/issues"
+  },
+  "keywords": [
+    "ai-agent-skill",
+    "agents-md",
+    "copilot-instructions",
+    "agent-rules",
+    "anthropic",
+    "claude-code"
+  ],
+  "aiAgentSkill": "skills/agent-rules/SKILL.md",
+  "files": [
+    "skills/agent-rules/",
+    "scripts/",
+    "LICENSE-MIT",
+    "LICENSE-CC-BY-SA-4.0",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@netresearch/agent-skill-coordinator": "^0.1"
+  }
+}

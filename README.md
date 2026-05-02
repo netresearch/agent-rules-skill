@@ -64,6 +64,24 @@ composer require netresearch/agent-rules-skill
 ```
 
 Requires [netresearch/composer-agent-skill-plugin](https://github.com/netresearch/composer-agent-skill-plugin).
+### npm (Node Projects)
+
+```bash
+npm install --save-dev \
+  @netresearch/agent-skill-coordinator \
+  github:netresearch/agent-rules-skill
+```
+
+Requires [@netresearch/agent-skill-coordinator](https://github.com/netresearch/node-agent-skill-coordinator), which discovers the skill in `node_modules` and registers it in `AGENTS.md` via a `postinstall` hook. For pnpm, also allowlist the coordinator's postinstall:
+
+```json
+{
+  "pnpm": {
+    "onlyBuiltDependencies": ["@netresearch/agent-skill-coordinator"]
+  }
+}
+```
+
 ## Usage
 
 The skill triggers on keywords like:
