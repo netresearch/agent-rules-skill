@@ -66,6 +66,8 @@ Use `--update` to preserve human-curated content outside `<!-- GENERATED -->` ma
 | [`output-structure.md`](references/output-structure.md) | Root/scoped sections |
 | [`git-hooks-setup.md`](references/git-hooks-setup.md) | Hook framework detection and setup |
 | [`examples/`](references/examples/) | Complete examples |
+| [`ai-contribution-guidelines.md`](references/ai-contribution-guidelines.md) | "3 Cs" framework for AI contributions (Comprehensible, Consistent, Correct) |
+| [`directory-coverage.md`](references/directory-coverage.md) | Full coverage rationale for scoped AGENTS.md files |
 
 ## Templates
 
