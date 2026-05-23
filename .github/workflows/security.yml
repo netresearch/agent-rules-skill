@@ -1,21 +1,24 @@
 name: Security
 
+# Permissions note: when calling reusable workflows we let the called
+# workflow's own per-job permissions apply (the reusables declare
+# `permissions: {}` at the top level and elevate per job as needed —
+# e.g. gitleaks/composer-audit need `security-events: write` for SARIF
+# upload). A workflow-level `permissions: contents: read` block here
+# would cap every job below it, causing reusables that need to elevate
+# (composer-audit, gitleaks SARIF) to fail at workflow startup. Only
+# dependency-review (which uses an *action*, not a reusable workflow)
+# needs caller-side permissions.
+
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
 
-# Principle of least privilege: top-level grants the minimum every job
-# needs. Jobs that need more expand their own permissions block below.
-permissions:
-  contents: read
-
 jobs:
   gitleaks:
     uses: netresearch/.github/.github/workflows/gitleaks.yml@main
-    permissions:
-      contents: read
     secrets:
       GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
@@ -28,6 +31,3 @@ jobs:
 
   composer-audit:
     uses: netresearch/typo3-ci-workflows/.github/workflows/security.yml@main
-    permissions:
-      contents: read
-      security-events: write  # SARIF upload for SAST scan
