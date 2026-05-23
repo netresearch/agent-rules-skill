@@ -1,14 +1,19 @@
 name: Security
 
-# Permissions note: when calling reusable workflows we let the called
-# workflow's own per-job permissions apply (the reusables declare
-# `permissions: {}` at the top level and elevate per job as needed —
-# e.g. gitleaks/composer-audit need `security-events: write` for SARIF
-# upload). A workflow-level `permissions: contents: read` block here
-# would cap every job below it, causing reusables that need to elevate
-# (composer-audit, gitleaks SARIF) to fail at workflow startup. Only
-# dependency-review (which uses an *action*, not a reusable workflow)
-# needs caller-side permissions.
+# Permissions note: do NOT add a workflow-level `permissions:` block here.
+# The reusables called below (gitleaks, dependency-review, composer-audit)
+# declare `permissions: {}` at top-level and grant what each job needs at
+# the job level. A workflow-level cap of e.g. `contents: read` here would
+# conflict with any caller-side job-level block that elevates beyond the
+# cap, causing the workflow to startup_failure at dispatch time (this is
+# exactly what was broken on this repo 2026-05-06 → 2026-05-23 and what
+# this PR fixes).
+#
+# Per-job `permissions:` blocks on `uses:` reusable-workflow calls are
+# left to the workflows themselves where possible. dependency-review keeps
+# a caller-side block because that's the pattern used by the working peer
+# skill repos (skill-repo-skill etc.) — defensive symmetry with what
+# dependency-review.yml's job grants internally.
 
 on:
   push:
