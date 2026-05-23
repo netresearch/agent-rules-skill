@@ -1,21 +1,29 @@
 name: Security
 
+# Permissions note: do NOT add a workflow-level `permissions:` block here.
+# The reusables called below (gitleaks, dependency-review, composer-audit)
+# declare `permissions: {}` at top-level and grant what each job needs at
+# the job level. A workflow-level cap of e.g. `contents: read` here would
+# conflict with any caller-side job-level block that elevates beyond the
+# cap, causing the workflow to startup_failure at dispatch time (this is
+# exactly what was broken on this repo 2026-05-06 → 2026-05-23 and what
+# this PR fixes).
+#
+# Per-job `permissions:` blocks on `uses:` reusable-workflow calls are
+# left to the workflows themselves where possible. dependency-review keeps
+# a caller-side block because that's the pattern used by the working peer
+# skill repos (skill-repo-skill etc.) — defensive symmetry with what
+# dependency-review.yml's job grants internally.
+
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
 
-# Principle of least privilege: top-level grants the minimum every job
-# needs. Jobs that need more expand their own permissions block below.
-permissions:
-  contents: read
-
 jobs:
   gitleaks:
     uses: netresearch/.github/.github/workflows/gitleaks.yml@main
-    permissions:
-      contents: read
     secrets:
       GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
@@ -28,6 +36,3 @@ jobs:
 
   composer-audit:
     uses: netresearch/typo3-ci-workflows/.github/workflows/security.yml@main
-    permissions:
-      contents: read
-      security-events: write  # SARIF upload for SAST scan
