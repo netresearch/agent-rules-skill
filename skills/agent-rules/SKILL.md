@@ -30,7 +30,7 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 | `scripts/check-freshness.sh PATH` | Check if files are outdated |
 | `scripts/verify-content.sh PATH` | Verify documented files/commands match codebase |
 | `scripts/verify-commands.sh PATH` | Verify documented commands execute |
-| `scripts/score-agents.sh PATH` | Grade AGENTS.md quality 0-100, worst-first (reproducible) |
+| `scripts/score-agents.sh PATH` | Grade AGENTS.md quality, worst-first |
 | `scripts/detect-project.sh PATH` | Detect language, version, build tools |
 | `scripts/detect-scopes.sh PATH` | Identify directories needing scoped files |
 | `scripts/extract-commands.sh PATH` | Extract commands from build configs |
@@ -61,19 +61,19 @@ Use `--update` to preserve human-curated content outside `<!-- GENERATED -->` ma
 
 | File | Contents |
 |------|----------|
-| [`verification-guide.md`](references/verification-guide.md) | Verification steps, design principles, what NOT to add |
+| [`verification-guide.md`](references/verification-guide.md) | Verification steps, design principles, anti-bloat |
 | [`scripts-guide.md`](references/scripts-guide.md) | Script options, validation checklist |
-| [`quality-rubric.md`](references/quality-rubric.md) | Quality grading: deterministic axes + LLM overlay |
+| [`quality-rubric.md`](references/quality-rubric.md) | Quality grading rubric |
 | [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md) | 16-agent compatibility matrix |
 | [`output-structure.md`](references/output-structure.md) | Root/scoped sections |
 | [`git-hooks-setup.md`](references/git-hooks-setup.md) | Hook framework detection and setup |
 | [`examples/`](references/examples/) | Complete examples |
-| [`ai-contribution-guidelines.md`](references/ai-contribution-guidelines.md) | "3 Cs" framework for AI contributions (Comprehension, Context, Continuity) |
-| [`directory-coverage.md`](references/directory-coverage.md) | Full coverage rationale for scoped AGENTS.md files |
+| [`ai-contribution-guidelines.md`](references/ai-contribution-guidelines.md) | "3 Cs" framework for AI contributions |
+| [`directory-coverage.md`](references/directory-coverage.md) | Scoped-file coverage rationale |
 
 ## Templates
 
-Root: `assets/root-thin.md` (default), `root-verbose.md`. Scoped: `assets/scoped/` -- `backend-go.md`, `backend-php.md`, `python-modern.md`, `typo3.md`, `symfony.md`, `skill-repo.md`, `cli.md`, `frontend-typescript.md`, `oro.md`.
+Root: `assets/root-thin.md` (default) or `root-verbose.md`. Scoped: `assets/scoped/`, one per stack (Go/PHP/Python/TYPO3/Symfony/Oro/CLI/TS/skill-repo).
 
 ## Supported Projects
 
@@ -81,5 +81,5 @@ Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), 
 
 ## See Also
 
-- [`agent-harness-skill`](https://github.com/netresearch/agent-harness-skill) — broader agent-readiness harness (CI verification, enforcement). Invokes this skill when AGENTS.md is missing.
+- [`agent-harness-skill`](https://github.com/netresearch/agent-harness-skill) — broader agent-readiness harness (CI verification, enforcement).
 - [`skill-repo-skill`](https://github.com/netresearch/skill-repo-skill) — skill-repo structure (plugin.json, split licensing, release workflows).
