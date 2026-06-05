@@ -78,8 +78,8 @@ fi
 
 # Optional LLM-axis ratings for the secondary "with review" grade.
 REVIEW_JSON='{}'
-if [ -n "$REVIEW_FILE" ]; then
-    if [ -f "$REVIEW_FILE" ] && jq -e . "$REVIEW_FILE" >/dev/null 2>&1; then
+if [[ -n "$REVIEW_FILE" ]]; then
+    if [[ -f "$REVIEW_FILE" ]] && jq -e . "$REVIEW_FILE" >/dev/null 2>&1; then
         REVIEW_JSON=$(cat "$REVIEW_FILE")
     else
         echo "Error: --review file missing or not valid JSON: $REVIEW_FILE" >&2
@@ -94,11 +94,12 @@ run_json() {
     shift
     local out
     out=$(bash "$SCRIPT_DIR/$script" "$PROJECT_DIR" --json "$@" 2>/dev/null || true)
-    if [ -n "$out" ] && printf '%s' "$out" | jq -e . >/dev/null 2>&1; then
+    if [[ -n "$out" ]] && printf '%s' "$out" | jq -e . >/dev/null 2>&1; then
         printf '%s' "$out"
     else
         echo '{}'
     fi
+    return 0
 }
 
 STRUCT_JSON=$(run_json validate-structure.sh)
@@ -114,10 +115,10 @@ lines_pairs=()
 for path in "${SPINE[@]}"; do
     full="$PROJECT_DIR/$path"
     n=0
-    [ -f "$full" ] && n=$(wc -l < "$full" | tr -d ' ')
+    [[ -f "$full" ]] && n=$(wc -l < "$full" | tr -d ' ')
     lines_pairs+=("$(jq -nc --arg p "$path" --argjson n "$n" '{key:$p,value:$n}')")
 done
-if [ "${#lines_pairs[@]}" -eq 0 ]; then
+if [[ "${#lines_pairs[@]}" -eq 0 ]]; then
     LINES_JSON='{}'
 else
     LINES_JSON=$(printf '%s\n' "${lines_pairs[@]}" | jq -s 'from_entries')
@@ -215,7 +216,7 @@ SCORING=$(jq -nc \
     }
     ')
 
-if [ "$JSON" = true ]; then
+if [[ "$JSON" = true ]]; then
     printf '%s\n' "$SCORING" | jq .
     exit 0
 fi

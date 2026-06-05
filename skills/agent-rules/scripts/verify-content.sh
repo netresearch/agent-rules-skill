@@ -85,7 +85,7 @@ cd "$PROJECT_DIR"
 # keeps --json strictly additive: the default (no-flag) path is byte-for-byte
 # unchanged.
 JSON_ISSUES=()
-if [ "$JSON" = true ]; then
+if [[ "$JSON" = true ]]; then
     exec 3>&1 1>/dev/null
 fi
 
@@ -103,7 +103,7 @@ add_issue() {
     # In JSON mode, also record a structured issue. "message" is stored without
     # the [SEVERITY] prefix; "file" is the AGENTS.md currently under inspection
     # (CURRENT_FILE), coerced to JSON null when empty.
-    if [ "$JSON" = true ]; then
+    if [[ "$JSON" = true ]]; then
         JSON_ISSUES+=("$(jq -nc --arg sev "$severity" --arg msg "$message" --arg file "$CURRENT_FILE" \
             '{severity:$sev,message:$msg,file:($file|if .=="" then null else . end)}')")
     fi
@@ -306,8 +306,8 @@ done
 # Emit the machine-readable JSON document (to the reserved fd 3) and exit using
 # the SAME EXIT_CODE the human path uses. summary.errors/warns are derived from
 # the assembled issues array; total mirrors ${#ISSUES[@]}.
-if [ "$JSON" = true ]; then
-    if [ "${#JSON_ISSUES[@]}" -eq 0 ]; then
+if [[ "$JSON" = true ]]; then
+    if [[ "${#JSON_ISSUES[@]}" -eq 0 ]]; then
         issues_json='[]'
     else
         issues_json=$(printf '%s\n' "${JSON_ISSUES[@]}" | jq -s '.')

@@ -95,7 +95,7 @@ cd "$PROJECT_DIR"
 # original stdout (fd 3) for the single JSON document emitted at the end. This
 # keeps --json strictly additive: the default (no-flag) path is untouched.
 JSON_CMDS=()
-if [ "$JSON" = true ]; then
+if [[ "$JSON" = true ]]; then
     exec 3>&1 1>/dev/null
 fi
 
@@ -613,7 +613,7 @@ mapfile -t commands < <(extract_commands | sort -u)
 
 if [ ${#commands[@]} -eq 0 ]; then
     warn "No commands found in AGENTS.md"
-    if [ "$JSON" = true ]; then
+    if [[ "$JSON" = true ]]; then
         jq -nc --argjson p "$PASSED" --argjson s "$SKIPPED" --argjson f "$FAILED" \
             '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:[]}' >&3
     fi
@@ -631,8 +631,8 @@ done
 # Summary counts come from the authoritative PASSED/SKIPPED/FAILED counters; the
 # commands[] array is built best-effort from COMMAND_RESULTS (iterating its keys,
 # parsing each stored value as JSON, else null).
-if [ "$JSON" = true ]; then
-    if [ "${#COMMAND_RESULTS[@]}" -gt 0 ]; then
+if [[ "$JSON" = true ]]; then
+    if [[ "${#COMMAND_RESULTS[@]}" -gt 0 ]]; then
         for cmd in "${!COMMAND_RESULTS[@]}"; do
             stored="${COMMAND_RESULTS[$cmd]}"
             if entry=$(jq -nc --arg cmd "$cmd" --argjson detail "$stored" \
@@ -644,7 +644,7 @@ if [ "$JSON" = true ]; then
         done
     fi
 
-    if [ "${#JSON_CMDS[@]}" -eq 0 ]; then
+    if [[ "${#JSON_CMDS[@]}" -eq 0 ]]; then
         arr_json='[]'
     else
         arr_json=$(printf '%s\n' "${JSON_CMDS[@]}" | jq -s '.')
@@ -657,7 +657,7 @@ if [ "$JSON" = true ]; then
         --argjson f "$FAILED" \
         '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:$items}' >&3
 
-    if [ "$FAILED" -gt 0 ]; then exit 1; fi
+    if [[ "$FAILED" -gt 0 ]]; then exit 1; fi
     exit 0
 fi
 

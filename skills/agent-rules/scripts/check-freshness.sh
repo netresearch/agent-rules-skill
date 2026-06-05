@@ -63,7 +63,7 @@ fi
 # original stdout (fd 3) for the single JSON document emitted at the end. This
 # keeps --json strictly additive: the default (no-flag) path is untouched.
 JSON_FILES=()
-if [ "$JSON" = true ]; then
+if [[ "$JSON" = true ]]; then
     exec 3>&1 1>/dev/null
 fi
 
@@ -173,7 +173,7 @@ check_file_freshness() {
     if ! last_updated=$(extract_last_updated "$agents_file"); then
         echo "  ⚠️  No 'Last updated' date found in header"
         ((UNKNOWN_COUNT++)) || true
-        if [ "$JSON" = true ]; then
+        if [[ "$JSON" = true ]]; then
             JSON_FILES+=("$(jq -nc --arg path "$rel_path" \
                 '{path:$path,status:"unknown",last_updated:null,commits_since:null}')")
         fi
@@ -192,7 +192,7 @@ check_file_freshness() {
     if [ "$commit_count" -eq 0 ]; then
         echo "  ✅ Up to date (no commits since $last_updated)"
         ((FRESH_COUNT++)) || true
-        if [ "$JSON" = true ]; then
+        if [[ "$JSON" = true ]]; then
             JSON_FILES+=("$(jq -nc --arg path "$rel_path" --arg lu "$last_updated" \
                 '{path:$path,status:"fresh",last_updated:$lu,commits_since:0}')")
         fi
@@ -202,7 +202,7 @@ check_file_freshness() {
     # Check if commits are significant
     echo "  ⚠️  Potentially stale: $commit_count commit(s) since $last_updated"
     ((STALE_COUNT++)) || true
-    if [ "$JSON" = true ]; then
+    if [[ "$JSON" = true ]]; then
         JSON_FILES+=("$(jq -nc --arg path "$rel_path" --arg lu "$last_updated" --argjson cs "$commit_count" \
             '{path:$path,status:"stale",last_updated:$lu,commits_since:$cs}')")
     fi
@@ -245,8 +245,8 @@ while read -r file; do
 done <<< "$AGENTS_FILES"
 
 # Emit JSON document (machine-readable) and exit before the human summary.
-if [ "$JSON" = true ]; then
-    if [ "${#JSON_FILES[@]}" -eq 0 ]; then
+if [[ "$JSON" = true ]]; then
+    if [[ "${#JSON_FILES[@]}" -eq 0 ]]; then
         files_json='[]'
     else
         files_json=$(printf '%s\n' "${JSON_FILES[@]}" | jq -s '.')
@@ -257,7 +257,7 @@ if [ "$JSON" = true ]; then
         --argjson stale "$STALE_COUNT" \
         --argjson unknown "$UNKNOWN_COUNT" \
         '{script:"check-freshness",schema:1,summary:{fresh:$fresh,stale:$stale,unknown:$unknown},files:$files}' >&3
-    if [ "$STALE_COUNT" -gt 0 ]; then exit 1; fi
+    if [[ "$STALE_COUNT" -gt 0 ]]; then exit 1; fi
     exit 0
 fi
 

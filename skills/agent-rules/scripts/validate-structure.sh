@@ -90,7 +90,7 @@ info() {
 # Record the just-run check (LAST_STATUS/LAST_DETAIL) under a relative file path.
 # No-op unless --json; never writes to stdout.
 record_check() {
-    [ "$JSON" = true ] || return 0
+    [[ "$JSON" = true ]] || return 0
     local path="$1" name="$2" obj
     obj=$(jq -nc --arg name "$name" --arg status "$LAST_STATUS" --arg detail "$LAST_DETAIL" \
         '{name:$name,status:$status,detail:$detail}')
@@ -260,7 +260,7 @@ check_claude_symlink() {
 
 # In JSON mode, route all human-readable output to /dev/null and reserve the
 # original stdout (fd 3) for the single JSON document emitted at the end.
-if [ "$JSON" = true ]; then
+if [[ "$JSON" = true ]]; then
     exec 3>&1 1>/dev/null
 fi
 
@@ -326,11 +326,11 @@ fi
 # Emit JSON document and exit before the human summary. JSON mode is structure-only
 # and deliberately does NOT run the --check-freshness shell-out below (score-agents
 # calls check-freshness.sh --json itself), keeping the two signals decoupled.
-if [ "$JSON" = true ]; then
+if [[ "$JSON" = true ]]; then
     json_files=()
-    if [ "${#FILE_CHECKS_JSON[@]}" -gt 0 ]; then
+    if [[ "${#FILE_CHECKS_JSON[@]}" -gt 0 ]]; then
         while IFS= read -r path; do
-            [ -z "$path" ] && continue
+            [[ -z "$path" ]] && continue
             checks_json=$(printf '%s' "${FILE_CHECKS_JSON[$path]}" | jq -s '.')
             json_files+=("$(jq -nc \
                 --arg path "$path" \
@@ -342,7 +342,7 @@ if [ "$JSON" = true ]; then
                   checks:$checks}')")
         done < <(printf '%s\n' "${!FILE_CHECKS_JSON[@]}" | sort)
     fi
-    if [ "${#json_files[@]}" -eq 0 ]; then
+    if [[ "${#json_files[@]}" -eq 0 ]]; then
         files_json='[]'
     else
         files_json=$(printf '%s\n' "${json_files[@]}" | jq -s '.')
@@ -352,7 +352,7 @@ if [ "$JSON" = true ]; then
         --argjson e "$ERRORS" \
         --argjson w "$WARNINGS" \
         '{script:"validate-structure",schema:1,summary:{errors:$e,warnings:$w},files:$files}' >&3
-    if [ "$ERRORS" -eq 0 ]; then exit 0; else exit 1; fi
+    if [[ "$ERRORS" -eq 0 ]]; then exit 0; else exit 1; fi
 fi
 
 # Summary
