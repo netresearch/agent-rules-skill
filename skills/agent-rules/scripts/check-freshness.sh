@@ -208,9 +208,13 @@ if [ -z "$AGENTS_FILES" ]; then
     exit 0
 fi
 
-# Check each file
+# Check each file.
+# `|| true`: check_file_freshness returns non-zero for stale/unknown files; without
+# this guard `set -e` aborts the loop on the first such file, processing only one
+# file and defeating the summary below (and forcing the validate-structure caller to
+# always warn). Tolerating the non-zero lets every file be counted.
 while read -r file; do
-    check_file_freshness "$file"
+    check_file_freshness "$file" || true
     echo ""
 done <<< "$AGENTS_FILES"
 

@@ -119,8 +119,12 @@ verify_makefile_target() {
 
 extract_documented_files() {
     local agents_file="$1"
-    # Extract file references like `filename.sh`, `filename.py`, etc.
-    grep -oE '\`[a-zA-Z0-9_-]+\.(sh|py|go|php|ts|js|json)\`' "$agents_file" 2>/dev/null | tr -d '`' | sort -u || true
+    # Extract file references inside markdown code spans, e.g. `filename.sh`.
+    # NOTE: the delimiters must be LITERAL backticks. A previous version used
+    # \` which GNU grep interprets as the "start of buffer" anchor, so this
+    # check silently matched nothing.
+    # shellcheck disable=SC2016  # Literal backticks are intended (markdown code spans), no expansion wanted
+    grep -oE '`[a-zA-Z0-9_-]+\.(sh|py|go|php|ts|js|json)`' "$agents_file" 2>/dev/null | tr -d '`' | sort -u || true
 }
 
 extract_documented_scripts() {
@@ -140,7 +144,12 @@ if [ -f "AGENTS.md" ]; then
 
     # Check documented make targets
     log_check "Makefile targets"
-    DOCUMENTED_TARGETS=$(grep -oE 'make [a-z_-]+' AGENTS.md | sed 's/make //' | sort -u)
+    # `|| true`: with `set -o pipefail`, a no-match grep makes this pipeline exit
+    # non-zero, which under `set -e` aborts the entire script here in the root
+    # section -- so the scoped-file loop below never runs. Tolerating the
+    # non-zero (as MODULE_COUNTS/SCRIPT_COUNTS already do) lets verification
+    # continue. Pre-existing bug: AGENTS.md without 'make ' commands aborted early.
+    DOCUMENTED_TARGETS=$(grep -oE 'make [a-z_-]+' AGENTS.md | sed 's/make //' | sort -u || true)
     for target in $DOCUMENTED_TARGETS; do
         verify_makefile_target "$target" || true
     done
@@ -197,8 +206,11 @@ for scoped_file in $SCOPED_FILES; do
     DOCUMENTED=$(extract_documented_files "$scoped_file")
 
     for doc_file in $DOCUMENTED; do
-        # Check if file exists relative to scope or project root
-        if [ ! -f "${scope_dir}/${doc_file}" ] && [ ! -f "./${doc_file}" ] && [ ! -f "scripts/${doc_file}" ]; then
+        # A documented file may live anywhere in the tree (src/, app/, ...), not
+        # just the scope dir, so search the whole project for its basename and
+        # only flag when it exists NOWHERE. This avoids false positives from the
+        # previous narrow 3-location check.
+        if ! find . -name "$doc_file" -not -path './.git/*' -print -quit 2>/dev/null | grep -q .; then
             # Special handling for common false positives
             case "$doc_file" in
                 *.json|*.md|*.yml|*.yaml)
