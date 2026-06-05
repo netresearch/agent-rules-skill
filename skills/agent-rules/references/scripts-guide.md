@@ -146,6 +146,29 @@ Options:
 
 **Why this matters:** Research shows broken commands waste 500+ tokens as agents debug non-existent commands. Verified commands enable confident execution.
 
+## Scoring Quality
+
+```bash
+scripts/score-agents.sh /path/to/project          # human report, worst-first
+scripts/score-agents.sh /path/to/project --json   # machine-readable scoring
+```
+
+Aggregates the `--json` output of the four verifier scripts into a **reproducible**
+0-100 grade per AGENTS.md file (A-F), ranked worst-first so you know where to spend
+effort. Same tree → same grade (no model call; CI-friendly).
+
+Axes: Structure 25 · Currency 20 · Content 20 · Commands 15 (root) · Conciseness 20.
+Scoped files have no Commands axis and normalise over the remaining 85.
+
+The four verifiers each gained a `--json` mode (strictly additive — default output
+is unchanged). For the qualitative LLM overlay (Architecture / Actionability /
+Non-obvious patterns), which is deliberately **not** part of the deterministic
+number, see [`quality-rubric.md`](quality-rubric.md).
+
+> Note: `score-agents.sh` grades whatever `validate-structure.sh` lists, which does
+> not honour `.gitignore` (it will include generated/vendored AGENTS.md under the
+> tree). Point it at a clean project root, or exclude such trees, for a clean grade.
+
 ## Post-Generation Validation Checklist
 
 **After generating AGENTS.md files, ALWAYS validate the output:**

@@ -30,6 +30,7 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 | `scripts/check-freshness.sh PATH` | Check if files are outdated |
 | `scripts/verify-content.sh PATH` | Verify documented files/commands match codebase |
 | `scripts/verify-commands.sh PATH` | Verify documented commands execute |
+| `scripts/score-agents.sh PATH` | Grade AGENTS.md quality 0-100, worst-first (reproducible) |
 | `scripts/detect-project.sh PATH` | Detect language, version, build tools |
 | `scripts/detect-scopes.sh PATH` | Identify directories needing scoped files |
 | `scripts/extract-commands.sh PATH` | Extract commands from build configs |
@@ -60,8 +61,9 @@ Use `--update` to preserve human-curated content outside `<!-- GENERATED -->` ma
 
 | File | Contents |
 |------|----------|
-| [`verification-guide.md`](references/verification-guide.md) | Verification steps, design principles |
+| [`verification-guide.md`](references/verification-guide.md) | Verification steps, design principles, what NOT to add |
 | [`scripts-guide.md`](references/scripts-guide.md) | Script options, validation checklist |
+| [`quality-rubric.md`](references/quality-rubric.md) | Quality grading: deterministic axes + LLM overlay |
 | [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md) | 16-agent compatibility matrix |
 | [`output-structure.md`](references/output-structure.md) | Root/scoped sections |
 | [`git-hooks-setup.md`](references/git-hooks-setup.md) | Hook framework detection and setup |

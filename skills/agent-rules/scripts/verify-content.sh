@@ -10,7 +10,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${1:-.}"
 VERBOSE=false
 FIX_MODE=false
+JSON=false
 EXIT_CODE=0
+# Relative path of the AGENTS.md currently being verified; captured into each
+# issue's "file" field in JSON mode. Empty => emitted as JSON null.
+CURRENT_FILE=""
 
 # Colors
 RED='\033[0;31m'
@@ -29,6 +33,10 @@ while [[ $# -gt 0 ]]; do
             FIX_MODE=true
             shift
             ;;
+        --json)
+            JSON=true
+            shift
+            ;;
         --help|-h)
             cat <<EOF
 Usage: verify-content.sh [PROJECT_DIR] [OPTIONS]
@@ -42,6 +50,7 @@ that need manual review or correction.
 Options:
   --verbose, -v     Show detailed comparison output
   --fix             Suggest fixes for common issues
+  --json            Emit machine-readable JSON on stdout (human output suppressed)
   --help, -h        Show this help message
 
 Verification checks:
@@ -71,6 +80,15 @@ done
 
 cd "$PROJECT_DIR"
 
+# In JSON mode, route all human-readable output to /dev/null and reserve the
+# original stdout (fd 3) for the single JSON document emitted at the end. This
+# keeps --json strictly additive: the default (no-flag) path is byte-for-byte
+# unchanged.
+JSON_ISSUES=()
+if [ "$JSON" = true ]; then
+    exec 3>&1 1>/dev/null
+fi
+
 echo "Verifying AGENTS.md content in: $(pwd)"
 echo ""
 
@@ -82,6 +100,13 @@ add_issue() {
     local message="$2"
     ISSUES+=("[$severity] $message")
     EXIT_CODE=1
+    # In JSON mode, also record a structured issue. "message" is stored without
+    # the [SEVERITY] prefix; "file" is the AGENTS.md currently under inspection
+    # (CURRENT_FILE), coerced to JSON null when empty.
+    if [ "$JSON" = true ]; then
+        JSON_ISSUES+=("$(jq -nc --arg sev "$severity" --arg msg "$message" --arg file "$CURRENT_FILE" \
+            '{severity:$sev,message:$msg,file:($file|if .=="" then null else . end)}')")
+    fi
 }
 
 log_check() {
@@ -138,6 +163,9 @@ extract_documented_scripts() {
 # ============================================================================
 
 echo "=== Verifying Root AGENTS.md ==="
+
+# Attribute root-section issues to the root AGENTS.md.
+CURRENT_FILE="AGENTS.md"
 
 if [ -f "AGENTS.md" ]; then
     echo -e "${GREEN}✓${NC} Root AGENTS.md exists"
@@ -198,6 +226,8 @@ SCOPED_FILES=$(find . -mindepth 2 -name "AGENTS.md" -not -path "./.git/*" 2>/dev
 for scoped_file in $SCOPED_FILES; do
     scope_dir=$(dirname "$scoped_file")
     scope_name=$(basename "$scope_dir")
+    # Attribute this iteration's issues to the scoped file (relative, no ./).
+    CURRENT_FILE="${scoped_file#./}"
     echo ""
     echo "Checking: $scoped_file"
 
@@ -268,6 +298,32 @@ for scoped_file in $SCOPED_FILES; do
 
     echo -e "${GREEN}✓${NC} Checked: $scoped_file"
 done
+
+# ============================================================================
+# JSON OUTPUT
+# ============================================================================
+
+# Emit the machine-readable JSON document (to the reserved fd 3) and exit using
+# the SAME EXIT_CODE the human path uses. summary.errors/warns are derived from
+# the assembled issues array; total mirrors ${#ISSUES[@]}.
+if [ "$JSON" = true ]; then
+    if [ "${#JSON_ISSUES[@]}" -eq 0 ]; then
+        issues_json='[]'
+    else
+        issues_json=$(printf '%s\n' "${JSON_ISSUES[@]}" | jq -s '.')
+    fi
+    jq -nc \
+        --argjson items "$issues_json" \
+        --argjson total "${#ISSUES[@]}" \
+        '{script:"verify-content",schema:1,
+          summary:{
+            errors:([$items[]|select(.severity=="ERROR")]|length),
+            warns:([$items[]|select(.severity=="WARN")]|length),
+            total:$total
+          },
+          issues:$items}' >&3
+    exit $EXIT_CODE
+fi
 
 # ============================================================================
 # SUMMARY
