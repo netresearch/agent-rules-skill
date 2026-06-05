@@ -111,18 +111,17 @@ COMMANDS_JSON=$(run_json verify-commands.sh)
 # example fixtures). Precompute a path -> line-count map for the Conciseness axis.
 mapfile -t SPINE < <(printf '%s' "$STRUCT_JSON" | jq -r '(.files // [])[].path')
 
-lines_pairs=()
-for path in "${SPINE[@]}"; do
-    full="$PROJECT_DIR/$path"
-    n=0
-    [[ -f "$full" ]] && n=$(wc -l < "$full" | tr -d ' ')
-    lines_pairs+=("$(jq -nc --arg p "$path" --argjson n "$n" '{key:$p,value:$n}')")
-done
-if [[ "${#lines_pairs[@]}" -eq 0 ]]; then
-    LINES_JSON='{}'
-else
-    LINES_JSON=$(printf '%s\n' "${lines_pairs[@]}" | jq -s 'from_entries')
-fi
+# Build the path -> line-count map in a SINGLE jq pass (tab-separated stream)
+# rather than spawning jq once per file.
+LINES_JSON=$(
+    for path in "${SPINE[@]}"; do
+        full="$PROJECT_DIR/$path"
+        n=0
+        [[ -f "$full" ]] && n=$(wc -l < "$full" | tr -d ' ')
+        printf '%s\t%s\n' "$path" "$n"
+    done | jq -Rs 'split("\n") | map(select(. != "")) | map(split("\t"))
+                   | map({key: .[0], value: (.[1]|tonumber)}) | from_entries'
+)
 
 # --- Scoring (single jq pass; pure function of its inputs => reproducible) -----
 SCORING=$(jq -nc \

@@ -240,7 +240,9 @@ for scoped_file in $SCOPED_FILES; do
         # just the scope dir, so search the whole project for its basename and
         # only flag when it exists NOWHERE. This avoids false positives from the
         # previous narrow 3-location check.
-        if ! find . -name "$doc_file" -not -path './.git/*' -print -quit 2>/dev/null | grep -q .; then
+        if ! find . -name "$doc_file" \
+                -not -path './.git/*' -not -path '*/node_modules/*' -not -path '*/vendor/*' \
+                -print -quit 2>/dev/null | grep -q .; then
             # Special handling for common false positives
             case "$doc_file" in
                 *.json|*.md|*.yml|*.yaml)

@@ -633,7 +633,10 @@ done
 # parsing each stored value as JSON, else null).
 if [[ "$JSON" = true ]]; then
     if [[ "${#COMMAND_RESULTS[@]}" -gt 0 ]]; then
-        for cmd in "${!COMMAND_RESULTS[@]}"; do
+        # Iterate keys in SORTED order: associative-array key order is otherwise
+        # unspecified in Bash, which would make commands[] order vary run to run.
+        # read -r (not word-split) preserves command strings that contain spaces.
+        while IFS= read -r cmd; do
             stored="${COMMAND_RESULTS[$cmd]}"
             if entry=$(jq -nc --arg cmd "$cmd" --argjson detail "$stored" \
                 '{cmd:$cmd,detail:$detail}' 2>/dev/null); then
@@ -641,7 +644,7 @@ if [[ "$JSON" = true ]]; then
             else
                 JSON_CMDS+=("$(jq -nc --arg cmd "$cmd" '{cmd:$cmd,detail:null}')")
             fi
-        done
+        done < <(printf '%s\n' "${!COMMAND_RESULTS[@]}" | LC_ALL=C sort)
     fi
 
     if [[ "${#JSON_CMDS[@]}" -eq 0 ]]; then

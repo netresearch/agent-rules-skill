@@ -192,7 +192,11 @@ check_scope_links() {
     local root_file="$1"
 
     if ! grep -q "## Index of scoped AGENTS.md" "$root_file"; then
-        return 0  # No index, skip check
+        # No scope index (thin root without scopes) -- nothing to check. Set an
+        # explicit status so a subsequent record_check does not reuse the
+        # previous check's LAST_STATUS/LAST_DETAIL in --json mode.
+        LAST_STATUS="pass"; LAST_DETAIL="No scope index (no scoped files to link)"
+        return 0
     fi
 
     # Extract links from scope index
