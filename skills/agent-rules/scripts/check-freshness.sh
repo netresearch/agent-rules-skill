@@ -8,6 +8,7 @@ cd "$PROJECT_DIR"
 
 # Options
 VERBOSE=false
+JSON=false
 DAYS_THRESHOLD=7  # Warn if commits are older than this many days after last update (used below)
 
 # Parse flags
@@ -15,6 +16,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --verbose|-v)
             VERBOSE=true
+            shift
+            ;;
+        --json)
+            JSON=true
             shift
             ;;
         --threshold=*)
@@ -30,6 +35,7 @@ Check if AGENTS.md files are up to date with recent git commits.
 
 Options:
   --verbose, -v         Show detailed output including commit lists
+  --json                Emit machine-readable JSON on stdout (human output suppressed)
   --threshold=DAYS      Days after last update to consider stale (default: 7)
   --help, -h            Show this help message
 
@@ -51,6 +57,14 @@ done
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     echo "Error: Not a git repository"
     exit 1
+fi
+
+# In JSON mode, route all human-readable output to /dev/null and reserve the
+# original stdout (fd 3) for the single JSON document emitted at the end. This
+# keeps --json strictly additive: the default (no-flag) path is untouched.
+JSON_FILES=()
+if [[ "$JSON" = true ]]; then
+    exec 3>&1 1>/dev/null
 fi
 
 STALE_COUNT=0
@@ -159,6 +173,10 @@ check_file_freshness() {
     if ! last_updated=$(extract_last_updated "$agents_file"); then
         echo "  ⚠️  No 'Last updated' date found in header"
         ((UNKNOWN_COUNT++)) || true
+        if [[ "$JSON" = true ]]; then
+            JSON_FILES+=("$(jq -nc --arg path "$rel_path" \
+                '{path:$path,status:"unknown",last_updated:null,commits_since:null}')")
+        fi
         return 1
     fi
 
@@ -174,12 +192,20 @@ check_file_freshness() {
     if [ "$commit_count" -eq 0 ]; then
         echo "  ✅ Up to date (no commits since $last_updated)"
         ((FRESH_COUNT++)) || true
+        if [[ "$JSON" = true ]]; then
+            JSON_FILES+=("$(jq -nc --arg path "$rel_path" --arg lu "$last_updated" \
+                '{path:$path,status:"fresh",last_updated:$lu,commits_since:0}')")
+        fi
         return 0
     fi
 
     # Check if commits are significant
     echo "  ⚠️  Potentially stale: $commit_count commit(s) since $last_updated"
     ((STALE_COUNT++)) || true
+    if [[ "$JSON" = true ]]; then
+        JSON_FILES+=("$(jq -nc --arg path "$rel_path" --arg lu "$last_updated" --argjson cs "$commit_count" \
+            '{path:$path,status:"stale",last_updated:$lu,commits_since:$cs}')")
+    fi
 
     if [ "$VERBOSE" = true ]; then
         echo "  Recent commits:"
@@ -208,11 +234,32 @@ if [ -z "$AGENTS_FILES" ]; then
     exit 0
 fi
 
-# Check each file
+# Check each file.
+# `|| true`: check_file_freshness returns non-zero for stale/unknown files; without
+# this guard `set -e` aborts the loop on the first such file, processing only one
+# file and defeating the summary below (and forcing the validate-structure caller to
+# always warn). Tolerating the non-zero lets every file be counted.
 while read -r file; do
-    check_file_freshness "$file"
+    check_file_freshness "$file" || true
     echo ""
 done <<< "$AGENTS_FILES"
+
+# Emit JSON document (machine-readable) and exit before the human summary.
+if [[ "$JSON" = true ]]; then
+    if [[ "${#JSON_FILES[@]}" -eq 0 ]]; then
+        files_json='[]'
+    else
+        files_json=$(printf '%s\n' "${JSON_FILES[@]}" | jq -s '.')
+    fi
+    jq -nc \
+        --argjson files "$files_json" \
+        --argjson fresh "$FRESH_COUNT" \
+        --argjson stale "$STALE_COUNT" \
+        --argjson unknown "$UNKNOWN_COUNT" \
+        '{script:"check-freshness",schema:1,summary:{fresh:$fresh,stale:$stale,unknown:$unknown},files:$files}' >&3
+    if [[ "$STALE_COUNT" -gt 0 ]]; then exit 1; fi
+    exit 0
+fi
 
 # Summary
 echo "=== Freshness Summary ==="

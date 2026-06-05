@@ -11,7 +11,47 @@ if ((BASH_VERSINFO[0] < 4)); then
     exit 1
 fi
 
-PROJECT_DIR="${1:-.}"
+PROJECT_DIR="."
+JSON=false
+
+# Parse flags. Preserves the original positional semantics (PROJECT_DIR="${1:-.}"):
+# the first non-flag argument becomes PROJECT_DIR, defaulting to "." when absent.
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --json)
+            JSON=true
+            shift
+            ;;
+        --help|-h)
+            cat <<EOF
+Usage: verify-commands.sh [PROJECT_DIR] [OPTIONS]
+
+Verify that commands documented in AGENTS.md actually exist (and optionally run).
+
+Options:
+  --json                Emit machine-readable JSON on stdout (human output suppressed)
+  --help, -h            Show this help message
+
+Environment variables:
+  VERBOSE=true          Show detailed [INFO] output on stderr
+  DRY_RUN=true          Skip writing the JSON sidecar and updating timestamps
+  SMOKE_TEST=true       Actually run safe commands (not just check existence)
+  TIMEOUT=SECONDS       Per-command timeout for smoke tests (default: 60)
+  OUTPUT_JSON=PATH      Sidecar results file (default: PROJECT_DIR/.agents/command-verification.json)
+
+Examples:
+  verify-commands.sh .                     # Verify commands in ./AGENTS.md
+  verify-commands.sh . --json              # Machine-readable JSON output
+EOF
+            exit 0
+            ;;
+        *)
+            PROJECT_DIR="$1"
+            shift
+            ;;
+    esac
+done
+
 AGENTS_FILE="$PROJECT_DIR/AGENTS.md"
 VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
@@ -50,6 +90,14 @@ if [ ! -f "$AGENTS_FILE" ]; then
 fi
 
 cd "$PROJECT_DIR"
+
+# In JSON mode, route all human-readable output to /dev/null and reserve the
+# original stdout (fd 3) for the single JSON document emitted at the end. This
+# keeps --json strictly additive: the default (no-flag) path is untouched.
+JSON_CMDS=()
+if [[ "$JSON" = true ]]; then
+    exec 3>&1 1>/dev/null
+fi
 
 echo "Verifying commands in $AGENTS_FILE..."
 echo ""
@@ -565,6 +613,10 @@ mapfile -t commands < <(extract_commands | sort -u)
 
 if [ ${#commands[@]} -eq 0 ]; then
     warn "No commands found in AGENTS.md"
+    if [[ "$JSON" = true ]]; then
+        jq -nc --argjson p "$PASSED" --argjson s "$SKIPPED" --argjson f "$FAILED" \
+            '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:[]}' >&3
+    fi
     exit 0
 fi
 
@@ -574,6 +626,43 @@ echo ""
 for cmd in "${commands[@]}"; do
     [ -n "$cmd" ] && verify_command "$cmd"
 done
+
+# Emit JSON document (machine-readable) and exit before the human summary.
+# Summary counts come from the authoritative PASSED/SKIPPED/FAILED counters; the
+# commands[] array is built best-effort from COMMAND_RESULTS (iterating its keys,
+# parsing each stored value as JSON, else null).
+if [[ "$JSON" = true ]]; then
+    if [[ "${#COMMAND_RESULTS[@]}" -gt 0 ]]; then
+        # Iterate keys in SORTED order: associative-array key order is otherwise
+        # unspecified in Bash, which would make commands[] order vary run to run.
+        # read -r (not word-split) preserves command strings that contain spaces.
+        while IFS= read -r cmd; do
+            stored="${COMMAND_RESULTS[$cmd]}"
+            if entry=$(jq -nc --arg cmd "$cmd" --argjson detail "$stored" \
+                '{cmd:$cmd,detail:$detail}' 2>/dev/null); then
+                JSON_CMDS+=("$entry")
+            else
+                JSON_CMDS+=("$(jq -nc --arg cmd "$cmd" '{cmd:$cmd,detail:null}')")
+            fi
+        done < <(printf '%s\n' "${!COMMAND_RESULTS[@]}" | LC_ALL=C sort)
+    fi
+
+    if [[ "${#JSON_CMDS[@]}" -eq 0 ]]; then
+        arr_json='[]'
+    else
+        arr_json=$(printf '%s\n' "${JSON_CMDS[@]}" | jq -s '.')
+    fi
+
+    jq -nc \
+        --argjson items "$arr_json" \
+        --argjson p "$PASSED" \
+        --argjson s "$SKIPPED" \
+        --argjson f "$FAILED" \
+        '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:$items}' >&3
+
+    if [[ "$FAILED" -gt 0 ]]; then exit 1; fi
+    exit 0
+fi
 
 echo ""
 echo "======================================"

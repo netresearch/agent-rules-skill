@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR=""
 CHECK_FRESHNESS=false
 VERBOSE=false
+JSON=false
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -21,6 +22,10 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        --json)
+            JSON=true
+            shift
+            ;;
         --help|-h)
             cat <<EOF
 Usage: validate-structure.sh [PROJECT_DIR] [OPTIONS]
@@ -30,6 +35,7 @@ Validate AGENTS.md structure compliance and optionally check freshness.
 Options:
   --check-freshness, -f  Also check if files are up to date with git commits
   --verbose, -v          Show detailed output
+  --json                 Emit machine-readable JSON on stdout (structure only)
   --help, -h             Show this help message
 
 Examples:
@@ -52,22 +58,43 @@ cd "$PROJECT_DIR" || exit 1
 ERRORS=0
 WARNINGS=0
 
+# --json state: each helper records the outcome of the just-run check so that
+# record_check can attach it to a per-file record. Default-path output is unchanged.
+LAST_STATUS=""
+LAST_DETAIL=""
+declare -A FILE_CHECKS_JSON=()
+declare -A FILE_ROLE=()
+
 error() {
     echo "❌ ERROR: $*"
     ((ERRORS+=1))
+    LAST_STATUS="fail"; LAST_DETAIL="$*"
 }
 
 warning() {
     echo "⚠️  WARNING: $*"
     ((WARNINGS+=1))
+    LAST_STATUS="warn"; LAST_DETAIL="$*"
 }
 
 success() {
     echo "✅ $*"
+    LAST_STATUS="pass"; LAST_DETAIL="$*"
 }
 
 info() {
     echo "ℹ️  $*"
+    LAST_STATUS="pass"; LAST_DETAIL="$*"
+}
+
+# Record the just-run check (LAST_STATUS/LAST_DETAIL) under a relative file path.
+# No-op unless --json; never writes to stdout.
+record_check() {
+    [[ "$JSON" = true ]] || return 0
+    local path="$1" name="$2" obj
+    obj=$(jq -nc --arg name "$name" --arg status "$LAST_STATUS" --arg detail "$LAST_DETAIL" \
+        '{name:$name,status:$status,detail:$detail}')
+    FILE_CHECKS_JSON["$path"]="${FILE_CHECKS_JSON["$path"]:-}${obj}"$'\n'
 }
 
 # Check if file has managed header
@@ -165,7 +192,11 @@ check_scope_links() {
     local root_file="$1"
 
     if ! grep -q "## Index of scoped AGENTS.md" "$root_file"; then
-        return 0  # No index, skip check
+        # No scope index (thin root without scopes) -- nothing to check. Set an
+        # explicit status so a subsequent record_check does not reuse the
+        # previous check's LAST_STATUS/LAST_DETAIL in --json mode.
+        LAST_STATUS="pass"; LAST_DETAIL="No scope index (no scoped files to link)"
+        return 0
     fi
 
     # Extract links from scope index
@@ -231,6 +262,12 @@ check_claude_symlink() {
     fi
 }
 
+# In JSON mode, route all human-readable output to /dev/null and reserve the
+# original stdout (fd 3) for the single JSON document emitted at the end.
+if [[ "$JSON" = true ]]; then
+    exec 3>&1 1>/dev/null
+fi
+
 # Main validation
 echo "Validating AGENTS.md structure in: $PROJECT_DIR"
 echo ""
@@ -242,10 +279,11 @@ if [ ! -f "$ROOT_FILE" ]; then
     error "Root AGENTS.md not found"
 else
     echo "=== Root AGENTS.md ==="
-    check_managed_header "$ROOT_FILE"
-    check_root_is_thin "$ROOT_FILE"
-    check_precedence_statement "$ROOT_FILE"
-    check_scope_links "$ROOT_FILE"
+    FILE_ROLE["AGENTS.md"]="root"
+    check_managed_header "$ROOT_FILE"; record_check "AGENTS.md" "managed_header"
+    check_root_is_thin "$ROOT_FILE"; record_check "AGENTS.md" "root_is_thin"
+    check_precedence_statement "$ROOT_FILE"; record_check "AGENTS.md" "precedence"
+    check_scope_links "$ROOT_FILE"; record_check "AGENTS.md" "scope_links"
     echo ""
 fi
 
@@ -262,6 +300,8 @@ ALL_AGENTS_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
 if [ -n "$ALL_AGENTS_FILES" ]; then
     while read -r file; do
         check_claude_symlink "$file"
+        sym_rel="${file#"$PROJECT_DIR"/}"; sym_rel="${sym_rel#./}"
+        record_check "$sym_rel" "claude_symlink"
     done <<< "$ALL_AGENTS_FILES"
 fi
 echo ""
@@ -279,10 +319,44 @@ if [ -n "$SCOPED_FILES" ]; then
     while read -r file; do
         rel_path="${file#"$PROJECT_DIR"/}"
         echo "Checking: $rel_path"
-        check_managed_header "$file"
-        check_scoped_sections "$file"
+        json_key="${rel_path#./}"
+        FILE_ROLE["$json_key"]="scoped"
+        check_managed_header "$file"; record_check "$json_key" "managed_header"
+        check_scoped_sections "$file"; record_check "$json_key" "required_sections"
         echo ""
     done <<< "$SCOPED_FILES"
+fi
+
+# Emit JSON document and exit before the human summary. JSON mode is structure-only
+# and deliberately does NOT run the --check-freshness shell-out below (score-agents
+# calls check-freshness.sh --json itself), keeping the two signals decoupled.
+if [[ "$JSON" = true ]]; then
+    json_files=()
+    if [[ "${#FILE_CHECKS_JSON[@]}" -gt 0 ]]; then
+        while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            checks_json=$(printf '%s' "${FILE_CHECKS_JSON[$path]}" | jq -s '.')
+            json_files+=("$(jq -nc \
+                --arg path "$path" \
+                --arg role "${FILE_ROLE[$path]:-scoped}" \
+                --argjson checks "$checks_json" \
+                '{path:$path,role:$role,
+                  errors:($checks|map(select(.status=="fail"))|length),
+                  warnings:($checks|map(select(.status=="warn"))|length),
+                  checks:$checks}')")
+        done < <(printf '%s\n' "${!FILE_CHECKS_JSON[@]}" | sort)
+    fi
+    if [[ "${#json_files[@]}" -eq 0 ]]; then
+        files_json='[]'
+    else
+        files_json=$(printf '%s\n' "${json_files[@]}" | jq -s '.')
+    fi
+    jq -nc \
+        --argjson files "$files_json" \
+        --argjson e "$ERRORS" \
+        --argjson w "$WARNINGS" \
+        '{script:"validate-structure",schema:1,summary:{errors:$e,warnings:$w},files:$files}' >&3
+    if [[ "$ERRORS" -eq 0 ]]; then exit 0; else exit 1; fi
 fi
 
 # Summary

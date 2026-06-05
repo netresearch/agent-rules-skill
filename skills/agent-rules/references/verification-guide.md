@@ -95,6 +95,47 @@ ls tests/*.py tests/**/*.py
 - **WRONG:** Using extracted command output without running it
 - **RIGHT:** Extract -> Compare -> Fix discrepancies -> Validate
 
+## What NOT to Put in a Root AGENTS.md
+
+The **root** AGENTS.md is auto-loaded into every session -- each line spends prompt
+budget that is never reclaimed. Be ruthless here. (Scoped/subdirectory files load on
+demand, so they can carry more detail; this economy applies hardest to the root.)
+
+| Don't add | Why | Instead |
+|-----------|-----|---------|
+| Restating what the filename/code already says | The agent reads the code anyway | Document only what is *not* derivable |
+| Generic best practices ("write tests", "use clear names") | Universal advice, not project-specific | Cut it -- the model already knows |
+| One-off fixes ("fixed login bug in #123") | Won't recur; pure clutter | Cut it; it lives in git history |
+| Tutorials on well-known tech (what JWT/Docker *is*) | Wastes tokens on what the model knows | One line: the project's *choice*, not the lesson |
+| Duplicating a scoped file's content in root | Breaks the Pointer Principle | Link to the scoped `AGENTS.md` |
+
+### Compression: bad -> good
+
+Each rewrite keeps the project-specific signal and drops the filler.
+
+**Obvious-code restatement**
+
+- BAD: `The UserService class handles user-related operations.`
+- GOOD: *(omit -- the class name already says this)*
+
+**Tutorial instead of the project's choice**
+
+- BAD: `Auth uses JWT. JSON Web Tokens (RFC 7519) are a compact, self-contained way to transmit signed claims as JSON; we picked HS256 because...`
+- GOOD: `Auth: JWT (HS256), Bearer token in the Authorization header.`
+
+**Generic advice**
+
+- BAD: `Always validate user input and write tests for new features.`
+- GOOD: *(omit -- universal, not specific to this repo)*
+
+**Prose where a pointer wins**
+
+- BAD: `To run the tests, first install dependencies with composer, then run the PHPUnit suite through the composer test script...`
+- GOOD: `Tests: composer test (PHPUnit). See Tests/AGENTS.md.`
+
+> **Litmus test:** *"Would a senior engineer who knows this stack but not this repo
+> learn something from this line?"* If no, cut it.
+
 ## Agent-Optimized Design
 
 This skill generates AGENTS.md files optimized for AI coding agent efficiency based on:
