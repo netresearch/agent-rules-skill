@@ -17,8 +17,9 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 ## When to Use
 
 - Creating or updating AGENTS.md for new/existing projects
+- **Scaffolding a new repository** — ship AGENTS.md with the initial commits; retrofitting later needs full re-verification
 - Standardizing agent documentation across repositories
-- Checking if AGENTS.md files are current with recent code changes
+- Checking AGENTS.md freshness after code changes
 - Onboarding AI agents to an unfamiliar codebase
 
 ## Scripts
@@ -77,9 +78,9 @@ Root: `assets/root-thin.md` (default) or `root-verbose.md`. Scoped: `assets/scop
 
 ## Supported Projects
 
-Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), Python (pip/poetry/ruff/mypy), Skill repos, Hybrid (multi-stack with auto-scoping).
+Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), Python (pip/poetry/ruff/mypy), Skill repos, Hybrid (auto-scoping).
 
 ## See Also
 
-- [`agent-harness-skill`](https://github.com/netresearch/agent-harness-skill) — broader agent-readiness harness (CI verification, enforcement).
-- [`skill-repo-skill`](https://github.com/netresearch/skill-repo-skill) — skill-repo structure (plugin.json, split licensing, release workflows).
+- [`agent-harness-skill`](https://github.com/netresearch/agent-harness-skill) — agent-readiness harness (CI enforcement).
+- [`skill-repo-skill`](https://github.com/netresearch/skill-repo-skill) — skill-repo structure (plugin.json, licensing, releases).
