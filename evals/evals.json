@@ -17,7 +17,7 @@
       "id": 3,
       "name": "scaffold-includes-agents-md",
       "prompt": "Scaffold a brand-new extension repository: composer.json, CI workflow, test runner. What belongs in the initial commits?",
-      "expected_output": "AGENTS.md (plus CLAUDE.md/GEMINI.md symlinks) generated via detect -> extract -> generate -> verify belongs in the initial scaffold commits, not deferred - the scaffolding session holds every fact, while retrofitting later requires a full re-verification pass against a codebase no longer in anyone's context."
+      "expected_output": "AGENTS.md (plus CLAUDE.md/GEMINI.md symlinks), generated via detect -> extract -> generate -> verify, belongs in the initial scaffold commits, not deferred - the scaffolding session holds every fact, while retrofitting later requires a full re-verification pass against a codebase no longer in anyone's context."
     }
   ]
 }
