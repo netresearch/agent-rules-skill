@@ -1,29 +1,29 @@
 name: Security
 
-# Permissions note: do NOT add a workflow-level `permissions:` block here.
-# The reusables called below (gitleaks, dependency-review, composer-audit)
-# declare `permissions: {}` at top-level and grant what each job needs at
-# the job level. A workflow-level cap of e.g. `contents: read` here would
-# conflict with any caller-side job-level block that elevates beyond the
-# cap, causing the workflow to startup_failure at dispatch time (this is
-# exactly what was broken on this repo 2026-05-06 → 2026-05-23 and what
-# this PR fixes).
+# Aggregated security scans for skill repos: secret scanning (gitleaks),
+# dependency review on PRs, and a composer audit (every skill repo ships a
+# composer.json for split-licensing / Packagist distribution).
 #
-# Per-job `permissions:` blocks on `uses:` reusable-workflow calls are
-# left to the workflows themselves where possible. dependency-review keeps
-# a caller-side block because that's the pattern used by the working peer
-# skill repos (skill-repo-skill etc.) — defensive symmetry with what
-# dependency-review.yml's job grants internally.
+# Top-level `permissions: {}` denies everything by default; each reusable
+# caller job re-declares the exact union its reusable's jobs require, so the
+# token passed to each reusable is fully explicit and never relies on the
+# repo default. This is the same pattern proven in netresearch/.github's
+# go-app template (top {} + per-job security-events: write).
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
+
+permissions: {}
 
 jobs:
   gitleaks:
     uses: netresearch/.github/.github/workflows/gitleaks.yml@main
+    permissions:
+      contents: read
+      security-events: write
     secrets:
       GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
@@ -36,3 +36,6 @@ jobs:
 
   composer-audit:
     uses: netresearch/typo3-ci-workflows/.github/workflows/security.yml@main
+    permissions:
+      contents: read
+      security-events: write

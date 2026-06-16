@@ -1,33 +1,52 @@
+# Managed by netresearch/.github/templates/skill/
+#
+# Declares only the ecosystems every skill consumer is guaranteed to have:
+# github-actions (CI workflows) and composer (every skill repo ships a
+# composer.json for split-licensing / Packagist distribution).
+#
+# npm and devcontainers are OPT-IN: a repo that actually has package.json
+# fixtures (e.g. skills/<name>/references/examples/**) or a devcontainer adds
+# the block below to its own dependabot.yml and lists `.github/dependabot.yml`
+# under `intentional-drift:` in .github/template.yaml so the template sync
+# stops managing the file. Declaring an ecosystem without its manifest makes
+# the Dependabot run fail with `dependency_file_not_found`.
+#
+# Opt-in npm (use Dependabot's plural `directories:` to consolidate multiple
+# fixture dirs into one grouped PR):
+#   - package-ecosystem: npm
+#     directories:
+#       - /skills/<name>/references/examples/<project>
+#     schedule:
+#       interval: weekly
+#       day: monday
+#     open-pull-requests-limit: 5
+#     groups:
+#       npm:
+#         patterns: ['*']
+#     cooldown:
+#       default-days: 7
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
     groups:
       github-actions:
-        patterns:
-          - "*"
+        patterns: ['*']
+    cooldown:
+      default-days: 7
 
-  # Single npm entry covering all fixture projects via Dependabot's plural
-  # `directories:` syntax. Using one entry (instead of five) means the
-  # `fixture-deps` group consolidates routine updates across all fixtures
-  # into a single grouped PR — without this, each `package-ecosystem +
-  # directory` pair has its own group scope and Dependabot opens one PR
-  # per directory (copilot/gemini flagged this on PR #35).
-  #
-  # Dependabot security updates also need a matching ecosystem+directory
-  # entry, or the updater errors when trying to open PRs for vulnerable
-  # packages (see CVE-2026-39365 on vite, which motivated adding this).
-  - package-ecosystem: npm
-    directories:
-      - /skills/agent-rules/references/examples/go-api-with-react-admin/admin
-      - /skills/agent-rules/references/examples/go-with-internal-web-tsx
-      - /skills/agent-rules/references/examples/go-with-internal-web-tsx/internal/web
-      - /skills/agent-rules/references/examples/php-with-frontend
-      - /skills/agent-rules/references/examples/php-with-frontend/web
+  - package-ecosystem: composer
+    directory: /
     schedule:
       interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
     groups:
-      fixture-deps:
-        patterns: ["*"]
+      composer:
+        patterns: ['*']
+    cooldown:
+      default-days: 7
