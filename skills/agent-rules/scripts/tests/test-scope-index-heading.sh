@@ -61,7 +61,10 @@ fi
 FX2="$WORK/legacy-heading"
 cp -r "$FX1" "$FX2"
 # Rewrite only the heading line, keeping the rest of the generated root intact.
-sed -i "s|^${NEW_HEADING}\$|${LEGACY_HEADING}|" "$FX2/AGENTS.md"
+# Use a temp file + mv rather than `sed -i` so the test stays portable across
+# GNU sed (Linux) and BSD sed (macOS); this repo's CI also runs on macos-latest.
+sed "s|^${NEW_HEADING}\$|${LEGACY_HEADING}|" "$FX2/AGENTS.md" > "$FX2/AGENTS.md.tmp"
+mv "$FX2/AGENTS.md.tmp" "$FX2/AGENTS.md"
 grep -qF "$LEGACY_HEADING" "$FX2/AGENTS.md" || fail "could not rewrite heading to legacy form"
 
 if bash "$VALIDATE" "$FX2" >/dev/null 2>&1; then
@@ -74,7 +77,9 @@ fi
 FX3="$WORK/no-heading"
 cp -r "$FX1" "$FX3"
 # Drop the scope-index heading so the >50-line root has no index at all.
-sed -i "/^${NEW_HEADING}\$/d" "$FX3/AGENTS.md"
+# Temp file + mv keeps this portable across GNU and BSD sed (see Test 2).
+sed "/^${NEW_HEADING}\$/d" "$FX3/AGENTS.md" > "$FX3/AGENTS.md.tmp"
+mv "$FX3/AGENTS.md.tmp" "$FX3/AGENTS.md"
 
 if bash "$VALIDATE" "$FX3" >/dev/null 2>&1; then
     fail "validate-structure.sh accepted a bloated root with no scope index"
