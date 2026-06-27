@@ -1,0 +1,31 @@
+name: Test Scripts
+
+# Runs the agent-rules script regression tests (e.g. the scope-index heading
+# contract between generate-agents.sh and validate-structure.sh, issue #55).
+# Local job — no reusable workflow needed; the tests only require git, jq and
+# bash, all preinstalled on the runner.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/agent-rules/scripts/**'
+      - 'skills/agent-rules/assets/**'
+  pull_request:
+    paths:
+      - 'skills/agent-rules/scripts/**'
+      - 'skills/agent-rules/assets/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  script-tests:
+    name: Script regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run scope-index heading regression test
+        run: bash skills/agent-rules/scripts/tests/test-scope-index-heading.sh
