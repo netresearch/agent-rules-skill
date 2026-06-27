@@ -5,6 +5,12 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Scope-index heading regex (ERE). Matches both the current template heading
+# "## Scoped AGENTS.md (MUST read ...)" and the legacy "## Index of scoped
+# AGENTS.md" so validation stays in sync with generate-agents.sh output and
+# remains backward-compatible with files produced by older versions.
+SCOPE_INDEX_HEADING_RE='^## (Index of scoped|Scoped) AGENTS\.md'
+
 # Default options
 PROJECT_DIR=""
 CHECK_FRESHNESS=false
@@ -119,7 +125,7 @@ check_root_is_thin() {
     if [ "$line_count" -le 50 ]; then
         success "Root is thin: $line_count lines"
         return 0
-    elif grep -q "## Index of scoped AGENTS.md" "$file"; then
+    elif grep -qE "$SCOPE_INDEX_HEADING_RE" "$file"; then
         success "Root has scope index (verbose style acceptable)"
         return 0
     else
@@ -191,7 +197,7 @@ check_scoped_sections() {
 check_scope_links() {
     local root_file="$1"
 
-    if ! grep -q "## Index of scoped AGENTS.md" "$root_file"; then
+    if ! grep -qE "$SCOPE_INDEX_HEADING_RE" "$root_file"; then
         # No scope index (thin root without scopes) -- nothing to check. Set an
         # explicit status so a subsequent record_check does not reuse the
         # previous check's LAST_STATUS/LAST_DETAIL in --json mode.
@@ -201,7 +207,7 @@ check_scope_links() {
 
     # Extract links from scope index
     local links
-    links=$(sed -n '/## Index of scoped AGENTS.md/,/^##/p' "$root_file" | grep -o '\./[^)]*AGENTS.md' || true)
+    links=$(sed -nE "/$SCOPE_INDEX_HEADING_RE/,/^##/p" "$root_file" | grep -o '\./[^)]*AGENTS.md' || true)
 
     if [ -z "$links" ]; then
         # Empty scope index with AGENTS-GENERATED markers is valid (placeholder)
