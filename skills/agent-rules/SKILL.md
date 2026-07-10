@@ -62,15 +62,16 @@ Use `--update` to preserve human-curated content outside `<!-- GENERATED -->` ma
 
 | File | Contents |
 |------|----------|
-| [`verification-guide.md`](references/verification-guide.md) | Verification steps, design principles, anti-bloat |
+| [`verification-guide.md`](references/verification-guide.md) | Verification steps, anti-bloat |
 | [`scripts-guide.md`](references/scripts-guide.md) | Script options, validation checklist |
-| [`quality-rubric.md`](references/quality-rubric.md) | Quality grading rubric |
+| [`quality-rubric.md`](references/quality-rubric.md) | Grading rubric |
 | [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md) | 16-agent compatibility matrix |
 | [`output-structure.md`](references/output-structure.md) | Root/scoped sections |
-| [`git-hooks-setup.md`](references/git-hooks-setup.md) | Hook framework detection and setup |
+| [`git-hooks-setup.md`](references/git-hooks-setup.md) | Hook framework setup |
 | [`examples/`](references/examples/) | Complete examples |
-| [`ai-contribution-guidelines.md`](references/ai-contribution-guidelines.md) | "3 Cs" framework for AI contributions |
+| [`ai-contribution-guidelines.md`](references/ai-contribution-guidelines.md) | "3 Cs" AI-contribution framework |
 | [`directory-coverage.md`](references/directory-coverage.md) | Scoped-file coverage rationale |
+| [`feedback-memory-schema.md`](references/feedback-memory-schema.md) | Approved-learning file format |
 
 ## Templates
 
