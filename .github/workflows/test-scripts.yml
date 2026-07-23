@@ -2,7 +2,8 @@ name: Test Scripts
 
 # Runs the agent-rules script regression tests (e.g. the scope-index heading
 # contract between generate-agents.sh and validate-structure.sh, issue #55).
-# Local job — no reusable workflow needed; the tests only require git, jq and
+# Thin caller of the shared script-check reusable, so the checkout pin and
+# harden-runner are maintained centrally. The tests only need git, jq and
 # bash, all preinstalled on the runner.
 
 on:
@@ -17,15 +18,12 @@ on:
       - 'skills/agent-rules/assets/**'
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   script-tests:
-    name: Script regression tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Run scope-index heading regression test
-        run: bash skills/agent-rules/scripts/tests/test-scope-index-heading.sh
+    uses: netresearch/.github/.github/workflows/script-check.yml@main
+    permissions:
+      contents: read
+    with:
+      check-cmd: bash skills/agent-rules/scripts/tests/test-scope-index-heading.sh
