@@ -33,15 +33,15 @@ Additional recommended sections:
 - Good vs Bad examples
 - When stuck
 - House Rules (for scoped overrides)
-- **Approved learnings** — index entries linking to `docs/feedback/feedback_<slug>.md` (one line per learning, see [feedback-memory-schema.md](feedback-memory-schema.md))
+- **Approved learnings** — titled rules appended by `/retro` (see [feedback-memory-schema.md](feedback-memory-schema.md))
 
 ### AGENTS.md is an index, not a rule dump
 
-When session learnings are approved (via `/retro` or similar), the **prose lives in `docs/feedback/feedback_<slug>.md`** following the [feedback memory schema](feedback-memory-schema.md). AGENTS.md only carries a one-line link per learning under `## Approved learnings`. This keeps AGENTS.md compact (the agent-harness conformance rule) while preserving full audit trail in `docs/feedback/`.
+When session learnings are approved (via `/retro` or similar), the rule is appended under `## Approved learnings` as a short titled block — AGENTS.md is the single project rule store, so there is no second file to keep in sync. Keep each rule to a title plus one or two sentences naming the trigger and the action; anything that needs more belongs in `docs/` with a pointer, the same as every other topic in this index. Repos that still carry a `docs/feedback/` tree from the earlier index-plus-file model keep working — see [feedback-memory-schema.md](feedback-memory-schema.md).
 
 Place `## Approved learnings` **after `## Key Decisions` and before `## Boundaries`** in the section order, and put it **outside** any `<!-- AGENTS-GENERATED:START ... -->` markers — this section is managed by retro-skill, not by `generate-agents.sh`, so it must survive `--update` runs.
 
-If the approved-learnings index would push AGENTS.md over the harness 150-line cap (`AH-02`), prune inactive entries or move to a scoped `AGENTS.md` rather than letting the index grow unbounded.
+If the approved-learnings section would push AGENTS.md over the harness 150-line cap (`AH-02`), prune rules that no longer apply or move them to a scoped `AGENTS.md` next to the code they govern, rather than letting the section grow unbounded.
 
 ## When to Customize vs Auto-Generate
 
