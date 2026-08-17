@@ -1,26 +1,69 @@
 # Feedback Memory Schema
 
-Canonical format for **approved session learnings** materialized as project-rule or user-memory files. This schema is the contract between `retro-skill` (which writes these files) and `agent-rules-skill` (which manages how they integrate with AGENTS.md and project documentation).
+How **approved session learnings** reach a repository, and the file format of
+the learning files that earlier versions of `retro-skill` wrote. This is the
+contract between `retro-skill` (which materializes learnings) and
+`agent-rules-skill` (which owns how they sit in AGENTS.md).
 
-## When this schema applies
+`retro-skill` owns *what it writes and where*. This document follows it; where
+the two disagree, [retro's destination
+taxonomy](https://github.com/netresearch/retro-skill/blob/main/skills/retro/references/destination-taxonomy.md)
+wins.
 
-| Destination | Path |
-|---|---|
-| **user-memory** (personal preference across projects) | `~/.claude/projects/<project-dir-slug>/memory/feedback_<slug>.md` |
-| **project-rule** (project-specific convention) | `<project>/docs/feedback/feedback_<slug>.md` |
+## Where approved learnings go today
 
-### Variable definitions
-
-| Variable | Meaning | Example |
+| Destination | Target | Form |
 |---|---|---|
-| `<project-dir-slug>` | Claude Code's encoding of the absolute working directory for user-memory. Slashes are replaced with `-`. | `/home/sme/p` → `-home-sme-p` |
-| `<slug>` | kebab-case filename slug for *this specific learning* | `merge-strategy`, `preserve-commit-signing` |
+| **`personal-rule`** (personal preference across projects) | `~/.claude/CLAUDE.md` | A titled rule appended to the always-loaded global rules file. Nothing lands in the repository, and nothing here manages it. |
+| **`project-rule`** (project-specific convention) | `<project>/AGENTS.md` | A titled rule appended to AGENTS.md, which is the single project rule store. |
 
-`<project-dir-slug>` and `<slug>` are distinct. `retro-skill` MUST compute `<project-dir-slug>` deterministically from the absolute working directory at the time of materialization (not from any frontmatter field).
+`personal-rule` was called `user-memory` in earlier versions; the old name is a
+deprecated alias `retro` still accepts as input.
 
-For user-memory **global** scope (not tied to a single project): place under whatever project-dir-slug Claude Code uses for global memory; consult `~/.claude/projects/` for the convention in use.
+A rule in either target has the same shape:
 
-## Schema
+```markdown
+## <Short rule title>
+
+<1-2 sentences: what to do and why. State the trigger and the action.>
+```
+
+**Not** `~/.claude/projects/<slug>/memory/`. That directory is cwd-scoped — a
+file written there is only recalled when the working directory resolves to the
+same project slug — so it is no longer a destination at all. It is only ever a
+*source*: `/retro promote` drains what accumulated there upward into the
+correct destination.
+
+## Project-rule placement in AGENTS.md
+
+The rule is appended under `## Approved learnings`.
+
+### Section position
+
+`## Approved learnings` goes **after `## Key Decisions` and before
+`## Boundaries`** in the `root-thin.md` template's section order, and
+**outside** any `<!-- AGENTS-GENERATED:START ... -->` markers, so that
+`generate-agents.sh --update` preserves it. The section is managed by
+`retro-skill`, not by the generator.
+
+### Size
+
+AGENTS.md is an index, and the harness caps it at 150 lines (`AH-02`). When the
+section pushes against that cap, prune learnings that no longer apply or move
+them to a scoped `AGENTS.md` next to the code they govern. Growing the root
+index unbounded trades one problem for another: a 400-line AGENTS.md is read
+less carefully than a 120-line one.
+
+## Legacy learning files
+
+Earlier versions wrote each learning to its own file —
+`<project>/docs/feedback/feedback_<slug>.md` for project rules,
+`~/.claude/projects/<slug>/memory/feedback_<slug>.md` for personal ones — with
+a one-line index entry in AGENTS.md pointing at it. Those files still exist in
+repositories and in local memory, `retro` still reads them, and `/retro
+promote` re-homes the personal ones. Nothing writes new ones.
+
+Keep reading them in this format:
 
 ```markdown
 ---
@@ -34,102 +77,49 @@ originSessionId: <session-id-from-jsonl-filename>
 **How to apply:** <1-2 paragraphs describing how the assistant should behave next time>
 ```
 
-### Field semantics
-
 | Field | Required | Notes |
 |---|---|---|
-| `name` | yes | Human-readable title for the learning. May be a free-form sentence (e.g. `"Preserve commit signing on rewrite operations"`) or a short slug (e.g. `"merge strategy"`). **Not necessarily kebab-case** — the canonical examples use both natural language and slugs. The **filename** uses an independent kebab-case slug (see "Filename slug" below). |
-| `description` | yes | One-line summary, ≤200 chars. Used by retro-skill to score relevance against new friction. **MUST be double-quoted** when it contains any of `: # [ ] { } , & * ! \| > ' " % @` or a leading whitespace, or it may break YAML parsing. Safer rule: quote unconditionally. |
-| `type` | yes | always `feedback` (distinguishes from other memory types). |
-| `originSessionId` | recommended, not required | Session ID where the friction was first observed (audit trail). If absent, the file is still valid but loses traceability. |
-| `**Why:**` body section | yes | Start of line, exact form `**Why:** ` (with trailing space). Without this, the file rots — readers can't judge if it still applies. |
-| `**How to apply:**` body section | yes | Start of line, exact form `**How to apply:** `. Vague rules don't change behavior. |
+| `name` | yes | Human-readable title. May be free-form (`"Preserve commit signing on rewrite operations"`) or a short slug (`"merge strategy"`) — **not necessarily kebab-case**. The filename slug is independent of it. |
+| `description` | yes | One-line summary, ≤200 chars, used to score relevance against new friction. **MUST be double-quoted** when it contains any of `: # [ ] { } , & * ! \| > ' " % @` or leading whitespace. Safer rule: quote unconditionally. |
+| `type` | yes | Always `feedback`. |
+| `originSessionId` | recommended | Session where the friction was first observed. Its absence does not invalidate the file, only its traceability. |
+| `**Why:**` body section | yes | Start of line, exact form `**Why:**` plus a trailing space. Without it the file rots — a reader cannot judge whether it still applies. |
+| `**How to apply:**` body section | yes | Start of line, exact form `**How to apply:**` plus a trailing space. A vague rule changes no behaviour. |
 
-### Filename slug (independent from `name`)
+An extended `metadata:` block (`node_type`, `type`) appears in some files; it is
+tolerated, not required.
 
-The `<slug>` in the filename `feedback_<slug>.md` is **separately chosen** by retro-skill, kebab-case, descriptive of the learning topic. It is NOT required to match `frontmatter.name`.
+A legacy file is valid when its frontmatter parses (PyYAML / yq), `name`,
+`description` and `type` are non-empty, both body markers are present at start
+of line, and the filename matches `feedback_<slug>.md` with a kebab-case slug.
 
-Canonical examples demonstrate the freedom: file `feedback_skill-sources.md` has `name: "skill source vs cache"`; file `feedback_no-version-bumps-in-feature-prs.md` has `name: "No version bumps in feature PRs"`.
+An AGENTS.md that still indexes such files keeps working — the index entry is a
+plain link, and the harness `AH-10` check verifies that it resolves. Migrating
+an existing `docs/feedback/` tree into AGENTS.md rules is optional and is not
+something this skill does automatically.
 
-## Project-rule placement
-
-When `retro-skill` materializes a `project-rule` destination:
-
-1. **Write file:** `<project>/docs/feedback/feedback_<slug>.md` (create `docs/feedback/` if missing).
-2. **Add AGENTS.md index entry** under a `## Approved learnings` section:
-
-```markdown
-## Approved learnings
-
-- [feedback_<slug>.md](docs/feedback/feedback_<slug>.md) — <one-line summary from frontmatter description>
-```
-
-The index entry is a single line; the full prose lives in the linked file.
-
-### Section position in AGENTS.md
-
-`## Approved learnings` should be placed **after `## Key Decisions` and before `## Boundaries`** in the `root-thin.md` template's section order. **Place it outside `<!-- AGENTS-GENERATED:START ... -->` markers** so `generate-agents.sh --update` preserves it — this section is managed by retro-skill, not by the generator.
-
-If the project's AGENTS.md is at or near the 150-line cap (the harness AH-02 threshold), prune older inactive learnings or move to a scoped `AGENTS.md` rather than letting the index grow unbounded.
-
-## User-memory placement
-
-When `retro-skill` materializes a `user-memory` destination:
-
-1. **Compute path:** `~/.claude/projects/<project-dir-slug>/memory/feedback_<slug>.md` for project-scoped learnings, OR the global-scope path (consult `~/.claude/projects/`).
-2. **Write file** using the schema above.
-3. **Add MEMORY.md index entry** under the existing flat `## Topic Files` section (no sub-sections):
-
-```markdown
-- [feedback_<slug>.md](feedback_<slug>.md) — <one-line summary>
-```
-
-Do not create a separate `## Feedback` heading — MEMORY.md uses a single flat list.
-
-## Why this schema (rationale)
+## Why the format was what it was
 
 - **Frontmatter** is machine-readable and tool-discoverable.
-- **`description`** lets retro-skill detect duplicates and rank relevance.
-- **`Why:` + `How to apply:`** structure forces meaningful content; vague file = vague rule.
-- **`originSessionId`** allows tracing back to the friction; supports audit and deprecation.
+- **`description`** lets retro detect duplicates and rank relevance.
+- **`Why:` + `How to apply:`** forces content that can be acted on; a vague file
+  is a vague rule.
+- **`originSessionId`** traces a rule back to the friction that produced it,
+  which is what makes deprecating it later possible.
 
-## Validation
-
-A valid feedback file has:
-
-- YAML frontmatter present and parseable by PyYAML / yq.
-- Required fields populated (non-empty): `name`, `description`, `type`.
-- `description` is double-quoted (or doesn't contain YAML-special characters).
-- Both `**Why:** ` and `**How to apply:** ` body markers present at start-of-line.
-- File path matches `feedback_<slug>.md` where `<slug>` is kebab-case (independent of frontmatter `name`).
-
-`originSessionId` is recommended but its absence does NOT invalidate the file.
-
-Optional `scripts/verify-feedback-memory.sh` (not yet implemented; tracked as TODO) can enforce this in CI.
+The current inline-rule form keeps the first, third and fourth properties in a
+smaller footprint: the rule is read where it is stored, and there is one place
+to look instead of an index plus a file.
 
 ## Validation gap (current state)
 
-`references/verification-guide.md` does **not** yet include a row for feedback files. Adding the check is tracked separately. retro-skill's PR-time validation of materialized files is the de-facto enforcement until the agent-rules-skill validator catches up.
-
-## Examples in the wild
-
-The user's own memory at `~/.claude/projects/-home-sme-p/memory/` contains **9 files** following this schema:
-
-- `feedback_dup-repo-verification.md`
-- `feedback_merge-strategy.md`
-- `feedback_merge-vs-rollout.md`
-- `feedback_no-version-bumps-in-feature-prs.md`
-- `feedback_obsolete-docs-prefer-delete.md`
-- `feedback_preserve-commit-signing.md`
-- `feedback_skill-iteration-cadence.md`
-- `feedback_skill-sources.md`
-- `feedback_subagent-default.md`
-
-Some include an extended `metadata:` block (e.g. `feedback_merge-vs-rollout.md` has `metadata: { node_type: memory, type: feedback }`); that variant is tolerated, not required.
+`references/verification-guide.md` has no row for approved-learning sections
+yet. Until it does, `retro-skill`'s own PR-time validation of what it
+materializes is the de-facto enforcement.
 
 ## See also
 
-- `retro-skill/references/destination-taxonomy.md` — Where this schema applies (in retro-skill repo)
-- `retro-skill/references/patch-workflow.md` — How retro-skill writes these (in retro-skill repo)
-- `references/output-structure.md` — How AGENTS.md indexes feedback files
-- `references/verification-guide.md` — How to validate the resulting AGENTS.md
+- [`retro-skill` destination taxonomy](https://github.com/netresearch/retro-skill/blob/main/skills/retro/references/destination-taxonomy.md) — the authoritative list of destinations and their materialization formats
+- [`retro-skill` patch workflow](https://github.com/netresearch/retro-skill/blob/main/skills/retro/references/patch-workflow.md) — how retro writes them
+- [`output-structure.md`](output-structure.md) — how AGENTS.md is laid out
+- [`verification-guide.md`](verification-guide.md) — how to validate the resulting AGENTS.md
