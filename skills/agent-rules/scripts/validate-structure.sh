@@ -9,7 +9,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # "## Scoped AGENTS.md (MUST read ...)" and the legacy "## Index of scoped
 # AGENTS.md" so validation stays in sync with generate-agents.sh output and
 # remains backward-compatible with files produced by older versions.
-SCOPE_INDEX_HEADING_RE='^## (Index of scoped|Scoped) AGENTS\.md'
+# Case-tolerant via bracket classes (not grep -i / sed I) so the same regex
+# works in grep -E and sed -E on both GNU and BSD (#81): older generated roots
+# use the title-case "## Index of Scoped AGENTS.md".
+SCOPE_INDEX_HEADING_RE='^## ([Ii]ndex of [Ss]coped|[Ss]coped) AGENTS\.md'
 
 # Default options
 PROJECT_DIR=""
@@ -129,7 +132,7 @@ check_root_is_thin() {
         success "Root has scope index (verbose style acceptable)"
         return 0
     else
-        error "Root is bloated: $line_count lines and no scope index"
+        error "Root is bloated: $line_count lines and no scope index (expected an '## Index of scoped AGENTS.md' or '## Scoped AGENTS.md ...' heading)"
         return 1
     fi
 }
@@ -260,7 +263,14 @@ check_claude_symlink() {
             return 1
         fi
     elif [ -f "$claude_file" ]; then
-        warning "CLAUDE.md is a regular file, not a symlink to AGENTS.md: $rel_dir"
+        # A regular file with an @AGENTS.md import line is fully valid: some
+        # directories cannot hold symlinks (the TYPO3 docs renderer lists
+        # Documentation/ via Flysystem, which aborts on symlinks -- #82).
+        if grep -qE '^@AGENTS\.md[[:space:]]*$' "$claude_file"; then
+            success "CLAUDE.md import file (@AGENTS.md): $rel_dir"
+            return 0
+        fi
+        warning "CLAUDE.md is a regular file, not a symlink to AGENTS.md (add an '@AGENTS.md' import line or replace with a symlink): $rel_dir"
         return 1
     else
         error "Missing CLAUDE.md symlink to AGENTS.md: $rel_dir (Claude Code won't read AGENTS.md without it)"

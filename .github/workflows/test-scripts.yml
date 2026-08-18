@@ -26,4 +26,4 @@ jobs:
     permissions:
       contents: read
     with:
-      check-cmd: bash skills/agent-rules/scripts/tests/test-scope-index-heading.sh
+      check-cmd: bash skills/agent-rules/scripts/tests/test-scope-index-heading.sh && bash skills/agent-rules/scripts/tests/test-claude-import-file.sh

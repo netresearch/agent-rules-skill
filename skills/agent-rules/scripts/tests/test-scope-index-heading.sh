@@ -73,7 +73,22 @@ else
     fail "validate-structure.sh rejected the legacy scope-index heading"
 fi
 
-# --- Test 3: bloated root without any scope index still fails ----------------
+# --- Test 3: title-case heading (older generated roots) accepted (#81) -------
+TITLE_HEADING='## Index of Scoped AGENTS.md'
+FX4="$WORK/title-case-heading"
+cp -r "$FX1" "$FX4"
+# Temp file + mv keeps this portable across GNU and BSD sed (see Test 2).
+sed "s|^${NEW_HEADING}\$|${TITLE_HEADING}|" "$FX4/AGENTS.md" > "$FX4/AGENTS.md.tmp"
+mv "$FX4/AGENTS.md.tmp" "$FX4/AGENTS.md"
+grep -qF "$TITLE_HEADING" "$FX4/AGENTS.md" || fail "could not rewrite heading to title-case form"
+
+if bash "$VALIDATE" "$FX4" >/dev/null 2>&1; then
+    pass "root with title-case heading validates (#81)"
+else
+    fail "validate-structure.sh rejected the title-case scope-index heading (#81 regression)"
+fi
+
+# --- Test 4: bloated root without any scope index still fails ----------------
 FX3="$WORK/no-heading"
 cp -r "$FX1" "$FX3"
 # Drop the scope-index heading so the >50-line root has no index at all.
