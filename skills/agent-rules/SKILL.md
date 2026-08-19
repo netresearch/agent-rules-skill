@@ -44,25 +44,26 @@ See `references/scripts-guide.md` for full options.
 
 ## Workflow
 
-1. **Detect**: `detect-project.sh` + `detect-scopes.sh` to identify stacks and subsystems
-2. **Extract**: `extract-commands.sh`, `extract-ci-rules.sh`, etc. to gather facts
-3. **Generate**: `generate-agents.sh` with `--style=thin` (default) or `--verbose`
+1. **Detect**: `detect-project.sh` + `detect-scopes.sh` — stacks and subsystems
+2. **Extract**: `extract-commands.sh`, `extract-ci-rules.sh` — gather facts
+3. **Generate**: `generate-agents.sh --style=thin` (default) or `--verbose`
 4. **Verify**: `verify-content.sh` + `verify-commands.sh` -- MANDATORY before done
 
-Use `--update` to preserve human-curated content outside `<!-- GENERATED -->` markers.
+`--update` preserves curated content outside `<!-- GENERATED -->` markers.
 
 ## Core Principles
 
 - **Structured over Prose** -- tables parse faster than paragraphs
 - **Never Fabricate** -- only document what exists; verify every command and path
 - **Pointer Principle** -- point to files, don't duplicate content
-- **Auto Symlinks** -- CLAUDE.md/GEMINI.md symlinks by default (see [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md))
+- **Auto Symlinks** -- CLAUDE.md/GEMINI.md by default ([`ai-tool-compatibility.md`](references/ai-tool-compatibility.md))
 
 ## References
 
 | File | Contents |
 |------|----------|
-| [`verification-guide.md`](references/verification-guide.md) | Verification steps, anti-bloat |
+| [`verification-guide.md`](references/verification-guide.md) | Verification steps, anti-bloat, preservation check |
+| [`fleet-sync-sweep.md`](references/fleet-sync-sweep.md) | Fleet-wide AGENTS.md sweeps |
 | [`scripts-guide.md`](references/scripts-guide.md) | Script options, validation checklist |
 | [`quality-rubric.md`](references/quality-rubric.md) | Grading rubric |
 | [`ai-tool-compatibility.md`](references/ai-tool-compatibility.md) | 16-agent compatibility matrix |
@@ -79,7 +80,7 @@ Root: `assets/root-thin.md` (default) or `root-verbose.md`. Scoped: `assets/scop
 
 ## Supported Projects
 
-Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), Python (pip/poetry/ruff/mypy), Skill repos, Hybrid (auto-scoping).
+Go, PHP (Composer/Laravel/Symfony/TYPO3/Oro), TypeScript (React/Next/Vue/Node), Python (pip/poetry/ruff/mypy), skill repos, hybrid.
 
 ## See Also
 
