@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-rules",
-  "version": "3.14.1",
+  "version": "3.15.0",
   "description": "Generate and maintain AGENTS.md, copilot-instructions.md, and other agent rule files",
   "author": {
     "name": "Netresearch DTT GmbH",
