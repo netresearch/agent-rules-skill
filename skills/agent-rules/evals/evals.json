@@ -380,6 +380,45 @@
         "Information matches actual GitHub settings",
         "Does not fabricate branch protection rules"
       ]
+    },
+    {
+      "id": 26,
+      "eval_name": "detect-hooks-existing-framework",
+      "prompt": "I'm about to start working on /home/cybot/projects/ofelia/main/ — what git hooks does this project use and are they set up?",
+      "expected_output": "Should detect lefthook.yml and explain how to install (make setup or lefthook install)",
+      "files": [],
+      "project_path": "/home/cybot/projects/ofelia/main",
+      "assertions": [
+        "Names lefthook as the framework in use, from lefthook.yml rather than from a guess",
+        "States how to install the hooks (lefthook install, or the make target that wraps it)",
+        "Does not claim hooks are active merely because a config file exists — installation is a separate step"
+      ]
+    },
+    {
+      "id": 27,
+      "eval_name": "detect-hooks-none-configured",
+      "prompt": "I'm starting work on /home/cybot/projects/assetpicker/main/ — are git hooks configured?",
+      "expected_output": "Should detect NO hook framework and suggest adding one",
+      "files": [],
+      "project_path": "/home/cybot/projects/assetpicker/main",
+      "assertions": [
+        "Reports that no hook framework is configured, having looked for the candidates rather than assuming",
+        "Proposes one, naming it",
+        "Does not invent a hook setup the repository does not have"
+      ]
+    },
+    {
+      "id": 28,
+      "eval_name": "scaffold-includes-agents-md",
+      "prompt": "Scaffold a brand-new extension repository: composer.json, CI workflow, test runner. What belongs in the initial commits?",
+      "expected_output": "AGENTS.md (plus CLAUDE.md/GEMINI.md symlinks), generated via detect -> extract -> generate -> verify, belongs in the initial scaffold commits, not deferred - the scaffolding session holds every fact, while retrofitting later requires a full re-verification pass against a codebase no longer in anyone's context.",
+      "files": [],
+      "project_path": "",
+      "assertions": [
+        "Puts AGENTS.md in the INITIAL scaffold commits rather than deferring it to later",
+        "Mentions the CLAUDE.md / GEMINI.md symlinks alongside it",
+        "Gives the reason: the scaffolding session holds every fact, while retrofitting requires re-verifying against a codebase nobody has in context any more"
+      ]
     }
   ]
 }
