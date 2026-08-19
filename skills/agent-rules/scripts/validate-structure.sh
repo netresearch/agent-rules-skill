@@ -311,6 +311,7 @@ ALL_AGENTS_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
     -not -path "*/.git/*" \
     -not -path "*/vendor/*" \
     -not -path "*/node_modules/*" \
+    -not -path "*/.Build/*" \
     2>/dev/null || true)
 
 if [ -n "$ALL_AGENTS_FILES" ]; then
@@ -322,12 +323,16 @@ if [ -n "$ALL_AGENTS_FILES" ]; then
 fi
 echo ""
 
-# Check scoped AGENTS.md files (exclude reference examples)
+# Check scoped AGENTS.md files (exclude reference examples and dependency trees:
+# third-party AGENTS.md files are not the project's to fix -- #84)
 SCOPED_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
     -not -path "$ROOT_FILE" \
     -not -path "*/references/examples/*" \
     -not -path "*/examples/*" \
     -not -path "*/.git/*" \
+    -not -path "*/vendor/*" \
+    -not -path "*/node_modules/*" \
+    -not -path "*/.Build/*" \
     2>/dev/null || true)
 
 if [ -n "$SCOPED_FILES" ]; then
