@@ -95,6 +95,26 @@ ls tests/*.py tests/**/*.py
 - **WRONG:** Using extracted command output without running it
 - **RIGHT:** Extract -> Compare -> Fix discrepancies -> Validate
 
+## The scripts verify structure, not preservation
+
+`validate-structure.sh` and `score-agents.sh` answer "does this file have the right shape", never "is the knowledge still here". An update that deletes a hard-won convention to meet the line budget passes both, and scores *higher* afterwards, because conciseness is a graded dimension and lost knowledge is not.
+
+This is not hypothetical. In a 24-repo sweep on 2026-08-19 three updates were green on every script and still wrong: one dropped a curated response-style section, one dropped an "Implementation Conventions" block distilled from five PR review cycles, one wrote a file count into a repo whose own unit test forbids exactly that. Two of the three were caught by reading the diff; the third by CI.
+
+So after any update to an existing AGENTS.md, run the preservation check by hand:
+
+```bash
+# Every heading the change removed -- each one needs an answer
+git diff <base>...HEAD -- AGENTS.md | grep -E '^-## '
+
+# For each, prove where it went (scoped file, docs/, an ADR) or that it is genuinely obsolete
+grep -rn "<distinctive phrase from the removed section>" AGENTS.md */AGENTS.md docs/
+```
+
+Relocation is the normal, correct outcome — the [pointer principle](../SKILL.md) wants detail out of the root. Deletion is legitimate when the thing described no longer exists. What is never acceptable is *unaccounted* removal, and the scripts cannot tell the three apart. A removed heading with no successor is a finding, not a diff artifact.
+
+The mirror-image failure is characterizing a deletion you have not read: a diffstat gives size, not significance. Before calling removed content a loss, read it at the parent commit (`git show <commit>^:<path>`) and check whether what it documents still exists — in the same sweep, a 105-line file that looked like a painful loss turned out to document seven workflows deleted in that very commit.
+
 ## What NOT to Put in a Root AGENTS.md
 
 The **root** AGENTS.md is auto-loaded into every session -- each line spends prompt
