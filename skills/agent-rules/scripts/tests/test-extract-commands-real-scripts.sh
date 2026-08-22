@@ -65,4 +65,39 @@ got=$(bash "$EXTRACT" "$WORK/std" 2>/dev/null | jq -r '.format')
 [ "$got" = "composer run format" ] || fail "preferred name not chosen: got '$got'"
 pass "the preferred script name still wins when defined"
 
+# The same defect shape lived in the package.json branch: `typecheck` was
+# accepted via `type-check`, and `dev` via `start`, while the emitted command
+# always used the first name.
+mkdir -p "$WORK/npm"
+cat > "$WORK/npm/package.json" <<'JSON'
+{
+  "name": "acme-alt",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "start": "vite",
+    "lint": "eslint ."
+  }
+}
+JSON
+
+NPM_OUT=$(bash "$EXTRACT" "$WORK/npm" 2>/dev/null)
+
+for pair in "typecheck:type-check" "dev:start"; do
+    field="${pair%%:*}"
+    want="npm run ${pair#*:}"
+    got=$(printf '%s' "$NPM_OUT" | jq -r --arg f "$field" '.[$f] // ""')
+    [ "$got" = "$want" ] || fail "$field: expected '$want', got '$got'"
+done
+pass "alternate package.json script names are emitted as themselves"
+
+# Same invariant as for composer, stated for the npm runner: an emitted
+# `<pm> run X` must name a script package.json defines. Commands that are not
+# script invocations (npx/tsc/eslint fallbacks) are out of scope here.
+while read -r key; do
+    [ -n "$key" ] || continue
+    jq -e --arg k "$key" '.scripts[$k]' "$WORK/npm/package.json" >/dev/null 2>&1 \
+        || fail "extractor emitted 'npm run $key', which package.json does not define"
+done < <(printf '%s' "$NPM_OUT" | jq -r '.[] | select(type == "string") | select(startswith("npm run ")) | sub("npm run ";"")')
+pass "every emitted npm script command exists in package.json"
+
 echo "All extract-commands script-name regression tests passed."
