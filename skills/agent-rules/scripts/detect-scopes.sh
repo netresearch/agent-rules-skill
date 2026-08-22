@@ -329,7 +329,10 @@ while IFS= read -r existing; do
     case "$dir" in
         "" | "." | "AGENTS.md") continue ;;        # the root file itself
     esac
-    for known in "${scopes[@]}"; do
+    # `${scopes[@]}` on an empty array counts as unset under `set -u` before
+    # bash 4.4, and this loop is reached with nothing detected yet whenever a
+    # project's only scoped file sits in an unrecognised directory.
+    for known in ${scopes[@]+"${scopes[@]}"}; do
         [ "$(printf '%s' "$known" | jq -r '.path')" = "$dir" ] && continue 2
     done
     count=$(find "$dir" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
