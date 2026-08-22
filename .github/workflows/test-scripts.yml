@@ -26,4 +26,11 @@ jobs:
     permissions:
       contents: read
     with:
-      check-cmd: bash skills/agent-rules/scripts/tests/test-scope-index-heading.sh && bash skills/agent-rules/scripts/tests/test-claude-import-file.sh && bash skills/agent-rules/scripts/tests/test-dependency-tree-exclusion.sh
+      # Every test in the directory, discovered rather than listed. The
+      # previous form named each script, so a test added later ran only on
+      # the author's machine and CI stayed green without it — a test that
+      # exists but never runs reads as coverage while enforcing nothing.
+      check-cmd: >-
+        for t in skills/agent-rules/scripts/tests/*.sh; do
+          echo "── $t"; bash "$t" || exit 1;
+        done
