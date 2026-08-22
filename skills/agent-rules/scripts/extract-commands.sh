@@ -144,16 +144,16 @@ extract_from_package_json() {
     # Set install command based on package manager
     INSTALL_CMD="$PACKAGE_MANAGER install"
 
-    local has_typecheck has_lint has_format has_test has_build has_dev
-    has_typecheck=$(jq -r '.scripts.typecheck // .scripts["type-check"] // empty' package.json 2>/dev/null)
+    local typecheck_key has_lint has_format has_test has_build dev_key
+    typecheck_key=$(package_script_key typecheck "type-check")
     has_lint=$(jq -r '.scripts.lint // empty' package.json 2>/dev/null)
     has_format=$(jq -r '.scripts.format // empty' package.json 2>/dev/null)
     has_test=$(jq -r '.scripts.test // empty' package.json 2>/dev/null)
     has_build=$(jq -r '.scripts.build // empty' package.json 2>/dev/null)
-    has_dev=$(jq -r '.scripts.dev // .scripts.start // empty' package.json 2>/dev/null)
+    dev_key=$(package_script_key dev start)
 
-    if [ -n "$has_typecheck" ]; then
-        TYPECHECK_CMD="$pm_run typecheck"
+    if [ -n "$typecheck_key" ]; then
+        TYPECHECK_CMD="$pm_run $typecheck_key"
     else
         TYPECHECK_CMD="$pm_dlx tsc --noEmit"
     fi
@@ -186,23 +186,30 @@ extract_from_package_json() {
         BUILD_CMD="$pm_run build"
     fi
 
-    if [ -n "$has_dev" ]; then
-        DEV_CMD="$pm_run dev"
+    if [ -n "$dev_key" ]; then
+        DEV_CMD="$pm_run $dev_key"
     fi
 }
 
-# Print the first composer script key that is actually defined, or nothing.
-# Callers emit `composer run <key>`, so the key has to be the one that exists.
-composer_script_key() {
+# Print the first script key that the given manifest actually defines, or
+# nothing. Callers emit `<runner> <key>`, so the key has to be the one that
+# exists — accepting `cs:fix` as evidence and then printing `format` writes a
+# command the project does not have.
+manifest_script_key() {
+    local manifest="$1"
+    shift
     local key
     for key in "$@"; do
-        if jq -e --arg k "$key" '.scripts[$k] // empty' composer.json >/dev/null 2>&1; then
+        if jq -e --arg k "$key" '.scripts[$k] // empty' "$manifest" >/dev/null 2>&1; then
             printf '%s' "$key"
             return 0
         fi
     done
     return 0
 }
+
+composer_script_key() { manifest_script_key composer.json "$@"; }
+package_script_key() { manifest_script_key package.json "$@"; }
 
 # Extract from composer.json
 extract_from_composer_json() {
