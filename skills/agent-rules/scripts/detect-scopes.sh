@@ -316,6 +316,27 @@ if [ "$concourse_detected" = true ] && [ -n "$concourse_dir" ] && [ -d "$concour
 fi
 
 # Output JSON
+# A directory that already carries an AGENTS.md IS a scope, whatever the
+# language heuristics above concluded. Detection knows a fixed set of
+# directory names; a project may reasonably keep a scoped file somewhere else
+# (TYPO3 `Configuration/`, for one). Leaving such a file out of the root index
+# means an agent reading the root never learns it exists — the precedence rule
+# the index exists to serve silently stops working, and nothing reports it.
+while IFS= read -r existing; do
+    [ -n "$existing" ] || continue
+    dir="${existing%/AGENTS.md}"
+    dir="${dir#./}"
+    case "$dir" in
+        "" | "." | "AGENTS.md") continue ;;        # the root file itself
+    esac
+    for known in "${scopes[@]}"; do
+        [ "$(printf '%s' "$known" | jq -r '.path')" = "$dir" ] && continue 2
+    done
+    count=$(find "$dir" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+    add_scope "$dir" "existing" "$count"
+done < <(find . -name AGENTS.md -not -path './.git/*' -not -path './node_modules/*' \
+             -not -path './vendor/*' -not -path './.Build/*' 2>/dev/null | sort)
+
 if [ ${#scopes[@]} -eq 0 ]; then
     echo '{"scopes": []}'
 else

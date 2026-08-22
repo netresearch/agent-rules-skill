@@ -3,6 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # the pre-commit hook runs shellcheck without
+# -x, so it cannot follow this source no matter how the path is written.
 source "$SCRIPT_DIR/lib/config-root.sh"
 
 PROJECT_DIR="${1:-.}"
@@ -188,32 +191,49 @@ extract_from_package_json() {
     fi
 }
 
+# Print the first composer script key that is actually defined, or nothing.
+# Callers emit `composer run <key>`, so the key has to be the one that exists.
+composer_script_key() {
+    local key
+    for key in "$@"; do
+        if jq -e --arg k "$key" '.scripts[$k] // empty' composer.json >/dev/null 2>&1; then
+            printf '%s' "$key"
+            return 0
+        fi
+    done
+    return 0
+}
+
 # Extract from composer.json
 extract_from_composer_json() {
     [ ! -f "composer.json" ] && return 0
 
-    local has_lint has_format has_test has_phpstan
-    has_lint=$(jq -r '.scripts.lint // .scripts["cs:check"] // empty' composer.json 2>/dev/null)
-    has_format=$(jq -r '.scripts.format // .scripts["cs:fix"] // empty' composer.json 2>/dev/null)
-    has_test=$(jq -r '.scripts.test // empty' composer.json 2>/dev/null)
-    has_phpstan=$(jq -r '.scripts.phpstan // .scripts["stan"] // empty' composer.json 2>/dev/null)
+    local lint_key format_key test_key phpstan_key
 
-    if [ -n "$has_lint" ]; then
-        LINT_CMD="composer run lint"
+    # Emit the script that EXISTS, not the first name we looked for. Accepting
+    # `cs:fix` as evidence and then printing `composer run format` produces a
+    # command the project does not define, and AGENTS.md presents it as fact.
+    lint_key=$(composer_script_key lint "cs:check")
+    format_key=$(composer_script_key format "cs:fix")
+    test_key=$(composer_script_key test)
+    phpstan_key=$(composer_script_key phpstan stan)
+
+    if [ -n "$lint_key" ]; then
+        LINT_CMD="composer run $lint_key"
     fi
 
-    if [ -n "$has_format" ]; then
-        FORMAT_CMD="composer run format"
+    if [ -n "$format_key" ]; then
+        FORMAT_CMD="composer run $format_key"
     fi
 
-    if [ -n "$has_test" ]; then
-        TEST_CMD="composer run test"
+    if [ -n "$test_key" ]; then
+        TEST_CMD="composer run $test_key"
     else
         TEST_CMD="vendor/bin/phpunit"
     fi
 
-    if [ -n "$has_phpstan" ]; then
-        TYPECHECK_CMD="composer run phpstan"
+    if [ -n "$phpstan_key" ]; then
+        TYPECHECK_CMD="composer run $phpstan_key"
     elif [ -f "phpstan.neon" ] || [ -f "Build/phpstan.neon" ]; then
         TYPECHECK_CMD="vendor/bin/phpstan analyze"
     fi

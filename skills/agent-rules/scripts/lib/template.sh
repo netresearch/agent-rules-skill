@@ -136,6 +136,8 @@ render_template() {
     content=$(echo "$content" | sed '/^[[:space:]]*{{[A-Z_][A-Z0-9_]*}}[[:space:]]*$/d')
 
     # Remove any remaining inline placeholders (better than "(not configured)" noise)
+    # shellcheck disable=SC2001  # regex quantifier over a character class;
+    # bash glob replacement cannot express "one class char then zero or more".
     content=$(echo "$content" | sed 's/{{[A-Z_][A-Z0-9_]*}}//g')
 
     # Remove empty lines that appear after table rows but before non-table content
@@ -211,16 +213,29 @@ build_scope_index() {
     local scopes_json="$1"
     local index=""
 
-    local count=$(echo "$scopes_json" | jq '.scopes | length')
+    local count
+    count=$(echo "$scopes_json" | jq '.scopes | length')
     if [ "$count" -eq 0 ]; then
         echo "- (No scoped AGENTS.md files yet)"
         return
     fi
 
     while read -r scope; do
-        local path=$(echo "$scope" | jq -r '.path')
-        local type=$(echo "$scope" | jq -r '.type')
-        local description=$(get_scope_description "$type")
+        local path type description
+        path=$(echo "$scope" | jq -r '.path')
+        type=$(echo "$scope" | jq -r '.type')
+        description=$(get_scope_description "$type")
+
+        # A scope discovered only because it already carries an AGENTS.md has no
+        # type to describe. Let the file speak for itself — its own Overview
+        # line says what the directory is for, which beats any label this
+        # script could invent. Falls back to a neutral phrase, never to the
+        # bare type name, which reads as a bug in the generated output.
+        if [ "$type" = "existing" ]; then
+            description=$(sed -n '/^## Overview/,/^## /p' "$path/AGENTS.md" 2>/dev/null \
+                | grep -v '^##' | grep -v '^$' | head -1 | cut -c1-100)
+            [ -n "$description" ] || description="Scoped rules for \`$path/\`"
+        fi
 
         index="$index- \`./$path/AGENTS.md\` — $description\n"
     done < <(echo "$scopes_json" | jq -c '.scopes[]')
@@ -253,7 +268,15 @@ get_scope_description() {
         "github-actions") echo "GitHub Actions workflows and CI/CD automation" ;;
         "gitlab-ci") echo "GitLab CI/CD pipeline configuration" ;;
         "concourse") echo "Concourse CI pipeline and task definitions" ;;
-        *) echo "$type" ;;
+        "typo3-testing") echo "TYPO3 test suites, fixtures and the Docker test runner" ;;
+        "typo3-docs") echo "TYPO3 documentation (reStructuredText, rendered by the docs toolchain)" ;;
+        "ddev") echo "DDEV local development environment and its commands" ;;
+        "python-modern") echo "Python package using the modern toolchain (uv, ruff, pyproject)" ;;
+        # Falling through prints the raw type name into user-facing output,
+        # which reads as a bug rather than a description. Anything reaching
+        # here is a type someone added to detect-scopes.sh without a matching
+        # case above — say so plainly instead of leaking the identifier.
+        *) echo "Scoped rules for this directory" ;;
     esac
 }
 
@@ -320,6 +343,7 @@ update_generated_sections() {
     local template_file="$1"
     local existing_file="$2"
     local output_file="$3"
+    # shellcheck disable=SC2034  # nameref, read through the indirect name below
     local -n update_vars=$4
 
     # First render the template to get new content
@@ -370,6 +394,7 @@ update_generated_sections() {
     # Update timestamp
     local today
     today=$(date +%Y-%m-%d)
+    # shellcheck disable=SC2001  # see above: quantified class, not a glob.
     result=$(echo "$result" | sed "s/Last updated: [0-9-]*/Last updated: $today/")
 
     # Write result
@@ -384,6 +409,7 @@ update_generated_sections() {
 render_template_smart() {
     local template_file="$1"
     local output_file="$2"
+    # shellcheck disable=SC2034  # nameref, read through the indirect name below
     local -n smart_vars=$3
     local update_mode="${4:-false}"
 
