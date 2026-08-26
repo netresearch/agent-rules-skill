@@ -37,6 +37,9 @@ has_yq() { command -v yq &>/dev/null; }
 # ---------------------------------------------------------------------------
 # GitHub Actions parsing
 # ---------------------------------------------------------------------------
+# shellcheck disable=SC2034  # the arrays below are read by NAME through
+# collect_unique/arr_to_json, which take a nameref; shellcheck cannot follow
+# that and reports every one of them as unused.
 parse_github_actions() {
     local wf_dir=".github/workflows"
     [[ -d "$wf_dir" ]] || { echo "{}"; return; }
@@ -280,6 +283,9 @@ parse_github_actions() {
 # ---------------------------------------------------------------------------
 # GitLab CI parsing
 # ---------------------------------------------------------------------------
+# shellcheck disable=SC2034  # the arrays below are read by NAME through
+# collect_unique/arr_to_json, which take a nameref; shellcheck cannot follow
+# that and reports every one of them as unused.
 parse_gitlab_ci() {
     [[ -f ".gitlab-ci.yml" ]] || { echo "{}"; return; }
 
@@ -325,6 +331,9 @@ parse_gitlab_ci() {
 # ---------------------------------------------------------------------------
 # Concourse CI parsing
 # ---------------------------------------------------------------------------
+# shellcheck disable=SC2034  # the arrays below are read by NAME through
+# collect_unique/arr_to_json, which take a nameref; shellcheck cannot follow
+# that and reports every one of them as unused.
 parse_concourse() {
     local pipeline_file=""
     for f in ci/pipeline.yml ci/pipeline.yaml pipeline.yml pipeline.yaml ci/*.yml; do

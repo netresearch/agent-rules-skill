@@ -103,23 +103,23 @@ infer_purpose() {
     local dir="$1"
 
     # Check for specific file patterns
-    if ls "$dir"/*.go 2>/dev/null | head -1 > /dev/null; then
+    if compgen -G "$dir/*.go" > /dev/null; then
         echo "Go packages"
-    elif ls "$dir"/*.py 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.py" > /dev/null; then
         echo "Python modules"
-    elif ls "$dir"/*.php 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.php" > /dev/null; then
         echo "PHP classes"
-    elif ls "$dir"/*.ts 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.ts" > /dev/null; then
         echo "TypeScript modules"
-    elif ls "$dir"/*.tsx 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.tsx" > /dev/null; then
         echo "React components"
-    elif ls "$dir"/*.vue 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.vue" > /dev/null; then
         echo "Vue components"
-    elif ls "$dir"/*.sh 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.sh" > /dev/null; then
         echo "shell scripts"
-    elif ls "$dir"/*.md 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.md" > /dev/null; then
         echo "documentation"
-    elif ls "$dir"/*.json 2>/dev/null | head -1 > /dev/null; then
+    elif compgen -G "$dir/*.json" > /dev/null; then
         echo "configuration/data"
     else
         echo "project files"
