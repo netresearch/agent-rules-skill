@@ -3,6 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # pre-commit runs shellcheck without -x, so
+# it cannot follow this source however the path is written.
 source "$SCRIPT_DIR/lib/config-root.sh"
 
 PROJECT_DIR="${1:-.}"

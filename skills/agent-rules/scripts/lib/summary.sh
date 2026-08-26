@@ -5,6 +5,8 @@
 if [[ -t 1 ]]; then
     GREEN='\033[0;32m'
     YELLOW='\033[0;33m'
+    # shellcheck disable=SC2034  # part of the palette; kept so the colour and
+    # no-colour branches stay symmetric rather than losing one entry.
     BLUE='\033[0;34m'
     CYAN='\033[0;36m'
     GRAY='\033[0;90m'
@@ -13,6 +15,7 @@ if [[ -t 1 ]]; then
 else
     GREEN=''
     YELLOW=''
+    # shellcheck disable=SC2034  # see the palette comment above
     BLUE=''
     CYAN=''
     GRAY=''
@@ -21,6 +24,9 @@ else
 fi
 
 # Summary data storage
+# shellcheck disable=SC2034  # written by add_summary below and read by nothing
+# in this repository — the provenance it records has no consumer yet. Left in
+# place rather than deleted, but it buys no trust until something reads it.
 declare -A SUMMARY_SOURCES
 declare -a SUMMARY_RULES
 declare -a SUMMARY_WARNINGS
@@ -43,6 +49,7 @@ record_detection() {
     if [[ -n "$source_detail" ]]; then
         SUMMARY_SOURCES["$category"]="$value (from $source_file: $source_detail)"
     else
+        # shellcheck disable=SC2034  # see the declaration comment above
         SUMMARY_SOURCES["$category"]="$value (from $source_file)"
     fi
 }
@@ -84,14 +91,23 @@ print_summary() {
     echo -e "${CYAN}▸ Project Detection${NC}"
     echo -e "  ${GRAY}────────────────────────────────────────${NC}"
 
-    local lang=$(echo "$project_info" | jq -r '.language')
-    local version=$(echo "$project_info" | jq -r '.version')
-    local ptype=$(echo "$project_info" | jq -r '.type')
-    local framework=$(echo "$project_info" | jq -r '.framework')
-    local build_tool=$(echo "$project_info" | jq -r '.build_tool')
-    local test_fw=$(echo "$project_info" | jq -r '.test_framework')
-    local ci=$(echo "$project_info" | jq -r '.ci')
-    local docker=$(echo "$project_info" | jq -r '.has_docker')
+    local lang
+
+    lang=$(echo "$project_info" | jq -r '.language')
+    local version
+    version=$(echo "$project_info" | jq -r '.version')
+    local ptype
+    ptype=$(echo "$project_info" | jq -r '.type')
+    local framework
+    framework=$(echo "$project_info" | jq -r '.framework')
+    local build_tool
+    build_tool=$(echo "$project_info" | jq -r '.build_tool')
+    local test_fw
+    test_fw=$(echo "$project_info" | jq -r '.test_framework')
+    local ci
+    ci=$(echo "$project_info" | jq -r '.ci')
+    local docker
+    docker=$(echo "$project_info" | jq -r '.has_docker')
 
     # Determine source file
     local lang_source=""
@@ -112,7 +128,8 @@ print_summary() {
     [[ "$docker" == "true" ]] && printf "  %-16s %s\n" "Docker:" "yes"
 
     # Quality Tools
-    local tools=$(echo "$project_info" | jq -r '.quality_tools | join(", ")')
+    local tools
+    tools=$(echo "$project_info" | jq -r '.quality_tools | join(", ")')
     if [[ -n "$tools" && "$tools" != "" ]]; then
         echo ""
         echo -e "${CYAN}▸ Quality Tools Detected${NC}"
@@ -121,7 +138,8 @@ print_summary() {
     fi
 
     # IDE Configs (from ide_info)
-    local detected_ides=$(echo "$ide_info" | jq -r '.detected_ides | join(", ")' 2>/dev/null || echo "")
+    local detected_ides
+    detected_ides=$(echo "$ide_info" | jq -r '.detected_ides | join(", ")' 2>/dev/null || echo "")
     if [[ -n "$detected_ides" && "$detected_ides" != "" ]]; then
         echo ""
         echo -e "${CYAN}▸ IDE Configurations${NC}"
@@ -129,15 +147,18 @@ print_summary() {
         printf "  %s\n" "$detected_ides"
 
         # Show editorconfig details if present
-        local indent=$(echo "$ide_info" | jq -r '.editorconfig.indent_style // ""' 2>/dev/null || echo "")
+        local indent
+        indent=$(echo "$ide_info" | jq -r '.editorconfig.indent_style // ""' 2>/dev/null || echo "")
         if [[ -n "$indent" ]]; then
-            local indent_size=$(echo "$ide_info" | jq -r '.editorconfig.indent_size // ""' 2>/dev/null || echo "")
+            local indent_size
+            indent_size=$(echo "$ide_info" | jq -r '.editorconfig.indent_size // ""' 2>/dev/null || echo "")
             printf "  ${GRAY}→ indent: %s (%s)${NC}\n" "$indent" "$indent_size"
         fi
     fi
 
     # AI Agent Configs (from agent_info)
-    local detected_agents=$(echo "$agent_info" | jq -r '.detected_agents | join(", ")' 2>/dev/null || echo "")
+    local detected_agents
+    detected_agents=$(echo "$agent_info" | jq -r '.detected_agents | join(", ")' 2>/dev/null || echo "")
     if [[ -n "$detected_agents" && "$detected_agents" != "" ]]; then
         echo ""
         echo -e "${CYAN}▸ AI Agent Configurations${NC}"
@@ -146,10 +167,14 @@ print_summary() {
     fi
 
     # Documentation Files (from docs_info)
-    local has_contributing=$(echo "$docs_info" | jq -r '.contributing.file // ""' 2>/dev/null || echo "")
-    local has_security=$(echo "$docs_info" | jq -r '.security.file // ""' 2>/dev/null || echo "")
-    local has_changelog=$(echo "$docs_info" | jq -r '.changelog.file // ""' 2>/dev/null || echo "")
-    local has_coc=$(echo "$docs_info" | jq -r '.code_of_conduct.exists // false' 2>/dev/null || echo "false")
+    local has_contributing
+    has_contributing=$(echo "$docs_info" | jq -r '.contributing.file // ""' 2>/dev/null || echo "")
+    local has_security
+    has_security=$(echo "$docs_info" | jq -r '.security.file // ""' 2>/dev/null || echo "")
+    local has_changelog
+    has_changelog=$(echo "$docs_info" | jq -r '.changelog.file // ""' 2>/dev/null || echo "")
+    local has_coc
+    has_coc=$(echo "$docs_info" | jq -r '.code_of_conduct.exists // false' 2>/dev/null || echo "false")
 
     if [[ -n "$has_contributing" || -n "$has_security" || -n "$has_changelog" || "$has_coc" == "true" ]]; then
         echo ""
@@ -162,11 +187,15 @@ print_summary() {
     fi
 
     # Platform Files (from platform_info)
-    local platform=$(echo "$platform_info" | jq -r '.platform // "none"' 2>/dev/null || echo "none")
+    local platform
+    platform=$(echo "$platform_info" | jq -r '.platform // "none"' 2>/dev/null || echo "none")
     if [[ "$platform" != "none" ]]; then
-        local pr_template=$(echo "$platform_info" | jq -r '.pull_request.template_file // ""' 2>/dev/null || echo "")
-        local codeowners=$(echo "$platform_info" | jq -r '.codeowners.file // ""' 2>/dev/null || echo "")
-        local dependabot=$(echo "$platform_info" | jq -r '.dependency_updates.dependabot.file // ""' 2>/dev/null || echo "")
+        local pr_template
+        pr_template=$(echo "$platform_info" | jq -r '.pull_request.template_file // ""' 2>/dev/null || echo "")
+        local codeowners
+        codeowners=$(echo "$platform_info" | jq -r '.codeowners.file // ""' 2>/dev/null || echo "")
+        local dependabot
+        dependabot=$(echo "$platform_info" | jq -r '.dependency_updates.dependabot.file // ""' 2>/dev/null || echo "")
 
         if [[ -n "$pr_template" || -n "$codeowners" || -n "$dependabot" ]]; then
             echo ""
@@ -183,12 +212,19 @@ print_summary() {
     echo -e "${CYAN}▸ Commands Extracted${NC}"
     echo -e "  ${GRAY}────────────────────────────────────────${NC}"
 
-    local typecheck=$(echo "$commands_info" | jq -r '.typecheck')
-    local lint=$(echo "$commands_info" | jq -r '.lint')
-    local format=$(echo "$commands_info" | jq -r '.format')
-    local test_cmd=$(echo "$commands_info" | jq -r '.test')
-    local build=$(echo "$commands_info" | jq -r '.build')
-    local dev=$(echo "$commands_info" | jq -r '.dev')
+    local typecheck
+
+    typecheck=$(echo "$commands_info" | jq -r '.typecheck')
+    local lint
+    lint=$(echo "$commands_info" | jq -r '.lint')
+    local format
+    format=$(echo "$commands_info" | jq -r '.format')
+    local test_cmd
+    test_cmd=$(echo "$commands_info" | jq -r '.test')
+    local build
+    build=$(echo "$commands_info" | jq -r '.build')
+    local dev
+    dev=$(echo "$commands_info" | jq -r '.dev')
 
     [[ -n "$typecheck" && "$typecheck" != "" ]] && printf "  %-12s ${YELLOW}%s${NC}\n" "typecheck:" "$typecheck"
     [[ -n "$lint" && "$lint" != "" ]] && printf "  %-12s ${YELLOW}%s${NC}\n" "lint:" "$lint"
@@ -198,7 +234,8 @@ print_summary() {
     [[ -n "$dev" && "$dev" != "" ]] && printf "  %-12s ${YELLOW}%s${NC}\n" "dev:" "$dev"
 
     # Scopes Detected
-    local scope_count=$(echo "$scopes_info" | jq '.scopes | length')
+    local scope_count
+    scope_count=$(echo "$scopes_info" | jq '.scopes | length')
     if [[ "$scope_count" -gt 0 ]]; then
         echo ""
         echo -e "${CYAN}▸ Scopes Detected ($scope_count)${NC}"
@@ -236,9 +273,13 @@ print_compact_summary() {
     local project_info="$1"
     local scopes_info="$2"
 
-    local lang=$(echo "$project_info" | jq -r '.language')
-    local ptype=$(echo "$project_info" | jq -r '.type')
-    local scope_count=$(echo "$scopes_info" | jq '.scopes | length')
+    local lang
+
+    lang=$(echo "$project_info" | jq -r '.language')
+    local ptype
+    ptype=$(echo "$project_info" | jq -r '.type')
+    local scope_count
+    scope_count=$(echo "$scopes_info" | jq '.scopes | length')
 
     echo "Detected: $lang ($ptype), $((scope_count + 1)) AGENTS.md file(s) to generate"
 }

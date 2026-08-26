@@ -245,6 +245,7 @@ write_json_results() {
 # Look for patterns like: `command arg` or | command | or | `command` |
 extract_commands() {
     # Extract from tables with backticks (| `command` | format)
+    # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
     grep -oE '\| `[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/| `//;s/`$//' | grep -v '^\s*$' || true
 
     # Extract from tables without backticks in Commands section
@@ -260,6 +261,7 @@ extract_commands() {
 
     # Extract from inline code that looks like commands
     # Includes: npm, yarn, pnpm, bun, make, go, composer, cargo, python, pip, poetry, uv, deno, gradle, php, vendor/bin
+    # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
     grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |python |pip |poetry |uv |deno |gradle |php |vendor/bin/)[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/`//g' || true
 }
 

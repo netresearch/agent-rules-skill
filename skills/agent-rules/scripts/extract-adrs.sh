@@ -96,6 +96,8 @@ for file in "${FILTERED_FILES[@]}"; do
                 # Skip empty lines
                 [[ -z "${sline// /}" ]] && continue
                 # Extract the status value
+                # shellcheck disable=SC2016  # sed script: the backticks and
+                # asterisks are literal regex, not shell expansions.
                 sline=$(echo "$sline" | sed -E 's/^\*\*//;s/\*\*.*$//;s/^- //;s/^`//;s/`$//')
                 if [[ "$sline" =~ ^(Accepted|Proposed|Deprecated|Superseded|Rejected|Draft|Approved) ]]; then
                     status="${BASH_REMATCH[1]}"
