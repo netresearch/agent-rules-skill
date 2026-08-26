@@ -71,15 +71,15 @@ detect_language() {
         fi
 
         # Check for PHP source files (common locations)
-        if [ -d "src" ] && [ -n "$(find src -name "*.php" -type f -print -quit 2>/dev/null)" ]; then
+        if [[ -d "src" ]] && [[ -n "$(find src -name "*.php" -type f -print -quit 2>/dev/null)" ]]; then
             has_php_files=true
-        elif [ -d "Classes" ] && [ -n "$(find Classes -name "*.php" -type f -print -quit 2>/dev/null)" ]; then
+        elif [[ -d "Classes" ]] && [[ -n "$(find Classes -name "*.php" -type f -print -quit 2>/dev/null)" ]]; then
             has_php_files=true
-        elif [ -d "lib" ] && [ -n "$(find lib -name "*.php" -type f -print -quit 2>/dev/null)" ]; then
+        elif [[ -d "lib" ]] && [[ -n "$(find lib -name "*.php" -type f -print -quit 2>/dev/null)" ]]; then
             has_php_files=true
         elif [ -f "ext_emconf.php" ]; then
             has_php_files=true
-        elif [ -n "$(find . -maxdepth 2 -name "*.php" -type f -print -quit 2>/dev/null)" ]; then
+        elif [[ -n "$(find . -maxdepth 2 -name "*.php" -type f -print -quit 2>/dev/null)" ]]; then
             has_php_files=true
         fi
 
