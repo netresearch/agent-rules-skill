@@ -75,15 +75,16 @@ Claude Code only reads `CLAUDE.md` files natively. AGENTS.md is not recognized.
 - **Subdirectory CLAUDE.md**: Loaded on demand when agent reads/edits files in that directory
 - **AGENTS.md**: Never loaded natively — requires symlink
 
-### Auto-detection (default behavior)
+### Default behavior
 
-When `generate-agents.sh` detects a `.claude/` directory in the project, it **automatically creates
-CLAUDE.md symlinks** at every level where an AGENTS.md is generated. No flags required.
+`generate-agents.sh` creates CLAUDE.md and GEMINI.md symlinks at every level where an AGENTS.md is
+generated. No flags required, so Claude Code and Gemini CLI users get working agent instructions out
+of the box.
 
-This means Claude Code users get working agent instructions out of the box, without needing to
-remember `--symlinks` or `--claude-shim` flags.
+To opt out, pass `--no-symlinks`. It suppresses both files at every level, with no exceptions.
 
-To opt out, pass `--no-symlinks` explicitly.
+Existing files are never taken over: a regular CLAUDE.md/GEMINI.md, or a symlink pointing anywhere
+other than AGENTS.md, is kept and reported, and only `--force` replaces it.
 
 ### Manual symlinks (if not using the generator)
 
@@ -210,13 +211,12 @@ Feature requests are open for most of these tools.
 ## Generation Script Integration
 
 `generate-agents.sh` creates `CLAUDE.md` and `GEMINI.md` symlinks **by default** at every
-level where an AGENTS.md is generated. Additionally, when a `.claude/` directory is detected
-in the project (indicating a Claude Code environment), CLAUDE.md symlink creation is
-**automatically enabled** even if `--no-symlinks` was passed.
+level where an AGENTS.md is generated. `--no-symlinks` turns that off; there is no environment
+detection that overrides the flag.
 
 ```bash
 scripts/generate-agents.sh /path/to/project              # Symlinks created by default
-scripts/generate-agents.sh /path/to/project --no-symlinks # Skip symlinks (unless .claude/ detected)
+scripts/generate-agents.sh /path/to/project --no-symlinks # No CLAUDE.md/GEMINI.md at any level
 ```
 
 The `--claude-shim` flag creates a root-only CLAUDE.md with `@import` (legacy behavior).

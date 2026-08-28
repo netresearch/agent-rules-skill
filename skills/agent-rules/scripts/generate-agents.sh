@@ -61,8 +61,8 @@ while [[ $# -gt 0 ]]; do
             CLAUDE_SHIM=true
             shift
             ;;
-        --no-symlinks) # DEPRECATED: symlinks are always created now
-            echo "Warning: --no-symlinks is deprecated. CLAUDE.md symlinks are always created."
+        --no-symlinks)
+            CREATE_SYMLINKS=false
             shift
             ;;
         --help|-h)
