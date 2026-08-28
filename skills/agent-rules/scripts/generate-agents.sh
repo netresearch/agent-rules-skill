@@ -117,6 +117,35 @@ log() {
     fi
 }
 
+# A CLAUDE.md/GEMINI.md compatibility file we are allowed to write:
+# absent, a symlink we created (pointing at AGENTS.md), or our own generated
+# "@AGENTS.md" import file. Anything else — a regular file, or a symlink
+# pointing at rules the user maintains elsewhere — belongs to the user and is
+# kept unless --force. Without this check "is a symlink" was treated the same
+# as "does not exist" and a foreign link was silently repointed (#103).
+compat_file_is_ours() {
+    local file="$1"
+    if [ -L "$file" ]; then
+        [ "$(readlink "$file")" = "AGENTS.md" ]
+        return
+    fi
+    [ ! -e "$file" ] && return 0
+    grep -qxF '@AGENTS.md' "$file" 2>/dev/null
+}
+
+# One line saying what was left alone and how to override it. Printed
+# unconditionally: a skip that only shows under --verbose reads as "nothing
+# happened here" to everyone else.
+report_kept_file() {
+    local file="$1" label="$2" what
+    if [ -L "$file" ]; then
+        what="symlink → $(readlink "$file")"
+    else
+        what="regular file"
+    fi
+    echo "⏭️  Kept: $label ($what) — use --force to replace"
+}
+
 error() {
     echo "[ERROR] $*" >&2
     exit 1
@@ -1269,20 +1298,23 @@ fi
 if [ "$CREATE_SYMLINKS" = true ] && [ "$CLAUDE_SHIM" = false ]; then
     for symlink_name in CLAUDE.md GEMINI.md; do
         SYMLINK_FILE="$PROJECT_DIR/$symlink_name"
-        if [ -L "$SYMLINK_FILE" ] || [ ! -e "$SYMLINK_FILE" ]; then
+        if compat_file_is_ours "$SYMLINK_FILE"; then
             if [ "$DRY_RUN" = true ]; then
                 echo "[DRY-RUN] Would symlink: $SYMLINK_FILE → AGENTS.md"
             else
                 ln -sf AGENTS.md "$SYMLINK_FILE"
                 echo "✅ Symlinked: $SYMLINK_FILE → AGENTS.md"
             fi
-        else
-            log "$symlink_name already exists (not a symlink), skipping (use --force to replace)"
-            if [ "$FORCE" = true ]; then
+        elif [ "$FORCE" = true ]; then
+            if [ "$DRY_RUN" = true ]; then
+                echo "[DRY-RUN] Would replace: $SYMLINK_FILE → AGENTS.md (--force)"
+            else
                 rm -f "$SYMLINK_FILE"
                 ln -s AGENTS.md "$SYMLINK_FILE"
                 echo "✅ Replaced: $SYMLINK_FILE → AGENTS.md (--force)"
             fi
+        else
+            report_kept_file "$SYMLINK_FILE" "$symlink_name"
         fi
     done
 fi
@@ -2287,8 +2319,8 @@ else
             for symlink_name in CLAUDE.md GEMINI.md; do
                 SYMLINK_FILE="$PROJECT_DIR/$SCOPE_PATH/$symlink_name"
                 if [ "$(basename "$SCOPE_PATH")" = "Documentation" ]; then
-                    if [ -f "$SYMLINK_FILE" ] && [ ! -L "$SYMLINK_FILE" ] && [ "$FORCE" = false ]; then
-                        log "$SCOPE_PATH/$symlink_name already exists (regular file), skipping (use --force to replace)"
+                    if ! compat_file_is_ours "$SYMLINK_FILE" && [ "$FORCE" = false ]; then
+                        report_kept_file "$SYMLINK_FILE" "$SCOPE_PATH/$symlink_name"
                         continue
                     fi
                     if [ "$DRY_RUN" = true ]; then
@@ -2302,7 +2334,7 @@ else
                     fi
                     continue
                 fi
-                if [ -L "$SYMLINK_FILE" ] || [ ! -e "$SYMLINK_FILE" ]; then
+                if compat_file_is_ours "$SYMLINK_FILE"; then
                     if [ "$DRY_RUN" = true ]; then
                         echo "[DRY-RUN] Would symlink: $SYMLINK_FILE → AGENTS.md"
                     else
@@ -2310,9 +2342,15 @@ else
                         echo "   ↳ Symlinked: $SCOPE_PATH/$symlink_name → AGENTS.md"
                     fi
                 elif [ "$FORCE" = true ]; then
-                    rm -f "$SYMLINK_FILE"
-                    ln -s AGENTS.md "$SYMLINK_FILE"
-                    echo "   ↳ Replaced: $SCOPE_PATH/$symlink_name → AGENTS.md (--force)"
+                    if [ "$DRY_RUN" = true ]; then
+                        echo "[DRY-RUN] Would replace: $SYMLINK_FILE → AGENTS.md (--force)"
+                    else
+                        rm -f "$SYMLINK_FILE"
+                        ln -s AGENTS.md "$SYMLINK_FILE"
+                        echo "   ↳ Replaced: $SCOPE_PATH/$symlink_name → AGENTS.md (--force)"
+                    fi
+                else
+                    report_kept_file "$SYMLINK_FILE" "$SCOPE_PATH/$symlink_name"
                 fi
             done
         fi
