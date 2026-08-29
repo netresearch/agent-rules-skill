@@ -89,5 +89,24 @@ grep -q 'DRY-RUN' <<<"$OUT" || fail "prose output lost its DRY-RUN lines"
 jq -e . >/dev/null 2>&1 <<<"$OUT" && fail "prose run emitted JSON"
 pass "the default output is unchanged"
 
+# --- Test 8: a file left alone is recorded, not merely absent from the list
+# Without this, a consumer cannot tell "AGENTS.md was skipped because it exists"
+# from "AGENTS.md was never considered" — both look like a missing entry.
+FX="$WORK/second-run"
+make_fixture "$FX"
+bash "$GENERATE" "$FX" >/dev/null 2>&1 || fail "generate-agents.sh errored"
+OUT="$(bash "$GENERATE" "$FX" --dry-run --json 2>/dev/null)" || fail "generate-agents.sh errored"
+[ "$(jq -r '.operations[] | select(.path=="AGENTS.md") | .op' <<<"$OUT")" = "keep" ] \
+    || fail "an existing AGENTS.md is not recorded as keep on a second run"
+[ "$(jq -r '.operations[] | select(.path=="AGENTS.md") | .reason' <<<"$OUT")" = "already exists" ] \
+    || fail "the keep entry for AGENTS.md carries no reason"
+pass "an existing AGENTS.md is recorded as keep, with its reason"
+
+# --- Test 9: --update writes, and the manifest says so
+OUT="$(bash "$GENERATE" "$FX" --update --json 2>/dev/null)" || fail "generate-agents.sh errored"
+[ "$(jq -r '.operations[] | select(.path=="AGENTS.md") | .op' <<<"$OUT")" = "write" ] \
+    || fail "--update rewrote AGENTS.md without recording it as a write"
+pass "--update records the rewrite it performs"
+
 echo ""
 echo "All JSON manifest tests passed."

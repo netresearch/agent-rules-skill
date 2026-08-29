@@ -819,6 +819,7 @@ build_workflow_info() {
 ROOT_FILE="$PROJECT_DIR/AGENTS.md"
 
 if [ -f "$ROOT_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+    emit_op keep agents-file "$ROOT_FILE" reason "already exists"
     log "Root AGENTS.md already exists, skipping (use --force to regenerate)"
 elif [ "$DRY_RUN" = true ]; then
     emit_op write agents-file "$ROOT_FILE"
@@ -1298,6 +1299,7 @@ print(f\"Processing {item}\")  # Use logging module
     enforce_byte_budget "$ROOT_FILE" "$BYTE_BUDGET"
 
     if [ "$UPDATE_ONLY" = true ]; then
+        emit_op write agents-file "$ROOT_FILE"
         echo "✅ Updated: $ROOT_FILE"
     else
         emit_op write agents-file "$ROOT_FILE"
@@ -1309,6 +1311,7 @@ fi
 if [ "$CLAUDE_SHIM" = true ]; then
     CLAUDE_FILE="$PROJECT_DIR/CLAUDE.md"
     if [ -f "$CLAUDE_FILE" ] && [ "$FORCE" = false ]; then
+        emit_op keep shim "$CLAUDE_FILE" reason "already exists"
         log "CLAUDE.md already exists, skipping (use --force to regenerate)"
     elif [ "$DRY_RUN" = true ]; then
         emit_op write shim "$CLAUDE_FILE"
@@ -1374,6 +1377,7 @@ else
         SCOPE_FILE="$PROJECT_DIR/$SCOPE_PATH/AGENTS.md"
 
         if [ -f "$SCOPE_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+            emit_op keep agents-file "$SCOPE_FILE" reason "already exists"
             log "Scoped AGENTS.md already exists: $SCOPE_PATH, skipping"
             continue
         fi
@@ -2347,6 +2351,7 @@ else
         enforce_byte_budget "$SCOPE_FILE" "$((BYTE_BUDGET / 2))"
 
         if [ "$UPDATE_ONLY" = true ]; then
+            emit_op write agents-file "$SCOPE_FILE"
             echo "✅ Updated: $SCOPE_FILE"
         else
             emit_op write agents-file "$SCOPE_FILE"
