@@ -33,6 +33,7 @@ FORCE=false
 VERBOSE=false
 CLAUDE_SHIM=false
 CREATE_SYMLINKS=true
+JSON=false
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -43,6 +44,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dry-run)
             DRY_RUN=true
+            shift
+            ;;
+        --json)
+            JSON=true
             shift
             ;;
         --update)
@@ -74,6 +79,7 @@ Generate AGENTS.md files for a project following the public agents.md convention
 Options:
   --style=thin|verbose    Template style (default: thin)
   --dry-run               Preview what will be created
+  --json                  Emit the write manifest as JSON (human output suppressed)
   --update                Update existing files only
   --force                 Force regeneration of existing files
   --claude-shim           Generate CLAUDE.md that imports AGENTS.md (root only, legacy)
@@ -84,6 +90,7 @@ Options:
 Examples:
   generate-agents.sh .                    # Generate thin root + scoped files
   generate-agents.sh . --dry-run          # Preview changes
+  generate-agents.sh . --dry-run --json   # Machine-readable plan, nothing written
   generate-agents.sh . --style=verbose    # Use verbose root template
   generate-agents.sh . --update           # Update existing files
   generate-agents.sh . --no-symlinks      # Skip CLAUDE.md/GEMINI.md symlinks
@@ -107,6 +114,31 @@ fi
 # Convert to absolute path before cd (so subsequent script calls work)
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 cd "$PROJECT_DIR"
+
+# --json emits the write manifest instead of the prose, the same way the
+# read-only scripts do it: stdout is parked on fd 3 and the human lines go
+# nowhere, so every existing echo stays untouched.
+if [ "$JSON" = true ]; then
+    exec 3>&1 1>/dev/null
+fi
+
+# One entry per path the run touches. With --dry-run it is a plan, without it a
+# receipt of what was written -- the dry_run field in the output says which.
+MANIFEST=()
+# emit_op OP KIND PATH [KEY VALUE]
+#   op:   write | symlink | keep
+#   kind: agents-file | compat-file | shim
+# Paths are recorded relative to the project root, so a manifest can be
+# reviewed and compared without carrying one machine's directory layout.
+emit_op() {
+    local op="$1" kind="$2" path="$3" key="${4:-}" value="${5:-}"
+    local rel="${path#"$PROJECT_DIR"/}"
+    MANIFEST+=("$(jq -nc \
+        --arg op "$op" --arg kind "$kind" --arg path "$rel" \
+        --arg key "$key" --arg value "$value" \
+        '{op: $op, kind: $kind, path: $path}
+         + (if $key == "" then {} else {($key): $value} end)')")
+}
 
 # Initialize summary tracking
 init_summary
@@ -143,6 +175,7 @@ report_kept_file() {
     else
         what="regular file"
     fi
+    emit_op keep compat-file "$file" reason "$what"
     echo "⏭️  Kept: $label ($what) — use --force to replace"
 }
 
@@ -786,8 +819,10 @@ build_workflow_info() {
 ROOT_FILE="$PROJECT_DIR/AGENTS.md"
 
 if [ -f "$ROOT_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+    emit_op keep agents-file "$ROOT_FILE" reason "already exists"
     log "Root AGENTS.md already exists, skipping (use --force to regenerate)"
 elif [ "$DRY_RUN" = true ]; then
+    emit_op write agents-file "$ROOT_FILE"
     echo "[DRY-RUN] Would create/update: $ROOT_FILE"
 else
     log "Generating root AGENTS.md..."
@@ -1264,8 +1299,10 @@ print(f\"Processing {item}\")  # Use logging module
     enforce_byte_budget "$ROOT_FILE" "$BYTE_BUDGET"
 
     if [ "$UPDATE_ONLY" = true ]; then
+        emit_op write agents-file "$ROOT_FILE"
         echo "✅ Updated: $ROOT_FILE"
     else
+        emit_op write agents-file "$ROOT_FILE"
         echo "✅ Created: $ROOT_FILE"
     fi
 fi
@@ -1274,8 +1311,10 @@ fi
 if [ "$CLAUDE_SHIM" = true ]; then
     CLAUDE_FILE="$PROJECT_DIR/CLAUDE.md"
     if [ -f "$CLAUDE_FILE" ] && [ "$FORCE" = false ]; then
+        emit_op keep shim "$CLAUDE_FILE" reason "already exists"
         log "CLAUDE.md already exists, skipping (use --force to regenerate)"
     elif [ "$DRY_RUN" = true ]; then
+        emit_op write shim "$CLAUDE_FILE"
         echo "[DRY-RUN] Would create: $CLAUDE_FILE"
     else
         cat > "$CLAUDE_FILE" << 'CLAUDESHIM'
@@ -1287,6 +1326,7 @@ if [ "$CLAUDE_SHIM" = true ]; then
 
 <!-- Add Claude-specific overrides below if needed -->
 CLAUDESHIM
+        emit_op write shim "$CLAUDE_FILE"
         echo "✅ Created: $CLAUDE_FILE (shim importing AGENTS.md)"
     fi
 fi
@@ -1300,17 +1340,21 @@ if [ "$CREATE_SYMLINKS" = true ] && [ "$CLAUDE_SHIM" = false ]; then
         SYMLINK_FILE="$PROJECT_DIR/$symlink_name"
         if compat_file_is_ours "$SYMLINK_FILE"; then
             if [ "$DRY_RUN" = true ]; then
+                emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                 echo "[DRY-RUN] Would symlink: $SYMLINK_FILE → AGENTS.md"
             else
                 ln -sf AGENTS.md "$SYMLINK_FILE"
+                emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                 echo "✅ Symlinked: $SYMLINK_FILE → AGENTS.md"
             fi
         elif [ "$FORCE" = true ]; then
             if [ "$DRY_RUN" = true ]; then
+                emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                 echo "[DRY-RUN] Would replace: $SYMLINK_FILE → AGENTS.md (--force)"
             else
                 rm -f "$SYMLINK_FILE"
                 ln -s AGENTS.md "$SYMLINK_FILE"
+                emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                 echo "✅ Replaced: $SYMLINK_FILE → AGENTS.md (--force)"
             fi
         else
@@ -1333,11 +1377,13 @@ else
         SCOPE_FILE="$PROJECT_DIR/$SCOPE_PATH/AGENTS.md"
 
         if [ -f "$SCOPE_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+            emit_op keep agents-file "$SCOPE_FILE" reason "already exists"
             log "Scoped AGENTS.md already exists: $SCOPE_PATH, skipping"
             continue
         fi
 
         if [ "$DRY_RUN" = true ]; then
+            emit_op write agents-file "$SCOPE_FILE"
             echo "[DRY-RUN] Would create/update: $SCOPE_FILE"
             continue
         fi
@@ -2305,8 +2351,10 @@ else
         enforce_byte_budget "$SCOPE_FILE" "$((BYTE_BUDGET / 2))"
 
         if [ "$UPDATE_ONLY" = true ]; then
+            emit_op write agents-file "$SCOPE_FILE"
             echo "✅ Updated: $SCOPE_FILE"
         else
+            emit_op write agents-file "$SCOPE_FILE"
             echo "✅ Created: $SCOPE_FILE"
         fi
 
@@ -2324,29 +2372,35 @@ else
                         continue
                     fi
                     if [ "$DRY_RUN" = true ]; then
+                        emit_op write compat-file "$SYMLINK_FILE" note "@AGENTS.md import file"
                         echo "[DRY-RUN] Would write import file: $SYMLINK_FILE (@AGENTS.md)"
                     else
                         rm -f "$SYMLINK_FILE"
                         printf '%s\n\n%s\n' \
                             '<!-- Regular file, not a symlink: the TYPO3 docs renderer (Flysystem) rejects symbolic links inside Documentation/. -->' \
                             '@AGENTS.md' > "$SYMLINK_FILE"
+                        emit_op write compat-file "$SYMLINK_FILE" note "@AGENTS.md import file"
                         echo "   ↳ Import file: $SCOPE_PATH/$symlink_name (@AGENTS.md, symlink-hostile directory)"
                     fi
                     continue
                 fi
                 if compat_file_is_ours "$SYMLINK_FILE"; then
                     if [ "$DRY_RUN" = true ]; then
+                        emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                         echo "[DRY-RUN] Would symlink: $SYMLINK_FILE → AGENTS.md"
                     else
                         ln -sf AGENTS.md "$SYMLINK_FILE"
+                        emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                         echo "   ↳ Symlinked: $SCOPE_PATH/$symlink_name → AGENTS.md"
                     fi
                 elif [ "$FORCE" = true ]; then
                     if [ "$DRY_RUN" = true ]; then
+                        emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                         echo "[DRY-RUN] Would replace: $SYMLINK_FILE → AGENTS.md (--force)"
                     else
                         rm -f "$SYMLINK_FILE"
                         ln -s AGENTS.md "$SYMLINK_FILE"
+                        emit_op symlink compat-file "$SYMLINK_FILE" target AGENTS.md
                         echo "   ↳ Replaced: $SCOPE_PATH/$symlink_name → AGENTS.md (--force)"
                     fi
                 else
@@ -2374,3 +2428,18 @@ fi
 echo ""
 echo "✅ AGENTS.md generation complete!"
 [ "$SCOPE_COUNT" -gt 0 ] && echo "   Generated: 1 root + $SCOPE_COUNT scoped files" || true
+
+# The manifest goes to the real stdout (fd 3), which --json parked before any
+# human line was written. dry_run tells a reader whether these operations are
+# planned or already carried out.
+if [ "$JSON" = true ]; then
+    printf '%s\n' "${MANIFEST[@]:-}" \
+        | jq -s --arg project "$PROJECT_DIR" --argjson dry "$([ "$DRY_RUN" = true ] && echo true || echo false)" \
+            'map(select(. != null)) as $ops
+             | {script: "generate-agents",
+                schema: 1,
+                dry_run: $dry,
+                project: $project,
+                summary: ($ops | group_by(.op) | map({key: .[0].op, value: length}) | from_entries),
+                operations: $ops}' >&3
+fi
