@@ -3,7 +3,7 @@
 Grade AGENTS.md files so you know which ones most need work. The grade has two
 layers that are **kept separate on purpose**:
 
-1. **Deterministic score** — `scripts/score-agents.sh PATH`. A 0-100 from the four
+1. **Deterministic score** — `${CLAUDE_SKILL_DIR}/scripts/score-agents.sh PATH`. A 0-100 from the four
    verifier scripts; no model call, so re-running on an unchanged tree gives the
    same grade — except a file dated *today*, where git's bare-date `--since` can
    shift the Currency axis within the day.
@@ -50,7 +50,7 @@ cat > /tmp/review.json <<'JSON'
   "web/AGENTS.md": {"architecture":"weak","actionability":"weak","non_obvious":"weak"}
 }
 JSON
-scripts/score-agents.sh PATH --review /tmp/review.json
+bash ${CLAUDE_SKILL_DIR}/scripts/score-agents.sh PATH --review /tmp/review.json
 ```
 
 ```
@@ -72,7 +72,7 @@ the overlay never moves the reproducible number.
 
 ## Workflow
 
-1. `scripts/score-agents.sh PATH` → deterministic report (worst-first).
+1. `${CLAUDE_SKILL_DIR}/scripts/score-agents.sh PATH` → deterministic report (worst-first).
 2. Open the worst-graded files; run the three overlay axes on each.
 3. Fix highest-leverage gaps first (a `D` on Structure is mechanical; a `weak`
    on Non-obvious patterns needs human/session knowledge — see

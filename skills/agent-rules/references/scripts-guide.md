@@ -5,7 +5,7 @@ Complete reference for all AGENTS.md generator scripts.
 ## Generating AGENTS.md Files
 
 ```bash
-scripts/generate-agents.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project
 ```
 
 Options:
@@ -26,7 +26,7 @@ scripts use. With `--dry-run` it is a plan of what would be written; without it,
 receipt of what was. Paths are relative to the project root.
 
 ```bash
-scripts/generate-agents.sh /path/to/project --dry-run --json
+bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project --dry-run --json
 ```
 
 ```json
@@ -51,7 +51,7 @@ parseable on its own.
 ## Validating Structure
 
 ```bash
-scripts/validate-structure.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/validate-structure.sh /path/to/project
 ```
 
 Options:
@@ -61,7 +61,7 @@ Options:
 ## Checking Freshness
 
 ```bash
-scripts/check-freshness.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/check-freshness.sh /path/to/project
 ```
 
 This script:
@@ -75,13 +75,13 @@ Options:
 
 Example with full validation:
 ```bash
-scripts/validate-structure.sh /path/to/project --check-freshness --verbose
+bash ${CLAUDE_SKILL_DIR}/scripts/validate-structure.sh /path/to/project --check-freshness --verbose
 ```
 
 ## Detecting Project Type
 
 ```bash
-scripts/detect-project.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/detect-project.sh /path/to/project
 ```
 
 Detects project language, version, and build tools.
@@ -89,7 +89,7 @@ Detects project language, version, and build tools.
 ## Detecting Scopes
 
 ```bash
-scripts/detect-scopes.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/detect-scopes.sh /path/to/project
 ```
 
 Identifies directories that should have scoped AGENTS.md files.
@@ -97,7 +97,7 @@ Identifies directories that should have scoped AGENTS.md files.
 ## Extracting Commands
 
 ```bash
-scripts/extract-commands.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/extract-commands.sh /path/to/project
 ```
 
 Extracts build commands from Makefile, package.json, composer.json, or go.mod.
@@ -105,7 +105,7 @@ Extracts build commands from Makefile, package.json, composer.json, or go.mod.
 ## Extracting Documentation
 
 ```bash
-scripts/extract-documentation.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/extract-documentation.sh /path/to/project
 ```
 
 Extracts information from README.md, CONTRIBUTING.md, SECURITY.md, and other documentation.
@@ -113,7 +113,7 @@ Extracts information from README.md, CONTRIBUTING.md, SECURITY.md, and other doc
 ## Extracting Platform Files
 
 ```bash
-scripts/extract-platform-files.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/extract-platform-files.sh /path/to/project
 ```
 
 Extracts information from .github/, .gitlab/, CODEOWNERS, dependabot.yml, etc.
@@ -121,7 +121,7 @@ Extracts information from .github/, .gitlab/, CODEOWNERS, dependabot.yml, etc.
 ## Extracting IDE Settings
 
 ```bash
-scripts/extract-ide-settings.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/extract-ide-settings.sh /path/to/project
 ```
 
 Extracts information from .editorconfig, .vscode/, .idea/, etc.
@@ -129,7 +129,7 @@ Extracts information from .editorconfig, .vscode/, .idea/, etc.
 ## Extracting AI Agent Configs
 
 ```bash
-scripts/extract-agent-configs.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/extract-agent-configs.sh /path/to/project
 ```
 
 Extracts information from .cursor/, .claude/, copilot-instructions.md, etc.
@@ -139,7 +139,7 @@ Extracts information from .cursor/, .claude/, copilot-instructions.md, etc.
 **CRITICAL: Always run this before considering AGENTS.md files complete.**
 
 ```bash
-scripts/verify-content.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/verify-content.sh /path/to/project
 ```
 
 This script:
@@ -160,7 +160,7 @@ Options:
 To prevent "command rot" (documented commands that no longer work):
 
 ```bash
-scripts/verify-commands.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/verify-commands.sh /path/to/project
 ```
 
 This script:
@@ -179,8 +179,8 @@ Options:
 ## Scoring Quality
 
 ```bash
-scripts/score-agents.sh /path/to/project          # human report, worst-first
-scripts/score-agents.sh /path/to/project --json   # machine-readable scoring
+bash ${CLAUDE_SKILL_DIR}/scripts/score-agents.sh /path/to/project          # human report, worst-first
+bash ${CLAUDE_SKILL_DIR}/scripts/score-agents.sh /path/to/project --json   # machine-readable scoring
 ```
 
 Aggregates the `--json` output of the four verifier scripts into a **reproducible**
@@ -205,13 +205,13 @@ number, see [`quality-rubric.md`](quality-rubric.md).
 
 ```bash
 # 1. Run structure validation
-scripts/validate-structure.sh /path/to/project --verbose
+bash ${CLAUDE_SKILL_DIR}/scripts/validate-structure.sh /path/to/project --verbose
 
 # 2. Verify content accuracy
-scripts/verify-content.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/verify-content.sh /path/to/project
 
 # 3. Verify commands work
-scripts/verify-commands.sh /path/to/project
+bash ${CLAUDE_SKILL_DIR}/scripts/verify-commands.sh /path/to/project
 ```
 
 **Validation criteria:**
