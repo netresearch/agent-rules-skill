@@ -24,7 +24,7 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 
 ## Scripts
 
-Call every script by its full path: `bash ${CLAUDE_SKILL_DIR}/scripts/<name> PATH`. A relative `scripts/…` is not covered by the frontmatter rule and raises a permission prompt per call.
+Call every script by its full path: `bash ${CLAUDE_SKILL_DIR}/scripts/<name> PATH`. Calling one relative to the working directory is not covered by the frontmatter rule and raises a permission prompt per call.
 
 | Script | Purpose |
 |--------|---------|
