@@ -7,7 +7,7 @@ metadata:
   author: Netresearch DTT GmbH
   version: "3.15.3"
   repository: https://github.com/netresearch/agent-rules-skill
-allowed-tools: Bash(git:*) Bash(jq:*) Bash(grep:*) Bash(find:*) Bash(bash:*) Read Glob Grep
+allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/*) Bash(bash ${CLAUDE_SKILL_DIR}/scripts/*) Bash(git:*) Bash(jq:*) Bash(grep:*) Bash(find:*) Read Glob Grep
 ---
 
 # AGENTS.md Generator Skill
@@ -24,21 +24,23 @@ Generate and maintain AGENTS.md files following the [agents.md convention](https
 
 ## Scripts
 
+Call every script by its full path: `bash ${CLAUDE_SKILL_DIR}/scripts/<name> PATH`. Calling one relative to the working directory is not covered by the frontmatter rule and raises a permission prompt per call.
+
 | Script | Purpose |
 |--------|---------|
-| `scripts/generate-agents.sh PATH` | Generate AGENTS.md files |
-| `scripts/validate-structure.sh PATH` | Validate structure compliance |
-| `scripts/check-freshness.sh PATH` | Check if files are outdated |
-| `scripts/verify-content.sh PATH` | Verify documented files/commands match codebase |
-| `scripts/verify-commands.sh PATH` | Verify documented commands execute |
-| `scripts/score-agents.sh PATH` | Grade AGENTS.md quality, worst-first |
-| `scripts/detect-project.sh PATH` | Detect language, version, build tools |
-| `scripts/detect-scopes.sh PATH` | Identify directories needing scoped files |
-| `scripts/extract-commands.sh PATH` | Extract commands from build configs |
-| `scripts/extract-ci-rules.sh PATH` | Extract CI quality gates and version matrix |
-| `scripts/extract-architecture-rules.sh PATH` | Extract module boundaries |
-| `scripts/extract-adrs.sh PATH` | Extract architectural decision records |
-| `scripts/extract-github-rulesets.sh PATH` | Extract GitHub rulesets and merge rules |
+| `generate-agents.sh PATH` | Generate AGENTS.md files |
+| `validate-structure.sh PATH` | Validate structure compliance |
+| `check-freshness.sh PATH` | Check if files are outdated |
+| `verify-content.sh PATH` | Verify documented files/commands match codebase |
+| `verify-commands.sh PATH` | Verify documented commands execute |
+| `score-agents.sh PATH` | Grade AGENTS.md quality, worst-first |
+| `detect-project.sh PATH` | Detect language, version, build tools |
+| `detect-scopes.sh PATH` | Identify directories needing scoped files |
+| `extract-commands.sh PATH` | Extract commands from build configs |
+| `extract-ci-rules.sh PATH` | Extract CI quality gates and version matrix |
+| `extract-architecture-rules.sh PATH` | Extract module boundaries |
+| `extract-adrs.sh PATH` | Extract architectural decision records |
+| `extract-github-rulesets.sh PATH` | Extract GitHub rulesets and merge rules |
 
 See `references/scripts-guide.md` for full options.
 

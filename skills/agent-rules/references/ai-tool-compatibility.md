@@ -215,8 +215,8 @@ level where an AGENTS.md is generated. `--no-symlinks` turns that off; there is 
 detection that overrides the flag.
 
 ```bash
-scripts/generate-agents.sh /path/to/project              # Symlinks created by default
-scripts/generate-agents.sh /path/to/project --no-symlinks # No CLAUDE.md/GEMINI.md at any level
+bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project              # Symlinks created by default
+bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project --no-symlinks # No CLAUDE.md/GEMINI.md at any level
 ```
 
 The `--claude-shim` flag creates a root-only CLAUDE.md with `@import` (legacy behavior).

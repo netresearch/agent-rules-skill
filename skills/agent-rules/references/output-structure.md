@@ -76,7 +76,7 @@ When updating existing AGENTS.md files, preserve custom content:
 
 **1. Use `--update` flag:**
 ```bash
-scripts/generate-agents.sh /path/to/project --update
+bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project --update
 ```
 This preserves content outside `<!-- GENERATED:START -->` / `<!-- GENERATED:END -->` markers.
 
