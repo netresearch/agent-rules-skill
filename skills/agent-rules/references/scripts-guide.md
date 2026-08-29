@@ -10,13 +10,43 @@ scripts/generate-agents.sh /path/to/project
 
 Options:
 - `--dry-run` - Preview changes without writing files
+- `--json` - Emit the write manifest as JSON instead of prose (see below)
 - `--verbose` - Show detailed output
 - `--style=thin` - Use thin root template (~30 lines, default)
 - `--style=verbose` - Use verbose root template (~100-200 lines)
 - `--update` - Update existing files only (preserves human edits outside generated markers)
-- `--claude-shim` - Generate CLAUDE.md that imports AGENTS.md (root only, use `--symlinks` instead)
-- `--symlinks` - Create CLAUDE.md and GEMINI.md symlinks at every level (root + subdirectories). Enables Claude Code on-demand loading and Gemini CLI native loading. **Recommended** for cross-agent compatibility.
-- `--force` - Regenerate even if files exist
+- `--claude-shim` - Generate CLAUDE.md that imports AGENTS.md (root only, legacy)
+- `--no-symlinks` - Do not create CLAUDE.md/GEMINI.md at any level. They are created by default at every level where an AGENTS.md is generated, which is what enables Claude Code on-demand loading and Gemini CLI native loading.
+- `--force` - Replace existing CLAUDE.md/GEMINI.md files that are not ours
+
+### Write manifest (`--json`)
+
+One entry per path the run touches, following the `schema: 1` shape the verifier
+scripts use. With `--dry-run` it is a plan of what would be written; without it, a
+receipt of what was. Paths are relative to the project root.
+
+```bash
+scripts/generate-agents.sh /path/to/project --dry-run --json
+```
+
+```json
+{
+  "script": "generate-agents",
+  "schema": 1,
+  "dry_run": true,
+  "project": "/path/to/project",
+  "summary": { "write": 1, "symlink": 1, "keep": 1 },
+  "operations": [
+    { "op": "write",   "kind": "agents-file", "path": "AGENTS.md" },
+    { "op": "symlink", "kind": "compat-file", "path": "CLAUDE.md", "target": "AGENTS.md" },
+    { "op": "keep",    "kind": "compat-file", "path": "GEMINI.md", "reason": "regular file" }
+  ]
+}
+```
+
+`op` is `write`, `symlink` or `keep`; `keep` means an existing file was left alone
+and carries the reason. Human output is suppressed under `--json`, so stdout is
+parseable on its own.
 
 ## Validating Structure
 
