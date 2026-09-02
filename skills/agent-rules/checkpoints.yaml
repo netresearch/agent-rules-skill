@@ -14,6 +14,12 @@ mechanical:
 
   # === RECOMMENDED SECTIONS ===
   # Note: The agents.md spec has NO required fields - these are best practices
+  #
+  # Accepted heading spellings come from two sources inside this skill and
+  # nowhere else: the equivalence table in scripts/validate-structure.sh
+  # (check_scoped_sections) and the headings the two root templates emit
+  # (assets/root-thin.md, assets/root-verbose.md). A spelling that is only
+  # plausible is a finding, not an equivalent.
   - id: AG-02
     type: regex
     target: AGENTS.md
@@ -24,9 +30,18 @@ mechanical:
   - id: AG-03
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Setup|Getting Started|Prerequisites|Dev Environment|Development Workflow)"
+    # Setup group of check_scoped_sections: Setup|Environment|Prerequisites|
+    # Getting Started (its fifth member, "Workflow files", is a scoped
+    # github-actions section that no root file carries).
+    # "Development Workflow" removed: root-verbose.md:69 spells a branch/PR
+    # sequence under that heading, not environment setup. AG-06 owns it.
+    # "Dev Environment" removed for the same reason: neither the equivalence
+    # table nor a root template emits it, so it was a plausible-only spelling
+    # under a rule that admits none. Adding it to check_scoped_sections
+    # instead would loosen validate-structure.sh to make this pattern true.
+    pattern: "^#+ (Setup|Getting Started|Prerequisites|Environment)"
     severity: warning
-    desc: "AGENTS.md should have Setup/Dev Environment section (recommended but not required)"
+    desc: "AGENTS.md should have Setup/Environment section (recommended but not required)"
 
   - id: AG-04
     type: regex
@@ -45,14 +60,28 @@ mechanical:
   - id: AG-06
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Development|Development Workflow|Contributing)"
+    # "Workflow" added: root-thin.md:30 emits "## Workflow" as the development
+    # workflow section, so the canonical thin output matched only via
+    # "Contributing". "PR/Commit Checklist" is deliberately NOT accepted here —
+    # check_scoped_sections keeps Checklist (PR|Commit|Checklist) as a group of
+    # its own, separate from any workflow section.
+    # Bare "Development" removed: no source emits it, and being an unanchored
+    # prefix it made "Development Workflow" redundant while accepting any
+    # heading that merely starts with "Development".
+    pattern: "^#+ (Development Workflow|Contributing|Workflow)"
     severity: warning
     desc: "AGENTS.md should have Development workflow section"
 
   - id: AG-07
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Testing|Tests|Running Tests)"
+    # Build/Tests group of check_scoped_sections:
+    # Build|Tests|Running|Commands|Common patterns. "Commands" is where this
+    # skill's own root templates and the assessed TYPO3 extensions put the test
+    # commands, so a "## Commands" section satisfies this check. That makes
+    # AG-07 overlap AG-04 on such files — the same shape AG-13 already has
+    # against AG-04, and not this checkpoint's to resolve.
+    pattern: "^#+ (Testing|Tests|Running Tests|Commands)"
     severity: warning
     desc: "AGENTS.md should have Testing section"
 
@@ -149,7 +178,12 @@ mechanical:
   - id: AG-12
     type: regex
     target: AGENTS.md
-    pattern: "^#+ (Critical|Constraints|Critical Constraints|Important|Caveats|Warnings)"
+    # "Boundaries" added: it is this skill's canonical name for the section
+    # (assets/root-thin.md:80, assets/root-verbose.md:28, and the Root File
+    # table in references/output-structure.md — "Boundaries | Always/Ask/Never
+    # rules"). Without it the check failed against both of the skill's own root
+    # templates while no template ever emits any of the six original spellings.
+    pattern: "^#+ (Critical|Constraints|Critical Constraints|Important|Caveats|Warnings|Boundaries)"
     severity: info
     desc: "AGENTS.md should have Critical/Constraints section for important warnings"
 
@@ -171,22 +205,36 @@ mechanical:
 
   # === GIT HOOKS ===
   - id: AG-29
-    type: file_exists_any
-    paths:
-      - lefthook.yml
-      - .lefthook.yml
-      - captainhook.json
-      - .husky/pre-commit
-      - .pre-commit-config.yaml
+    type: command
+    # Was type "file_exists_any" with a "paths:" list. Neither is a runner type
+    # nor a runner key, so the runner reported this checkpoint as SKIPPED
+    # ("Unknown checkpoint type") on every project and it never measured
+    # anything. The same five markers as one allowlisted `test`. The four
+    # frameworks are those in references/git-hooks-setup.md, and the husky
+    # marker is the `.husky/` directory named in that doc's table (line 15).
+    # Requiring `.husky/pre-commit` warned at every repo that runs Husky for
+    # another hook, commit-msg only being the common one. Which hooks a
+    # framework installs and what they cover is AG-30's question, not this
+    # one's — the same reason an empty lefthook.yml satisfies this check.
+    pattern: "test -f lefthook.yml -o -f .lefthook.yml -o -f captainhook.json -o -d .husky -o -f .pre-commit-config.yaml"
     severity: warning
-    desc: "Repository should have a git hooks framework configured"
+    desc: "Repository should have a git hooks framework configured (lefthook, captainhook, husky or pre-commit)"
 
   # === CLAUDE CODE COMPATIBILITY ===
   - id: AG-31
-    type: conditional
+    type: script
     severity: warning
     desc: "CLAUDE.md must exist when Claude Code environment detected (.claude/ directory present)"
-    check_command: "test -d .claude && test -f CLAUDE.md"
+    # Was type "conditional" with "check_command:" — neither is read by the
+    # runner, so this reported SKIPPED everywhere. The old body was also
+    # inverted: `test -d .claude && test -f CLAUDE.md` FAILS when .claude/ is
+    # absent, which is exactly when the rule does not apply. An `if` with no
+    # else exits 0 in that case, so a repo without .claude/ passes.
+    command: |
+      if test -d .claude
+      then
+        test -f CLAUDE.md
+      fi
     tags: [claude-code, compatibility]
 
   # === SCOPED AGENTS.MD ===
