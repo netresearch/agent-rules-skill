@@ -35,9 +35,13 @@ mechanical:
     # github-actions section that no root file carries).
     # "Development Workflow" removed: root-verbose.md:69 spells a branch/PR
     # sequence under that heading, not environment setup. AG-06 owns it.
-    pattern: "^#+ (Setup|Getting Started|Prerequisites|Dev Environment|Environment)"
+    # "Dev Environment" removed for the same reason: neither the equivalence
+    # table nor a root template emits it, so it was a plausible-only spelling
+    # under a rule that admits none. Adding it to check_scoped_sections
+    # instead would loosen validate-structure.sh to make this pattern true.
+    pattern: "^#+ (Setup|Getting Started|Prerequisites|Environment)"
     severity: warning
-    desc: "AGENTS.md should have Setup/Dev Environment section (recommended but not required)"
+    desc: "AGENTS.md should have Setup/Environment section (recommended but not required)"
 
   - id: AG-04
     type: regex
@@ -61,7 +65,10 @@ mechanical:
     # "Contributing". "PR/Commit Checklist" is deliberately NOT accepted here —
     # check_scoped_sections keeps Checklist (PR|Commit|Checklist) as a group of
     # its own, separate from any workflow section.
-    pattern: "^#+ (Development|Development Workflow|Contributing|Workflow)"
+    # Bare "Development" removed: no source emits it, and being an unanchored
+    # prefix it made "Development Workflow" redundant while accepting any
+    # heading that merely starts with "Development".
+    pattern: "^#+ (Development Workflow|Contributing|Workflow)"
     severity: warning
     desc: "AGENTS.md should have Development workflow section"
 
@@ -203,9 +210,13 @@ mechanical:
     # nor a runner key, so the runner reported this checkpoint as SKIPPED
     # ("Unknown checkpoint type") on every project and it never measured
     # anything. The same five markers as one allowlisted `test`. The four
-    # frameworks are those in references/git-hooks-setup.md; the husky marker
-    # stays the installed hook, not the bare `.husky/` directory that doc names.
-    pattern: "test -f lefthook.yml -o -f .lefthook.yml -o -f captainhook.json -o -f .husky/pre-commit -o -f .pre-commit-config.yaml"
+    # frameworks are those in references/git-hooks-setup.md, and the husky
+    # marker is the `.husky/` directory named in that doc's table (line 15).
+    # Requiring `.husky/pre-commit` warned at every repo that runs Husky for
+    # another hook, commit-msg only being the common one. Which hooks a
+    # framework installs and what they cover is AG-30's question, not this
+    # one's — the same reason an empty lefthook.yml satisfies this check.
+    pattern: "test -f lefthook.yml -o -f .lefthook.yml -o -f captainhook.json -o -d .husky -o -f .pre-commit-config.yaml"
     severity: warning
     desc: "Repository should have a git hooks framework configured (lefthook, captainhook, husky or pre-commit)"
 
