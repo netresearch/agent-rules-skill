@@ -37,6 +37,45 @@ scripts cannot measure. Use **strong / adequate / weak** with a one-line reason.
 | **Actionability** | Concrete, copy-paste commands, real paths, decisive heuristics ("squash-merge", "ask first") | Theoretical advice ("follow best practices", "write good tests") |
 | **Non-obvious patterns** | Captures what code can't tell you — ordering deps, quirks, "why we do it this way" | Only restates what the filenames already say |
 
+### A convention needs a fill-in skeleton, not a paragraph
+
+Actionability is not only about commands. Where the file states a *convention*
+the agent has to reproduce — commit trailers, a message format, a required
+header — prose is followed partially even when it is read, because the agent's
+own defaults fill the gap. Give it a skeleton to copy, near the top.
+
+Measured 2026-09-18 on `TYPO3-Documentation/TYPO3CMS-Reference-CoreApi`, whose
+`AGENTS.md` states its commit trailers as prose in two numbered rules: a clone
+with one uncommitted edit, a headless session asked only for the commit
+message, Haiku 4.5, six runs per variant. The unchanged file is the baseline
+and was run twice, once against each later batch, so its column pools 12
+observations against the variants' 6.
+
+| | prose rules | + skeleton | + skeleton and "replace the example" |
+|---|---|---|---|
+| required trailer present and correct | 4 / 12 | 6 / 6 | 6 / 6 |
+| documented `Assisted-by:` form | 1 / 12 | 6 / 6 | 6 / 6 |
+| model correctly named | 0 / 12 | 1 / 6 | 6 / 6 |
+
+Two things the last column pays for:
+
+- **A concrete example is copied verbatim.** Five of six runs filed
+  `Assisted-by: Claude Sonnet 5` while a different model was running — a
+  skeleton turns a placeholder into an assertion unless it says to replace it.
+- **A placeholder loses the field.** Writing `<model name> <contact>` instead
+  removed the false attribution by removing the trailer: it then appeared in
+  1 of 6. Keep the example *and* say to replace it.
+
+The control matters for the axis, too. Removing the one-line `CLAUDE.md` that
+holds `@AGENTS.md`, and leaving `AGENTS.md` itself in place, took every
+trailer to 0 of 6 — the same as deleting both, 0 of 4. So in the runs above
+the rules were reaching the session the whole time, and what the skeleton
+fixes is compliance, not delivery. "Not followed" and "not loaded" look
+identical in the output and have different fixes; verify which one you have
+before rewriting content. Claude Code reaches the rules only through
+`CLAUDE.md`, never by the AGENTS.md name alone; see
+[`ai-tool-compatibility.md`](ai-tool-compatibility.md).
+
 ### How to feed it back: `--review`
 
 Rate each file, write the ratings to JSON, and pass it to the scorer. It keeps the
