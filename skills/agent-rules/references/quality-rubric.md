@@ -47,7 +47,11 @@ own defaults fill the gap. Give it a skeleton to copy, near the top.
 Measured 2026-09-18 on `TYPO3-Documentation/TYPO3CMS-Reference-CoreApi`, whose
 `AGENTS.md` states its commit trailers as prose in two numbered rules: a clone
 with one uncommitted edit, a headless session asked only for the commit
-message, Haiku 4.5, six runs per variant.
+message, Haiku 4.5, six runs per variant. The unchanged file is the baseline
+and was run twice, once against each later batch, so its column pools 12
+observations against the variants' 6; the `model correctly named` row has no
+baseline figure because the question only arises once a skeleton supplies a
+name to copy.
 
 | | prose rules | + skeleton | + skeleton and "replace the example" |
 |---|---|---|---|
