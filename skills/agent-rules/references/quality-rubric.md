@@ -49,15 +49,13 @@ Measured 2026-09-18 on `TYPO3-Documentation/TYPO3CMS-Reference-CoreApi`, whose
 with one uncommitted edit, a headless session asked only for the commit
 message, Haiku 4.5, six runs per variant. The unchanged file is the baseline
 and was run twice, once against each later batch, so its column pools 12
-observations against the variants' 6; the `model correctly named` row has no
-baseline figure because the question only arises once a skeleton supplies a
-name to copy.
+observations against the variants' 6.
 
 | | prose rules | + skeleton | + skeleton and "replace the example" |
 |---|---|---|---|
 | required trailer present and correct | 4 / 12 | 6 / 6 | 6 / 6 |
-| documented `Assisted-by:` form | 0 / 12 | 6 / 6 | 6 / 6 |
-| model correctly named | — | 1 / 6 | 6 / 6 |
+| documented `Assisted-by:` form | 1 / 12 | 6 / 6 | 6 / 6 |
+| model correctly named | 0 / 12 | 1 / 6 | 6 / 6 |
 
 Two things the last column pays for:
 
@@ -68,12 +66,15 @@ Two things the last column pays for:
   removed the false attribution by removing the trailer: it then appeared in
   1 of 6. Keep the example *and* say to replace it.
 
-The control matters for the axis, too: deleting the file took every trailer to
-0 of 6, so the file was being read the whole time. "Not followed" and "not
-loaded" look identical in the output and have different fixes — verify which
-one you have before rewriting content. Claude Code reaches the rules only
-through `CLAUDE.md` (symlink or `@AGENTS.md` import), never by the AGENTS.md
-name alone; see [`ai-tool-compatibility.md`](ai-tool-compatibility.md).
+The control matters for the axis, too. Removing the one-line `CLAUDE.md` that
+holds `@AGENTS.md`, and leaving `AGENTS.md` itself in place, took every
+trailer to 0 of 6 — the same as deleting both, 0 of 4. So in the runs above
+the rules were reaching the session the whole time, and what the skeleton
+fixes is compliance, not delivery. "Not followed" and "not loaded" look
+identical in the output and have different fixes; verify which one you have
+before rewriting content. Claude Code reaches the rules only through
+`CLAUDE.md`, never by the AGENTS.md name alone; see
+[`ai-tool-compatibility.md`](ai-tool-compatibility.md).
 
 ### How to feed it back: `--review`
 
