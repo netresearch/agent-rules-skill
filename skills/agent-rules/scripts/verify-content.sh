@@ -220,8 +220,16 @@ echo ""
 
 echo "=== Verifying Scoped AGENTS.md Files ==="
 
-# Find all scoped AGENTS.md files
-SCOPED_FILES=$(find . -mindepth 2 -name "AGENTS.md" -not -path "./.git/*" 2>/dev/null || true)
+# Find all scoped AGENTS.md files. Dependency trees are excluded, as in
+# validate-structure.sh (#84): an AGENTS.md shipped by a package in vendor/,
+# node_modules/ or a TYPO3 extension's .Build/vendor/ documents that package,
+# not this project, and its file references would be reported as errors here.
+SCOPED_FILES=$(find . -mindepth 2 -name "AGENTS.md" \
+    -not -path "./.git/*" \
+    -not -path "*/vendor/*" \
+    -not -path "*/node_modules/*" \
+    -not -path "*/.Build/*" \
+    2>/dev/null || true)
 
 for scoped_file in $SCOPED_FILES; do
     scope_dir=$(dirname "$scoped_file")

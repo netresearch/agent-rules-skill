@@ -226,8 +226,14 @@ check_file_freshness() {
 echo "Checking AGENTS.md freshness in: $PROJECT_DIR"
 echo ""
 
-# Find all AGENTS.md files
-AGENTS_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" -type f 2>/dev/null | sort)
+# Find all AGENTS.md files. Dependency trees are excluded, as in
+# validate-structure.sh (#84): a third-party AGENTS.md is not this project's.
+AGENTS_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" -type f \
+    -not -path "*/.git/*" \
+    -not -path "*/vendor/*" \
+    -not -path "*/node_modules/*" \
+    -not -path "*/.Build/*" \
+    2>/dev/null | sort)
 
 if [ -z "$AGENTS_FILES" ]; then
     echo "No AGENTS.md files found"
