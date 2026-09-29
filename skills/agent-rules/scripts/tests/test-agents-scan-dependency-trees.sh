@@ -75,4 +75,19 @@ grep -q "src/AGENTS.md does not exist: MissingEntryPoint.php" <<<"$out" \
 [ "$rc" -ne 0 ] || fail "a real defect in the project's own scoped file did not fail the run"
 pass "the project's own scoped files are still verified"
 
+# A file that exists only inside a dependency tree is not a project file, so
+# naming it in the project's own AGENTS.md must still be reported. The lookup
+# for documented files uses the same three exclusions as the scan above.
+touch "$FX/vendor/acme/lib/OnlyInVendor.php" \
+    "$FX/node_modules/pkg/OnlyInNodeModules.js" \
+    "$FX/.Build/public/typo3conf/ext/acme/OnlyInBuild.php"
+# shellcheck disable=SC2016  # Literal backticks are markdown code spans
+printf '# AGENTS.md -- src\n\nSee `OnlyInVendor.php`, `OnlyInNodeModules.js` and `OnlyInBuild.php`.\n' > "$FX/src/AGENTS.md"
+out=$(cd "$FX" && bash "$VERIFY" . 2>&1)
+for f in OnlyInVendor.php OnlyInNodeModules.js OnlyInBuild.php; do
+    grep -q "src/AGENTS.md does not exist: $f" <<<"$out" \
+        || { echo "$out"; fail "$f exists only in a dependency tree but was accepted as a project file"; }
+done
+pass "files that exist only in a dependency tree do not count as documented project files"
+
 echo "All verify-content.sh dependency-tree tests passed."

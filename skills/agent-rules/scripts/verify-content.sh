@@ -250,6 +250,7 @@ for scoped_file in $SCOPED_FILES; do
         # previous narrow 3-location check.
         if ! find . -name "$doc_file" \
                 -not -path './.git/*' -not -path '*/node_modules/*' -not -path '*/vendor/*' \
+                -not -path '*/.Build/*' \
                 -print -quit 2>/dev/null | grep -q .; then
             # Special handling for common false positives
             case "$doc_file" in
