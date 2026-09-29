@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test for CLAUDE.md import-file handling (issue #82).
 #
 # The TYPO3 docs renderer lists Documentation/ via Flysystem, which aborts on

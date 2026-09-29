@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # AGENTS.md Quality Rubric
 
 Grade AGENTS.md files so you know which ones most need work. The grade has two

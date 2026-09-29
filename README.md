@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # AGENTS.md Generator Skill
 
 Netresearch AI skill for generating and maintaining AGENTS.md files following the [agents.md specification](https://agents.md/).

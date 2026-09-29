@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Netresearch DTT GmbH
+
 import { z } from 'zod';
 
 const envSchema = z.object({

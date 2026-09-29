@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test for dependency-tree exclusion in validate-structure.sh (issue #84).
 #
 # The CLAUDE.md-symlink scan excludes vendor/ and node_modules/, but the scoped

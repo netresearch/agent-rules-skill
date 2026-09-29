@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract CI workflow rules that agents need to follow:
 # version matrices, quality gates, coverage thresholds, security workflows, linter configs, pinned actions
 set -euo pipefail

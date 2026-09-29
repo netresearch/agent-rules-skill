@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Netresearch DTT GmbH
+
 import express from 'express';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';

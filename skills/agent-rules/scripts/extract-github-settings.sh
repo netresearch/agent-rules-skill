@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract GitHub repository settings via gh CLI
 # Returns {} silently if gh unavailable, not authenticated, or not a GitHub repo
 set -euo pipefail

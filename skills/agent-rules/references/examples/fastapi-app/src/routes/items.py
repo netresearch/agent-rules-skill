@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 """Item management endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query, status

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test for the CLAUDE.md/GEMINI.md write boundary (issues #102, #103).
 #
 # Two defects, both in generate-agents.sh:

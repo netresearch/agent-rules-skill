@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Template rendering helper functions
 
 # Remove sections that are entirely empty (only header + whitespace/empty tables)

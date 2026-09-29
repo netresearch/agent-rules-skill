@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract module boundary rules from architecture test frameworks
 # Supports: phpat, deptrac, Go conventions, ESLint import rules, golangci-lint depguard
 set -euo pipefail

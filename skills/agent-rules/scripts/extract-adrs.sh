@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract Architectural Decision Records (ADRs) from common locations
 # Returns JSON with ADR metadata for AGENTS.md generation
 set -euo pipefail

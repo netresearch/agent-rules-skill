@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract information from platform-specific files (.github/, .gitlab/, etc.)
 set -euo pipefail
 

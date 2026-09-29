@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Netresearch DTT GmbH
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 

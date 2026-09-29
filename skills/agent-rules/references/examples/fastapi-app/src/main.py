@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 """FastAPI application entry point."""
 
 from collections.abc import AsyncIterator

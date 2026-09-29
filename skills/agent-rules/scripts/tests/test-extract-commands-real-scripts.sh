@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test: extract-commands.sh must emit the composer script that the
 # project actually defines, never the first name it happened to look for.
 #

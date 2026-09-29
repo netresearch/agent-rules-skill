@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Main AGENTS.md generator script
 # Requires: Bash 4.3+ (for nameref variables)
 # shellcheck disable=SC2034  # vars/scope_vars are used via nameref in template functions
