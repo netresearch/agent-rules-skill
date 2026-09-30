@@ -20,7 +20,7 @@ The skill has no server component, stores no data outside the target project, an
 ## Security requirements
 
 1. The generator does not replace a `CLAUDE.md` or `GEMINI.md` that it did not create, unless the user passes `--force`.
-2. The generator does not replace an existing `AGENTS.md` unless the user passes `--force` or `--update`; `--update` rewrites only the sections between `AGENTS-GENERATED` markers.
+2. The generator does not replace an existing `AGENTS.md` unless the user passes `--force` or `--update`; `--update` rewrites only the sections between `AGENTS-GENERATED` markers when the file has them, and renders the whole file anew when it has none.
 3. With `--dry-run`, `generate-agents.sh` writes no file.
 4. When the user sets `SMOKE_TEST=true`, `verify-commands.sh` refuses to run a command string that contains shell metacharacters or whose first word is not on its list of build tools.
 5. The scripts send nothing from the target project to a network service other than the repository's owner and name, used to read its GitHub settings with the user's own `gh` login.
@@ -38,13 +38,13 @@ The skill has no server component, stores no data outside the target project, an
 
 | Threat | Countermeasure | Evidence |
 | --- | --- | --- |
-| The generator overwrites a user's own `CLAUDE.md` or `GEMINI.md` | A compatibility file is written only when it is absent, is a symlink to `AGENTS.md`, or is an `@AGENTS.md` import file; anything else is kept and reported unless `--force` is given | `generate-agents.sh` (`compat_file_is_ours`); `scripts/tests/test-symlink-write-boundary.sh` (foreign symlink kept, foreign regular file kept, `--dry-run --force` writes nothing), `scripts/tests/test-claude-import-file.sh` |
-| The generator discards hand-written content in an existing `AGENTS.md` | An existing file is kept unless `--force` or `--update`; `--update` replaces only the marked sections and keeps everything outside them | `generate-agents.sh` (root and scope file checks), `lib/template.sh` (`update_generated_sections`) |
-| A documented command chains a second command during a smoke test (CWE-78) | Before a smoke test, `is_safe_command` rejects any string containing `;`, `&`, `\|`, `` ` ``, `$`, `<`, `>`, braces, parentheses, glob characters, `!` or a newline, and any first word that is not on its list of build tools | `scripts/verify-commands.sh` (`is_safe_command`); `scripts/tests/test-command-allowlist.sh` asserts that `git status; touch PWNED` neither runs nor counts as verified, and that a plain allowlisted command still runs |
-| A smoke-tested command hangs the run | Each smoke-tested command runs under `timeout` | `scripts/verify-commands.sh` (`smoke_test_command`) |
-| Code from the target project is loaded into the scripts' shell | The scripts `source` only their own files under `scripts/lib/`; no shipped script uses `eval` | `generate-agents.sh`, `detect-project.sh`, `extract-commands.sh` (the `source` lines) |
+| The generator overwrites a user's own `CLAUDE.md` or `GEMINI.md` | A compatibility file is written only when it is absent, is a symlink to `AGENTS.md`, or is an `@AGENTS.md` import file; anything else is kept and reported unless `--force` is given | `generate-agents.sh` (`compat_file_is_ours`); `skills/agent-rules/scripts/tests/test-symlink-write-boundary.sh` (foreign symlink kept, foreign regular file kept, `--dry-run --force` writes nothing), `skills/agent-rules/scripts/tests/test-claude-import-file.sh` |
+| The generator discards hand-written content in an existing `AGENTS.md` | An existing file is kept unless `--force` or `--update`; `--update` replaces only the marked sections and keeps everything outside them; a file without `AGENTS-GENERATED` markers is rendered anew, like `--force` | `generate-agents.sh` (root and scope file checks), `skills/agent-rules/scripts/lib/template.sh` (`update_generated_sections`) |
+| A documented command chains a second command during a smoke test (CWE-78) | Before a smoke test, `is_safe_command` rejects any string containing `;`, `&`, `\|`, `` ` ``, `$`, `<`, `>`, braces, parentheses, `*`, `?`, `!` or a newline, and any first word that is not on its list of build tools | `skills/agent-rules/scripts/verify-commands.sh` (`is_safe_command`); `skills/agent-rules/scripts/tests/test-command-allowlist.sh` asserts that `git status; touch PWNED` neither runs nor counts as verified, and that a plain allowlisted command still runs |
+| A smoke-tested command hangs the run | Each smoke-tested command runs under `timeout` | `skills/agent-rules/scripts/verify-commands.sh` (`smoke_test_command`) |
+| Code from the target project is loaded into the scripts' shell | The scripts `source` only their own files under `skills/agent-rules/scripts/lib/`; no script under `skills/agent-rules/scripts/` or its `lib/` uses `eval` (only the test `test-command-allowlist.sh` does, on the function text of `verify-commands.sh`) | `generate-agents.sh`, `detect-project.sh`, `extract-commands.sh` (the `source` lines) |
 | Project data leaves the machine | No script calls `curl` or `wget`; the only network access is the `gh api` GET requests named under trust boundaries | `extract-github-settings.sh`, `extract-github-rulesets.sh`, `scripts/verify-harness.sh` |
-| A predictable temporary file is hijacked (CWE-377) | The only temporary file in a shipped script is created with `mktemp`; no script uses a fixed path under `/tmp` | `lib/template.sh` (`update_generated_sections`) |
+| A predictable temporary file is hijacked (CWE-377) | The only temporary file in a script under `skills/agent-rules/scripts/` or its `lib/` is created with `mktemp`, and the tests create their work directories with `mktemp -d`; no script uses a fixed path under `/tmp` | `skills/agent-rules/scripts/lib/template.sh` (`update_generated_sections`) |
 | An error in one step goes unnoticed and a later step works on a partial result | The generator, detector, extractor and verification scripts run with `set -euo pipefail`; `score-agents.sh`, `validate-structure.sh` and the tests run with `set -uo pipefail` and handle failures explicitly | `skills/agent-rules/scripts/*.sh`, `scripts/verify-harness.sh`, `Build/Scripts/check-plugin-version.sh` |
 | A secret is committed | Betterleaks scans every push and pull request to `main` | `.github/workflows/security.yml` |
 | A vulnerable or malicious dependency is added | Dependency review fails on high or critical vulnerabilities in a pull request; Composer Audit fails on known PHP advisories; Renovate proposes updates, including pre-commit hook revisions | `.github/workflows/security.yml`, `renovate.json` |
@@ -54,9 +54,9 @@ Which of these checks a pull request must pass before it can be merged is set in
 
 ## Secure design principles applied
 
-- **Secure defaults:** `generate-agents.sh` keeps existing files unless `--force` or `--update` is given.
+- **Secure defaults:** `generate-agents.sh` keeps existing files unless `--force` or `--update` is given (`--update` keeps hand-written text only outside the markers of a file that has them).
 - **Least privilege:** `SKILL.md` pre-approves a short list of tools; workflows declare `permissions: {}` and grant each job only what its reusable workflow needs (`.github/workflows/*.yml`).
-- **Complete input rejection instead of escaping:** `is_safe_command` refuses a command with shell syntax rather than trying to quote it (`scripts/verify-commands.sh`).
+- **Complete input rejection instead of escaping:** `is_safe_command` refuses a command with shell syntax rather than trying to quote it (`skills/agent-rules/scripts/verify-commands.sh`).
 - **Minimal attack surface:** the skill is Markdown plus shell scripts with no network listener; network access is limited to `gh api` reads.
 
 ## What a user cannot expect
