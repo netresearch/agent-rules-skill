@@ -1479,10 +1479,11 @@ else
 
             # Look for well-documented files with tests
             local sample
-            # shellcheck disable=SC2038  # Source files rarely have special chars
-            sample=$(find "$scope_path" -maxdepth 2 -type f \( "${find_args[@]}" \) 2>/dev/null | \
-                     xargs -I{} sh -c 'wc -l "{}" | grep -v "^0"' 2>/dev/null | \
-                     sort -rn | head -1 | awk '{print $2}')
+            # File names come from the target project: they reach wc as
+            # arguments (-exec ... \;), never inside a shell command string.
+            sample=$(find "$scope_path" -maxdepth 2 -type f \( "${find_args[@]}" \) \
+                         -exec wc -l {} \; 2>/dev/null | \
+                     grep -v "^0" | sort -rn | head -1 | awk '{print $2}')
 
             if [ -n "$sample" ] && [ -f "$sample" ]; then
                 local rel_path="${sample#"$PROJECT_DIR"/}"
