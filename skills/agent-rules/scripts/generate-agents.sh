@@ -1315,8 +1315,13 @@ if [ "$CLAUDE_SHIM" = true ]; then
     # -e alone follows a symlink, so a dangling one would count as absent and
     # the write below would land at its target, outside the project.
     if { [ -e "$CLAUDE_FILE" ] || [ -L "$CLAUDE_FILE" ]; } && [ "$FORCE" = false ]; then
-        emit_op keep shim "$CLAUDE_FILE" reason "already exists"
-        log "CLAUDE.md already exists, skipping (use --force to regenerate)"
+        if [ ! -L "$CLAUDE_FILE" ] && head -n 1 "$CLAUDE_FILE" 2>/dev/null | grep -qF 'Auto-generated shim for Claude Code compatibility'; then
+            emit_op keep shim "$CLAUDE_FILE" reason "already exists"
+            log "CLAUDE.md already exists, skipping (use --force to regenerate)"
+        else
+            # Not our shim: say so, as the symlink mode does for a kept file.
+            report_kept_file "$CLAUDE_FILE" CLAUDE.md
+        fi
     elif [ "$DRY_RUN" = true ]; then
         emit_op write shim "$CLAUDE_FILE"
         echo "[DRY-RUN] Would create: $CLAUDE_FILE"

@@ -107,5 +107,19 @@ bash "$GENERATE" "$FX" --claude-shim --no-symlinks --force >/dev/null 2>&1 || fa
 { [ -f "$FX/CLAUDE.md" ] && [ ! -L "$FX/CLAUDE.md" ]; } || fail "--claude-shim --force did not replace the symlink with the shim"
 pass "--claude-shim keeps a dangling symlink, and --force replaces it instead of writing through it"
 
+# --- Test 8: --claude-shim reports a kept foreign CLAUDE.md, not its own shim
+FX="$WORK/shim-foreign-file"
+make_fixture "$FX"
+printf '# my own rules\n' > "$FX/CLAUDE.md"
+OUT="$(bash "$GENERATE" "$FX" --claude-shim --no-symlinks 2>&1)" || fail "generate-agents.sh errored"
+grep -q '^# my own rules$' "$FX/CLAUDE.md" || fail "--claude-shim replaced a foreign CLAUDE.md without --force"
+grep -q "Kept: CLAUDE.md" <<<"$OUT" || fail "--claude-shim kept a foreign CLAUDE.md without saying so (output was: $OUT)"
+FX="$WORK/shim-own"
+make_fixture "$FX"
+bash "$GENERATE" "$FX" --claude-shim --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+OUT="$(bash "$GENERATE" "$FX" --claude-shim --no-symlinks 2>&1)" || fail "generate-agents.sh errored on second run"
+grep -q "Kept: CLAUDE.md" <<<"$OUT" && fail "re-running --claude-shim reported its own shim as kept"
+pass "--claude-shim reports a kept foreign CLAUDE.md and stays quiet about its own shim"
+
 echo ""
 echo "All symlink write-boundary tests passed."
