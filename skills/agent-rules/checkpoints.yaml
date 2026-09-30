@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Checkpoints for AGENTS.md verification
 # Ensures AGENTS.md exists, has proper structure, and stays accurate
 
@@ -211,7 +213,7 @@ mechanical:
     # ("Unknown checkpoint type") on every project and it never measured
     # anything. The same five markers as one allowlisted `test`. The four
     # frameworks are those in references/git-hooks-setup.md, and the husky
-    # marker is the `.husky/` directory named in that doc's table (line 15).
+    # marker is the `.husky/` directory named in that doc's table (line 18).
     # Requiring `.husky/pre-commit` warned at every repo that runs Husky for
     # another hook, commit-msg only being the common one. Which hooks a
     # framework installs and what they cover is AG-30's question, not this

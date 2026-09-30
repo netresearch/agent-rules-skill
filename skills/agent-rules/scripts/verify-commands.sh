@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Verify that commands documented in AGENTS.md actually work
 # This prevents "command rot" - documented commands that no longer exist
 # Requires: Bash 4.0+ (for associative arrays)

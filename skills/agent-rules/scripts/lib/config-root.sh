@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Find nearest config root for a given stack type
 
 # Find nearest directory containing package.json (for Node scopes)

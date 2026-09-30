@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # verify-content.sh - Verify AGENTS.md content against actual codebase state
 # This script checks if documented information matches reality.
 #

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Validate AGENTS.md structure compliance and optionally check freshness
 # Note: -e intentionally omitted - we accumulate errors and report at end
 set -uo pipefail

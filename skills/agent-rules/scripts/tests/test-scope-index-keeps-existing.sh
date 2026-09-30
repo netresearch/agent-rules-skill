@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test: a directory that already carries an AGENTS.md must appear in
 # the root scope index, even when detect-scopes.sh has no rule for that
 # directory name.

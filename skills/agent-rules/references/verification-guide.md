@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Verification Guide
 
 **NEVER trust existing AGENTS.md content as accurate.** Always verify documented information against the actual codebase.

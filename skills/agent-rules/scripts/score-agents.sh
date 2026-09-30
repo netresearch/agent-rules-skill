@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # score-agents.sh - Grade AGENTS.md files with a reproducible quality score.
 #
 # Aggregates the --json output of the four verifier scripts into a per-file

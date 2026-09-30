@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # AI Agent Contribution Guidelines
 
 Guidelines for AI agents contributing to projects with AGENTS.md files. Based on the "3 Cs" framework from GitHub's open source mentorship research (March 2026).

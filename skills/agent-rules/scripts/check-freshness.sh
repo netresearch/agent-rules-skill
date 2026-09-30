@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Check if AGENTS.md files are up to date with recent git commits
 # Compares the "Last updated" date in each AGENTS.md with commits affecting that scope
 set -euo pipefail

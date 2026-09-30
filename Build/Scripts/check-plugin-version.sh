@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # check-plugin-version.sh — Verify version consistency across plugin.json,
 # SKILL.md metadata, and (when present) git tags at HEAD.
 set -euo pipefail

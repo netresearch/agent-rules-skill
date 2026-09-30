@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract information from documentation files (README, CONTRIBUTING, SECURITY, etc.)
 set -euo pipefail
 

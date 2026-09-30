@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test for the smoke-test allowlist in verify-commands.sh (issue #104).
 #
 # is_safe_command() matched the first word of a command and the runner then

@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # AI Tool Compatibility
 
 How AGENTS.md integrates with different AI coding tools, and what mitigations are needed for each.

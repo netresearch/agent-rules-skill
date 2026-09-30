@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 name: Validate AGENTS.md
 
 on:
@@ -7,11 +9,12 @@ on:
     paths: ['AGENTS.md', '**/AGENTS.md', 'skills/agent-rules/**']
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   validate:
+    permissions:
+      contents: read
     uses: netresearch/skill-repo-skill/.github/workflows/validate-agents.yml@main
     with:
       scripts-path: 'skills/agent-rules/scripts'

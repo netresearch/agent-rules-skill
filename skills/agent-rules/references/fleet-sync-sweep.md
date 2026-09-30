@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Fleet Sync Sweep
 
 Bringing AGENTS.md across a whole repo fleet to one standard, in one pass. Written after the 2026-08-19 sweep over 24 `netresearch/t3x-*` repositories (17 with existing files to sync, 5 with none at all, 2 already done) — every step below either saved that sweep or was learned by breaking it.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract detailed settings from quality tool configuration files
 # (linters, formatters, type checkers, etc.)
 set -euo pipefail

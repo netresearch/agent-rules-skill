@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Test for the generate-agents.sh write manifest (issue #107).
 #
 # generate-agents.sh is the only script in the skill that writes, and was the

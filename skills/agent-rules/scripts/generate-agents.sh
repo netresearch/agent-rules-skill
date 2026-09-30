@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Main AGENTS.md generator script
 # Requires: Bash 4.3+ (for nameref variables)
 # shellcheck disable=SC2034  # vars/scope_vars are used via nameref in template functions
@@ -1310,13 +1312,22 @@ fi
 # Generate CLAUDE.md shim if requested
 if [ "$CLAUDE_SHIM" = true ]; then
     CLAUDE_FILE="$PROJECT_DIR/CLAUDE.md"
-    if [ -f "$CLAUDE_FILE" ] && [ "$FORCE" = false ]; then
-        emit_op keep shim "$CLAUDE_FILE" reason "already exists"
-        log "CLAUDE.md already exists, skipping (use --force to regenerate)"
+    # -e alone follows a symlink, so a dangling one would count as absent and
+    # the write below would land at its target, outside the project.
+    if { [ -e "$CLAUDE_FILE" ] || [ -L "$CLAUDE_FILE" ]; } && [ "$FORCE" = false ]; then
+        if [ ! -L "$CLAUDE_FILE" ] && head -n 1 "$CLAUDE_FILE" 2>/dev/null | grep -qF 'Auto-generated shim for Claude Code compatibility'; then
+            emit_op keep shim "$CLAUDE_FILE" reason "already exists"
+            log "CLAUDE.md already exists, skipping (use --force to regenerate)"
+        else
+            # Not our shim: say so, as the symlink mode does for a kept file.
+            report_kept_file "$CLAUDE_FILE" CLAUDE.md
+        fi
     elif [ "$DRY_RUN" = true ]; then
         emit_op write shim "$CLAUDE_FILE"
         echo "[DRY-RUN] Would create: $CLAUDE_FILE"
     else
+        # Replace a symlink rather than write through it.
+        [ -L "$CLAUDE_FILE" ] && rm -f "$CLAUDE_FILE"
         cat > "$CLAUDE_FILE" << 'CLAUDESHIM'
 <!-- Auto-generated shim for Claude Code compatibility -->
 <!-- Source of truth: AGENTS.md -->
@@ -1477,10 +1488,11 @@ else
 
             # Look for well-documented files with tests
             local sample
-            # shellcheck disable=SC2038  # Source files rarely have special chars
-            sample=$(find "$scope_path" -maxdepth 2 -type f \( "${find_args[@]}" \) 2>/dev/null | \
-                     xargs -I{} sh -c 'wc -l "{}" | grep -v "^0"' 2>/dev/null | \
-                     sort -rn | head -1 | awk '{print $2}')
+            # File names come from the target project: they reach wc as
+            # arguments (-exec ... \;), never inside a shell command string.
+            sample=$(find "$scope_path" -maxdepth 2 -type f \( "${find_args[@]}" \) \
+                         -exec wc -l {} \; 2>/dev/null | \
+                     grep -v "^0" | sort -rn | head -1 | awk '{print $2}')
 
             if [ -n "$sample" ] && [ -f "$sample" ]; then
                 local rel_path="${sample#"$PROJECT_DIR"/}"

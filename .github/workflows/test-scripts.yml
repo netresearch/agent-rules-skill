@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 name: Test Scripts
 
 # Runs the agent-rules script regression tests (e.g. the scope-index heading

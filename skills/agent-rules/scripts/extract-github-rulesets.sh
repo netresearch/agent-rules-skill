@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Extract GitHub repository rulesets (newer API, not just branch protection)
 # Returns JSON with ruleset details for AGENTS.md generation
 # Falls back gracefully if unavailable (no auth, not GitHub, no rulesets)

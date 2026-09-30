@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test for the scope-index heading contract between
 # generate-agents.sh and validate-structure.sh (issue #55).
 #

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Analyze git history for patterns (commit conventions, branching, releases)
 set -euo pipefail
 

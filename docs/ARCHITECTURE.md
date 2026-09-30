@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Architecture Overview
 
 The agent-rules-skill generates and maintains [AGENTS.md](https://agents.md/) files -- structured Markdown context files designed for AI coding agents. It detects project type, extracts commands and architecture rules, and produces thin root files plus scoped subsystem files.
