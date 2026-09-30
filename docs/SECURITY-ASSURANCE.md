@@ -22,7 +22,7 @@ The skill has no server component, stores no data outside the target project, an
 1. The generator does not replace a `CLAUDE.md` or `GEMINI.md` that it did not create, unless the user passes `--force`.
 2. The generator does not replace an existing `AGENTS.md` unless the user passes `--force` or `--update`; `--update` rewrites only the sections between `AGENTS-GENERATED` markers.
 3. With `--dry-run`, `generate-agents.sh` writes no file.
-4. When the user sets `SMOKE_TEST=true`, `verify-commands.sh` refuses to run a command string that could chain a second command through the shell.
+4. When the user sets `SMOKE_TEST=true`, `verify-commands.sh` refuses to run a command string that contains shell metacharacters or whose first word is not on its list of build tools.
 5. The scripts send nothing from the target project to a network service other than the repository's owner and name, used to read its GitHub settings with the user's own `gh` login.
 6. Nothing committed to this repository contains a secret.
 
@@ -48,7 +48,7 @@ The skill has no server component, stores no data outside the target project, an
 | An error in one step goes unnoticed and a later step works on a partial result | The generator, detector, extractor and verification scripts run with `set -euo pipefail`; `score-agents.sh`, `validate-structure.sh` and the tests run with `set -uo pipefail` and handle failures explicitly | `skills/agent-rules/scripts/*.sh`, `scripts/verify-harness.sh`, `Build/Scripts/check-plugin-version.sh` |
 | A secret is committed | Betterleaks scans every push and pull request to `main` | `.github/workflows/security.yml` |
 | A vulnerable or malicious dependency is added | Dependency review fails on high or critical vulnerabilities in a pull request; Composer Audit fails on known PHP advisories; Renovate proposes updates, including pre-commit hook revisions | `.github/workflows/security.yml`, `renovate.json` |
-| Insecure code or workflow patterns | Opengrep fails its check on findings of severity WARNING or higher; zizmor reports workflow findings to code scanning; ShellCheck runs on every shell script at severity `error` in the Skill Validation check | `.github/workflows/security.yml`, `.github/workflows/lint.yml` |
+| Insecure code or workflow patterns | Opengrep fails its check on findings of severity WARNING or higher; zizmor reports workflow findings to code scanning; ShellCheck runs on every `*.sh` file at severity `error` in the Skill Validation check | `.github/workflows/security.yml`, `.github/workflows/lint.yml` |
 
 Which of these checks a pull request must pass before it can be merged is set in the branch protection of `main`, not in this repository. On 2026-09-29 the required checks were Skill Validation, Eval Validation, DCO and CodeQL (repository default setup, languages Actions, Go, JavaScript/TypeScript and Python); the jobs of `security.yml` ran on every pull request but were not required. CodeQL does not analyse shell scripts, which make up the executable part of this skill.
 
@@ -62,7 +62,7 @@ Which of these checks a pull request must pass before it can be merged is set in
 ## What a user cannot expect
 
 - The scripts are not a sandbox. They treat the target project as trusted input; run them only on a project whose contents you trust.
-- `SMOKE_TEST=true` executes the project's own build commands (`make`, `npm run`, `composer`, `go` and others on the list). A documented command runs with the user's permissions.
+- `SMOKE_TEST=true` executes the project's own build commands (`make`, `npm run`, `composer`, `go` and others on the list). A documented command runs with the user's permissions. The list restricts the shell syntax and the first word, not what the tool then does: an allowlisted tool runs whatever the project's build files and the command's own arguments tell it to.
 - `--force` replaces existing `AGENTS.md`, `CLAUDE.md` and `GEMINI.md` files.
 - Text copied from the target project into `AGENTS.md` is not filtered. An agent that reads the generated file follows whatever instructions the project put there; review generated files before committing them.
 - The GitHub settings the generator records are those visible to the user's `gh` login at the time of the run.
