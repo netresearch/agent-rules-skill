@@ -1312,13 +1312,17 @@ fi
 # Generate CLAUDE.md shim if requested
 if [ "$CLAUDE_SHIM" = true ]; then
     CLAUDE_FILE="$PROJECT_DIR/CLAUDE.md"
-    if [ -f "$CLAUDE_FILE" ] && [ "$FORCE" = false ]; then
+    # -e alone follows a symlink, so a dangling one would count as absent and
+    # the write below would land at its target, outside the project.
+    if { [ -e "$CLAUDE_FILE" ] || [ -L "$CLAUDE_FILE" ]; } && [ "$FORCE" = false ]; then
         emit_op keep shim "$CLAUDE_FILE" reason "already exists"
         log "CLAUDE.md already exists, skipping (use --force to regenerate)"
     elif [ "$DRY_RUN" = true ]; then
         emit_op write shim "$CLAUDE_FILE"
         echo "[DRY-RUN] Would create: $CLAUDE_FILE"
     else
+        # Replace a symlink rather than write through it.
+        [ -L "$CLAUDE_FILE" ] && rm -f "$CLAUDE_FILE"
         cat > "$CLAUDE_FILE" << 'CLAUDESHIM'
 <!-- Auto-generated shim for Claude Code compatibility -->
 <!-- Source of truth: AGENTS.md -->

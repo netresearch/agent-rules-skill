@@ -92,5 +92,20 @@ grep -q "Kept: CLAUDE.md" <<<"$OUT" && fail "our own symlink was reported as a f
 [ "$(readlink "$FX/CLAUDE.md")" = "AGENTS.md" ] || fail "second run broke CLAUDE.md"
 pass "re-running keeps our own symlink without a notice"
 
+# --- Test 7: --claude-shim treats a dangling foreign symlink as existing.
+# [ -f ] follows the link, so it read as absent and the shim was written
+# at the link's target, outside the project.
+FX="$WORK/shim-dangling"
+make_fixture "$FX"
+mkdir -p "$WORK/shim-target"
+ln -s ../shim-target/CLAUDE.md "$FX/CLAUDE.md"
+bash "$GENERATE" "$FX" --claude-shim --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[ -e "$WORK/shim-target/CLAUDE.md" ] && fail "--claude-shim wrote through a dangling symlink"
+[ "$(readlink "$FX/CLAUDE.md")" = "../shim-target/CLAUDE.md" ] || fail "--claude-shim changed the symlink without --force"
+bash "$GENERATE" "$FX" --claude-shim --no-symlinks --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[ -e "$WORK/shim-target/CLAUDE.md" ] && fail "--claude-shim --force wrote through the symlink"
+{ [ -f "$FX/CLAUDE.md" ] && [ ! -L "$FX/CLAUDE.md" ]; } || fail "--claude-shim --force did not replace the symlink with the shim"
+pass "--claude-shim keeps a dangling symlink, and --force replaces it instead of writing through it"
+
 echo ""
 echo "All symlink write-boundary tests passed."
