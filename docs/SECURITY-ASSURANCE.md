@@ -13,7 +13,7 @@ This document states what a user can expect from this repository in terms of sec
 | Templates | `skills/agent-rules/assets/` | Rendered by `generate-agents.sh` into the `AGENTS.md` files it writes |
 | Example projects | `skills/agent-rules/references/examples/` | Read as examples; used as generator fixtures in CI (`.github/workflows/validate-agents.yml`) |
 | Generator and checks | `skills/agent-rules/scripts/*.sh`, `skills/agent-rules/scripts/lib/*.sh` | On the user's machine, run by the agent or the user against a project directory given as `PATH` |
-| Repository checks | `scripts/verify-harness.sh`, `Build/Scripts/check-plugin-version.sh`, `Build/hooks/pre-push`, `skills/agent-rules/scripts/tests/*.sh` | In this repository's CI and on contributors' machines |
+| Repository checks | `scripts/verify-harness.sh`, `Build/Scripts/check-plugin-version.sh`, `Build/hooks/pre-push`, `skills/agent-rules/scripts/tests/*.sh` | On contributors' machines (the pre-push hook runs `check-plugin-version.sh`, the others are run by hand); `skills/agent-rules/scripts/tests/*.sh` also in this repository's CI (`test-scripts.yml`) |
 
 The skill has no server component, stores no data outside the target project, and handles no user accounts.
 
