@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: Netresearch DTT GmbH
-
 import { Router, type Request, type Response } from 'express';
 
 const router = Router();

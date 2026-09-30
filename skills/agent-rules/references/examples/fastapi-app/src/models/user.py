@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: Netresearch DTT GmbH
 """User model schemas."""
 
 from datetime import datetime

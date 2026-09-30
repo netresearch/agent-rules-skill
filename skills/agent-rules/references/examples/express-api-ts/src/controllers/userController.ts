@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: Netresearch DTT GmbH
-
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AppError } from '../utils/errors.js';

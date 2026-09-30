@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: Netresearch DTT GmbH
-
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly code?: string;

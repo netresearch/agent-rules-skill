@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: Netresearch DTT GmbH
-
 import winston from 'winston';
 import { config } from '../config.js';
 

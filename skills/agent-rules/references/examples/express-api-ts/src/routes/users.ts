@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: Netresearch DTT GmbH
-
 import { Router } from 'express';
 import { UserController } from '../controllers/userController.js';
 

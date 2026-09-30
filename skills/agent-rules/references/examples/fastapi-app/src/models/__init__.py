@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: Netresearch DTT GmbH
 """Pydantic models for request/response schemas."""
 
 from src.models.item import Item, ItemCreate, ItemUpdate

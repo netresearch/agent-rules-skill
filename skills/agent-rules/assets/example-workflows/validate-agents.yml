@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Example GitHub Actions workflow for validating AGENTS.md files
 # Copy this to your repository's .github/workflows/ directory
 #
