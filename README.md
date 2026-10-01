@@ -167,7 +167,7 @@ Checks that run on every pull request to `main` (`.github/workflows/security.yml
 
 - Dependency review: fails on a known vulnerability of severity high or critical in a dependency the pull request adds or changes.
 - Composer Audit: fails on a known vulnerability in a Composer dependency.
-- Opengrep: static security analysis of the repository's code; fails on a finding from an Opengrep rule of severity WARNING (the shared workflow's default `--severity WARNING` selects only those rules).
+- Opengrep: static security analysis of the repository's code; which findings fail the check is set by the [organisation's static analysis rule](https://github.com/netresearch/.github/blob/main/SECURITY.md#static-analysis-sast).
 - Betterleaks: fails on a committed secret.
 - zizmor: static analysis of the GitHub Actions workflows; findings go to code scanning and do not fail the check.
 
