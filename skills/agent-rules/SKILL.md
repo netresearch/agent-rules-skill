@@ -52,6 +52,7 @@ See `references/scripts-guide.md` for full options.
 2. **Extract**: `extract-commands.sh`, `extract-ci-rules.sh` — gather facts
 3. **Generate**: `generate-agents.sh --style=thin` (default) or `--verbose`
 4. **Verify**: `verify-content.sh` + `verify-commands.sh` -- MANDATORY before done
+5. **Line cap**: before committing any root AGENTS.md edit, `wc -l AGENTS.md` must be under 150 (harness `AH-02`); run the repo's `verify-harness.sh` where it exists -- CI's harness check fails otherwise
 
 `--update` preserves curated content outside `<!-- GENERATED -->` markers.
 
