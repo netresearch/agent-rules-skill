@@ -64,5 +64,18 @@ else
     echo "⚠️  SKIP: ssh-keygen not found, signature program case not run"
 fi
 
+# Run from a git hook, GIT_DIR and GIT_INDEX_FILE point at the calling
+# repository; the scripts still answer for the analysed project.
+fx="$WORK/located"
+mkdir -p "$fx/src"
+printf 'package main\n' > "$fx/src/main.go"
+git -C "$fx" init -q
+git -C "$fx" add -A
+git init -q "$WORK/caller"
+out="$(cd "$fx" && GIT_DIR="$WORK/caller/.git" GIT_INDEX_FILE="$WORK/caller/.git/index" \
+    timeout 60 bash "$SCRIPTS_DIR/generate-file-map.sh" "$fx" 2>/dev/null)"
+grep -q 'src/' <<<"$out" || fail "generate-file-map.sh listed another repository's files (output: $out)"
+pass "inherited GIT_DIR and GIT_INDEX_FILE do not redirect the scripts"
+
 echo ""
 echo "All untrusted git config tests passed."
