@@ -15,6 +15,7 @@ fi
 
 PROJECT_DIR="."
 JSON=false
+UPDATE_VERIFIED=false
 
 # Parse flags. Preserves the original positional semantics (PROJECT_DIR="${1:-.}"):
 # the first non-flag argument becomes PROJECT_DIR, defaulting to "." when absent.
@@ -22,6 +23,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --json)
             JSON=true
+            shift
+            ;;
+        --update-verified)
+            UPDATE_VERIFIED=true
             shift
             ;;
         --help|-h)
@@ -32,11 +37,13 @@ Verify that commands documented in AGENTS.md actually exist (and optionally run)
 
 Options:
   --json                Emit machine-readable JSON on stdout (human output suppressed)
+  --update-verified     On success, record today's date in the "Last verified"
+                        marker of AGENTS.md (without it, AGENTS.md is not changed)
   --help, -h            Show this help message
 
 Environment variables:
   VERBOSE=true          Show detailed [INFO] output on stderr
-  DRY_RUN=true          Skip writing the JSON sidecar and updating timestamps
+  DRY_RUN=true          Skip writing the JSON sidecar and the --update-verified date
   SMOKE_TEST=true       Actually run safe commands (not just check existence)
   TIMEOUT=SECONDS       Per-command timeout for smoke tests (default: 60)
   OUTPUT_JSON=PATH      Sidecar results file (default: PROJECT_DIR/.agents/command-verification.json)
@@ -851,8 +858,8 @@ else
         [ "$SIDECAR_WRITABLE" = true ] && echo "Verification results saved to $OUTPUT_JSON"
     fi
 
-    # Update verified timestamp if not dry-run
-    if [ "$DRY_RUN" = false ] && [ -w "$AGENTS_FILE" ]; then
+    # A verification run changes the file it checks only when asked to.
+    if [ "$DRY_RUN" = false ] && [ "$UPDATE_VERIFIED" = true ] && [ -w "$AGENTS_FILE" ]; then
         TODAY=$(date +%Y-%m-%d)
         if grep -q "Last verified:" "$AGENTS_FILE"; then
             # Portable sed -i: use backup extension then remove backup

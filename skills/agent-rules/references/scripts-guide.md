@@ -171,11 +171,11 @@ This script:
 - Verifies npm/yarn scripts exist in package.json
 - Verifies make targets exist in Makefile
 - Verifies composer scripts exist in composer.json
-- Updates "Last verified" timestamp on success
+- With `--update-verified`, records the date in the "Last verified" marker of AGENTS.md on success; without it, AGENTS.md is not changed
 
 Options:
 - `VERBOSE=true` - Show detailed output
-- `DRY_RUN=true` - Don't update timestamp
+- `DRY_RUN=true` - Don't write the results file or the `--update-verified` date
 
 **Why this matters:** Research shows broken commands waste 500+ tokens as agents debug non-existent commands. Verified commands enable confident execution.
 
