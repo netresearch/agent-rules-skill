@@ -365,7 +365,7 @@ enforce_byte_budget() {
 
     # Write pruned content
     if [ "$pruned" = true ]; then
-        echo "$content" > "$file"
+        printf '%s\n' "$content" | replace_file "$file"
         local new_size
         new_size=$(wc -c < "$file")
         echo "⚠️  Pruned due to size budget ($size → $new_size bytes)"
@@ -820,7 +820,9 @@ build_workflow_info() {
 # Generate root AGENTS.md
 ROOT_FILE="$PROJECT_DIR/AGENTS.md"
 
-if [ -f "$ROOT_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+# A symlink counts as existing, dangling or not: [ -f ] follows it, and a
+# dangling one would read as absent and be written at its target.
+if { [ -e "$ROOT_FILE" ] || [ -L "$ROOT_FILE" ]; } && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
     emit_op keep agents-file "$ROOT_FILE" reason "already exists"
     log "Root AGENTS.md already exists, skipping (use --force to regenerate)"
 elif [ "$DRY_RUN" = true ]; then
@@ -1387,7 +1389,7 @@ else
         SCOPE_TYPE=$(echo "$scope" | jq -r '.type')
         SCOPE_FILE="$PROJECT_DIR/$SCOPE_PATH/AGENTS.md"
 
-        if [ -f "$SCOPE_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+        if { [ -e "$SCOPE_FILE" ] || [ -L "$SCOPE_FILE" ]; } && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
             emit_op keep agents-file "$SCOPE_FILE" reason "already exists"
             log "Scoped AGENTS.md already exists: $SCOPE_PATH, skipping"
             continue
