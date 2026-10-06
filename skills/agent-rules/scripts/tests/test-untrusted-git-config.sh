@@ -32,6 +32,7 @@ for script in generate-file-map.sh analyze-git-history.sh check-freshness.sh \
     # fsmonitor command.
     echo changed >> "$fx/src/main.go"
     (cd "$fx" && timeout 60 bash "$SCRIPTS_DIR/$script" "$fx" >/dev/null 2>&1)
+    [ $? -eq 124 ] && fail "$script timed out"
     [ -e "$WORK/$script.ran" ] && fail "$script ran a command from the project's git config"
 done
 pass "no script runs the core.fsmonitor command of the analysed project"
@@ -55,6 +56,7 @@ if command -v ssh-keygen >/dev/null 2>&1; then
     git -C "$fx" config log.showSignature true
     for script in analyze-git-history.sh check-freshness.sh detect-golden-samples.sh; do
         (cd "$fx" && timeout 60 bash "$SCRIPTS_DIR/$script" "$fx" >/dev/null 2>&1)
+        [ $? -eq 124 ] && fail "$script timed out"
         [ -e "$WORK/signature.ran" ] && fail "$script ran the signature program of the project's git config"
     done
     pass "no script runs the signature program of the analysed project"
