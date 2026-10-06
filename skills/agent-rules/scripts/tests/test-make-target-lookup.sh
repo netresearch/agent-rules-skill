@@ -54,5 +54,13 @@ grep -q "make target not found: release" <<<"$OUT" || fail "a missing target was
 grep -q "make target not found: VERSION" <<<"$OUT" || fail "a variable assignment was taken for a target (output was: $OUT)"
 pass "a missing target and a variable are reported as not found"
 
+# macOS realpath has no -e; the lookup must not depend on it.
+mkdir -p "$WORK/bin"
+printf '#!/bin/sh\nexit 1\n' > "$WORK/bin/realpath"
+chmod +x "$WORK/bin/realpath"
+OUT="$(cd "$FX" && PATH="$WORK/bin:$PATH" DRY_RUN=true bash "$VERIFY" . 2>&1)" || true
+grep -q "make target exists: lint" <<<"$OUT" || fail "the lookup needs realpath (output was: $OUT)"
+pass "the lookup works without a usable realpath"
+
 echo ""
 echo "All make target lookup tests passed."

@@ -335,7 +335,7 @@ extract_commands() {
 # it includes, without running make: even `make -n` expands $(shell ...) while
 # it parses, which would run the project's commands just to look up a target.
 # An include naming a variable needs make to expand it and is skipped; globs
-# are expanded; a file outside the project is ignored.
+# are expanded; a file outside the project or a symlinked one is ignored.
 makefile_files() {
     local first="" f word match real root
     for f in GNUmakefile makefile Makefile; do
@@ -348,7 +348,11 @@ makefile_files() {
     while [ "${#queue[@]}" -gt 0 ]; do
         f="${queue[0]}"
         queue=("${queue[@]:1}")
-        real="$(realpath -e -- "$f" 2>/dev/null)" || continue
+        # A symlinked makefile is skipped; the directory is resolved with
+        # cd/pwd -P because macOS realpath has no -e.
+        [ -L "$f" ] && continue
+        [ -f "$f" ] || continue
+        real="$(cd "$(dirname "$f")" 2>/dev/null && pwd -P)/$(basename "$f")" || continue
         [[ "$real" == "$root"/* ]] || continue
         [ -n "${seen[$real]:-}" ] && continue
         seen[$real]=1
