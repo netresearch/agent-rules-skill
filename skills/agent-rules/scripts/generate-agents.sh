@@ -390,6 +390,22 @@ PROJECT_TYPE=$(echo "$PROJECT_INFO" | jq -r '.type')
 # Detect scopes
 log "Detecting scopes..."
 SCOPES_INFO=$("$SCRIPT_DIR/detect-scopes.sh" "$PROJECT_DIR")
+# A scope directory that resolves outside the project (through a symlink) is
+# dropped before anything uses the list: its AGENTS.md and compatibility links
+# would be written there, and the root index would point at it.
+outside_scopes=()
+while IFS= read -r scope_path; do
+    [ -n "$scope_path" ] || continue
+    scope_real="$(cd "$PROJECT_DIR/$scope_path" 2>/dev/null && pwd -P)" || scope_real=""
+    if [[ "$scope_real" != "$PROJECT_REAL" && "$scope_real" != "$PROJECT_REAL"/* ]]; then
+        outside_scopes+=("$scope_path")
+        emit_op keep agents-file "$PROJECT_DIR/$scope_path/AGENTS.md" reason "resolves outside the project"
+        echo "⚠️  Skipped: $scope_path resolves outside the project"
+    fi
+done < <(echo "$SCOPES_INFO" | jq -r '.scopes[]?.path')
+if [ "${#outside_scopes[@]}" -gt 0 ]; then
+    SCOPES_INFO=$(echo "$SCOPES_INFO" | jq --args '.scopes |= map(select(.path as $p | $ARGS.positional | index($p) | not))' "${outside_scopes[@]}")
+fi
 [ "$VERBOSE" = true ] && echo "$SCOPES_INFO" | jq . >&2
 
 # Map language to stack filter for extract-commands.sh
@@ -1400,15 +1416,6 @@ else
         SCOPE_TYPE=$(echo "$scope" | jq -r '.type')
         SCOPE_FILE="$PROJECT_DIR/$SCOPE_PATH/AGENTS.md"
 
-        # A scope directory that resolves outside the project (through a
-        # symlink) is skipped: its AGENTS.md and compatibility links would be
-        # written there.
-        scope_real="$(cd "$PROJECT_DIR/$SCOPE_PATH" 2>/dev/null && pwd -P)" || scope_real=""
-        if [[ "$scope_real" != "$PROJECT_REAL" && "$scope_real" != "$PROJECT_REAL"/* ]]; then
-            emit_op keep agents-file "$SCOPE_FILE" reason "resolves outside the project"
-            echo "⚠️  Skipped: $SCOPE_PATH resolves outside the project"
-            continue
-        fi
 
         if { [ -e "$SCOPE_FILE" ] || [ -L "$SCOPE_FILE" ]; } && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
             emit_op keep agents-file "$SCOPE_FILE" reason "already exists"

@@ -117,6 +117,7 @@ ln -s ../../outside-skill "$FX/skills/evil"
 generate "$FX" || fail "generate-agents.sh errored"
 [ -e "$WORK/outside-skill/AGENTS.md" ] && fail "a scoped AGENTS.md was written through a symlinked directory"
 [ "$(ls -A "$WORK/outside-skill")" = SKILL.md ] || fail "files were created in the symlinked scope's target"
+grep -q 'skills/evil' "$FX/AGENTS.md" && fail "the root index lists the skipped scope"
 pass "a scope directory resolving outside the project is skipped"
 
 echo ""
