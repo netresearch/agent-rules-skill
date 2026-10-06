@@ -285,6 +285,87 @@ extract_commands() {
     grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |python |pip |poetry |uv |deno |gradle |php |vendor/bin/)[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/`//g' || true
 }
 
+# Print the makefile make would read in the current directory and every file
+# it includes, without running make: even `make -n` expands $(shell ...) while
+# it parses, which would run the project's commands just to look up a target.
+# An include naming a variable needs make to expand it and is skipped; globs
+# are expanded; a file outside the project is ignored.
+makefile_files() {
+    local first="" f word match real root
+    for f in GNUmakefile makefile Makefile; do
+        if [ -f "$f" ]; then first="$f"; break; fi
+    done
+    [ -n "$first" ] || return 0
+    root="$(pwd -P)"
+    local -a queue=("$first")
+    local -A seen=()
+    while [ "${#queue[@]}" -gt 0 ]; do
+        f="${queue[0]}"
+        queue=("${queue[@]:1}")
+        real="$(realpath -e -- "$f" 2>/dev/null)" || continue
+        [[ "$real" == "$root"/* ]] || continue
+        [ -n "${seen[$real]:-}" ] && continue
+        seen[$real]=1
+        printf '%s\n' "$f"
+        while IFS= read -r word; do
+            [[ "$word" == *'$'* ]] && continue
+            while IFS= read -r match; do
+                [ -n "$match" ] && queue+=("$match")
+            done < <(compgen -G "$word" || true)
+        done < <(awk '/^[ \t]*(-|s)?include[ \t]/ {
+                     sub(/^[ \t]*(-|s)?include[ \t]+/, ""); sub(/[ \t]*#.*/, "")
+                     n = split($0, w, /[ \t]+/)
+                     for (i = 1; i <= n; i++) if (w[i] != "") print w[i]
+                 }' "$f")
+    done
+}
+
+# Print the targets of the makefile and its includes, read as text: explicit
+# targets, names listed as .PHONY prerequisites (make accepts those), and
+# pattern rules such as plan-% (matched by makefile_has_target). Variable
+# assignments (VAR = x, VAR := x, VAR ::= x, export VAR := x), recipe lines,
+# define blocks and other special targets are not targets.
+makefile_targets() {
+    local f
+    while IFS= read -r f; do
+        awk '
+            /^define[ \t]/ || /^define$/ { in_define = 1; next }
+            in_define { if ($0 ~ /^endef/) in_define = 0; next }
+            /^\t/ || /^[ \t]*#/ { next }
+            {
+                line = $0
+                sub(/[ \t]*#.*/, "", line)
+                p = index(line, ":")
+                if (p == 0) next
+                head = substr(line, 1, p - 1)
+                rest = substr(line, p + 1)
+                if (rest ~ /^:?=/ || head ~ /[=$]/) next
+                if (head ~ /^[ \t]*\.PHONY[ \t]*$/) {
+                    n = split(rest, t, /[ \t]+/)
+                    for (i = 1; i <= n; i++) if (t[i] != "" && t[i] !~ /\$/) print t[i]
+                    next
+                }
+                n = split(head, t, /[ \t]+/)
+                for (i = 1; i <= n; i++)
+                    if (t[i] != "" && t[i] !~ /^\./) print t[i]
+            }' "$f"
+    done < <(makefile_files)
+}
+
+# Is <target> a target of the makefile in the current directory, by name or
+# through a pattern rule?
+makefile_has_target() {
+    local target="$1" targets t
+    targets="$(makefile_targets)"
+    grep -qxF -- "$target" <<<"$targets" && return 0
+    while IFS= read -r t; do
+        [[ "$t" == *%* ]] || continue
+        # shellcheck disable=SC2053  # the pattern is meant to match as a glob
+        [[ "$target" == ${t//%/*} ]] && return 0
+    done <<<"$targets"
+    return 1
+}
+
 # Verify a single command exists (not that it succeeds, just that it's callable)
 verify_command() {
     local cmd="$1"
@@ -362,7 +443,7 @@ verify_command() {
             local target="${cmd#make }"
             target="${target%% *}"
             if [ -f "Makefile" ] || [ -f "makefile" ] || [ -f "GNUmakefile" ]; then
-                if make -n "$target" > /dev/null 2>&1; then
+                if makefile_has_target "$target"; then
                     if [ "$SMOKE_TEST" = true ]; then
                         # Use make -n (dry run) for smoke test to avoid side effects
                         if smoke_test_command "make -n $target"; then
