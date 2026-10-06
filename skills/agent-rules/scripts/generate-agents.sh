@@ -1338,9 +1338,8 @@ if [ "$CLAUDE_SHIM" = true ]; then
         emit_op write shim "$CLAUDE_FILE"
         echo "[DRY-RUN] Would create: $CLAUDE_FILE"
     else
-        # Replace a symlink rather than write through it.
-        [ -L "$CLAUDE_FILE" ] && rm -f "$CLAUDE_FILE"
-        cat > "$CLAUDE_FILE" << 'CLAUDESHIM'
+        # replace_file replaces a symlink rather than writing through it.
+        replace_file "$CLAUDE_FILE" << 'CLAUDESHIM'
 <!-- Auto-generated shim for Claude Code compatibility -->
 <!-- Source of truth: AGENTS.md -->
 <!-- Re-generate with: generate-agents.sh --claude-shim -->
@@ -2399,10 +2398,9 @@ else
                         emit_op write compat-file "$SYMLINK_FILE" note "@AGENTS.md import file"
                         echo "[DRY-RUN] Would write import file: $SYMLINK_FILE (@AGENTS.md)"
                     else
-                        rm -f "$SYMLINK_FILE"
                         printf '%s\n\n%s\n' \
                             '<!-- Regular file, not a symlink: the TYPO3 docs renderer (Flysystem) rejects symbolic links inside Documentation/. -->' \
-                            '@AGENTS.md' > "$SYMLINK_FILE"
+                            '@AGENTS.md' | replace_file "$SYMLINK_FILE"
                         emit_op write compat-file "$SYMLINK_FILE" note "@AGENTS.md import file"
                         echo "   ↳ Import file: $SCOPE_PATH/$symlink_name (@AGENTS.md, symlink-hostile directory)"
                     fi
