@@ -130,17 +130,23 @@ is_safe_command() {
     # redirection (< >), grouping ({ } ( )), globs that could expand into
     # further arguments, and newlines. A documented build command needs none
     # of them; anything that does is not verifiable by smoke-running it.
-    if [[ "$cmd" == *[\;\&\|\`\$\<\>\{\}\(\)\*\?\!$'\n']* ]]; then
+    # A backslash is rejected too: bash -c would remove it, so "-ex\ec" would
+    # reach the program as an option the checks below look for by name.
+    if [[ "$cmd" == *[\;\&\|\`\$\<\>\{\}\(\)\*\?\!\\$'\n']* ]]; then
         return 1
     fi
 
     # Whitelist of known safe base commands.
     # These are common build/dev tools that are safe to invoke for verification.
+    # sed, awk, sort, uniq and less are not on it: their own arguments can run a
+    # command or write a file (sed's e and w, awk -f, sort -o and
+    # --compress-program, uniq's output file, less's shell escape), and none of
+    # them is a build command whose documentation needs verifying.
     local -a ALLOWED_COMMANDS=(
-        # Version control
+        # Version control (only `git --version`, see has_safe_arguments)
         git
         # File inspection
-        ls cat head tail less wc file stat find grep egrep fgrep rg ag sed awk sort uniq diff
+        ls cat head tail wc file stat find grep egrep fgrep rg ag diff
         # Build tools / package managers
         make go npm yarn pnpm bun composer cargo deno gradle gradlew python python3 pip pip3
         poetry uv pytest php phpunit node ruby bundle gem mvn ant
@@ -169,15 +175,60 @@ is_safe_command() {
         return 0
     fi
 
-    # Check against whitelist
+    # Check against whitelist, then the arguments
     for allowed in "${ALLOWED_COMMANDS[@]}"; do
         if [[ "$base_cmd" == "$allowed" ]]; then
-            return 0
+            has_safe_arguments "$base_cmd" "$cmd"
+            return
         fi
     done
 
     # Not in whitelist - reject
     return 1
+}
+
+# The first word decides nothing for a tool whose own arguments can run a
+# command or write a file. These are allowed only in the forms that do
+# neither. Quotes are removed before comparing, as bash -c would remove them.
+has_safe_arguments() {
+    local base="$1" cmd="$2" w
+    local -a words=()
+    read -ra words <<<"${cmd//[\'\"]/}"
+    case "$base" in
+        git)
+            # Any other git command reads the analysed repository's config,
+            # which can name commands git runs (core.fsmonitor, filters,
+            # aliases, diff drivers).
+            [[ ${#words[@]} -eq 2 && ( "${words[1]}" == "--version" || "${words[1]}" == "version" ) ]]
+            return
+            ;;
+        docker|podman)
+            # Informational subcommands only, named first (no global options).
+            [[ ${#words[@]} -ge 2 ]] || return 1
+            case "${words[1]}" in
+                version|--version|info|ps|images) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+        find)
+            for w in "${words[@]:1}"; do
+                case "$w" in
+                    -exec|-execdir|-ok|-okdir|-delete|-fprint|-fprint0|-fprintf|-fls) return 1 ;;
+                esac
+            done
+            ;;
+        rg)
+            for w in "${words[@]:1}"; do
+                [[ "$w" == --pre || "$w" == --pre=* ]] && return 1
+            done
+            ;;
+        yq)
+            for w in "${words[@]:1}"; do
+                [[ "$w" == --inplace* || "$w" =~ ^-[A-Za-z]*i[A-Za-z]*$ ]] && return 1
+            done
+            ;;
+    esac
+    return 0
 }
 
 # Portable milliseconds timestamp (works on both GNU and BSD date)

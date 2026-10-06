@@ -51,12 +51,13 @@ pass "plain allowlisted command is still smoke-tested"
 
 # --- Test 3: the predicate itself, per shell construct
 eval "$(awk '/^is_safe_command\(\) \{/,/^\}/' "$VERIFY")"
+eval "$(awk '/^has_safe_arguments\(\) \{/,/^\}/' "$VERIFY")"
 expect() {
     local cmd="$1" want="$2" got
     if is_safe_command "$cmd"; then got=allow; else got=reject; fi
     [ "$got" = "$want" ] || fail "is_safe_command: want $want, got $got for <$cmd>"
 }
-expect 'git status' allow
+expect 'git --version' allow
 expect 'npm test' allow
 expect 'make -n test' allow
 expect 'vendor/bin/phpunit --filter Foo' allow
@@ -75,6 +76,43 @@ expect 'bash -n scripts/*.sh' reject          # glob
 expect 'rm -rf /' reject                      # not on the allowlist
 expect 'curl http://example.com' reject       # network fetch, deliberately dropped
 pass "is_safe_command rejects every shell construct that can chain a command"
+
+# --- Test 4: an allowlisted tool is judged by its arguments too.
+# A tool whose options run a command or write a file is only smoke-tested in
+# the forms that do neither; the first word alone decides nothing.
+expect 'git status' reject                    # reads repository config that can name commands
+expect 'git -c core.pager=x log' reject       # config on the command line
+expect 'git version' allow
+expect 'find . -name x' allow
+expect 'find . -exec touch x ;' reject        # the ; alone is already rejected
+expect 'find . -execdir touch x +' reject
+expect 'find . -delete' reject
+expect 'find . -fprintf out x' reject
+expect "find . '-exec' touch x +" reject      # quoting does not hide an option
+expect 'find . -ex\ec touch x +' reject       # neither does a backslash
+expect 'rg --pre touch x' reject
+expect 'rg --pre=touch x' reject
+expect 'rg TODO src' allow
+expect 'yq -i .a=1 f.yaml' reject
+expect 'yq --inplace .a=1 f.yaml' reject
+expect 'yq .a f.yaml' allow
+expect 'docker ps' allow
+expect 'docker run alpine touch x' reject
+expect 'podman -H tcp://x ps' reject
+expect 'sed -n p README.md' reject            # its script language runs commands
+expect 'awk -f x.awk README.md' reject
+expect 'sort -o out README.md' reject
+pass "is_safe_command judges the arguments of tools whose options run commands or write files"
+
+# --- Test 5: the git case end to end. A repository's own config can name a
+# command that `git status` runs; that command must not run.
+FX="$WORK/git-config"
+write_agents "$FX" "git status"
+git -C "$FX" init -q
+git -C "$FX" config core.fsmonitor "touch $FX/PWNED; false"
+OUT="$(cd "$FX" && SMOKE_TEST=true bash "$VERIFY" . 2>&1)" || true
+[ -e "$FX/PWNED" ] && fail "a command from the repository's git config ran during the smoke test"
+pass "git status is not smoke-run in the analysed repository"
 
 echo ""
 echo "All command allowlist tests passed."
