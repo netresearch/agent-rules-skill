@@ -4,6 +4,10 @@
 # Check if AGENTS.md files are up to date with recent git commits
 # Compares the "Last updated" date in each AGENTS.md with commits affecting that scope
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # the pre-commit hook runs shellcheck without
+# -x, so it cannot follow this source no matter how the path is written.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git.sh"
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
@@ -56,7 +60,7 @@ EOF
 done
 
 # Ensure we're in a git repository
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
+if ! project_git rev-parse --git-dir > /dev/null 2>&1; then
     echo "Error: Not a git repository"
     exit 1
 fi
@@ -128,10 +132,10 @@ count_commits_since() {
 
     if [ "$scope_path" = "." ]; then
         # Root: check all commits except AGENTS.md files themselves
-        count=$(git log --oneline --since="$since_date" -- . ':(exclude)**/AGENTS.md' 2>/dev/null | wc -l)
+        count=$(project_git log --oneline --since="$since_date" -- . ':(exclude)**/AGENTS.md' 2>/dev/null | wc -l)
     else
         # Scoped: check commits in that directory
-        count=$(git log --oneline --since="$since_date" -- "$scope_path" ':(exclude)**/AGENTS.md' 2>/dev/null | wc -l)
+        count=$(project_git log --oneline --since="$since_date" -- "$scope_path" ':(exclude)**/AGENTS.md' 2>/dev/null | wc -l)
     fi
 
     echo "$count"
@@ -143,9 +147,9 @@ get_commits_since() {
     local since_date="$2"
 
     if [ "$scope_path" = "." ]; then
-        git log --oneline --since="$since_date" -- . ':(exclude)**/AGENTS.md' 2>/dev/null | head -10
+        project_git log --oneline --since="$since_date" -- . ':(exclude)**/AGENTS.md' 2>/dev/null | head -10
     else
-        git log --oneline --since="$since_date" -- "$scope_path" ':(exclude)**/AGENTS.md' 2>/dev/null | head -10
+        project_git log --oneline --since="$since_date" -- "$scope_path" ':(exclude)**/AGENTS.md' 2>/dev/null | head -10
     fi
 }
 
@@ -155,9 +159,9 @@ get_changed_files_since() {
     local since_date="$2"
 
     if [ "$scope_path" = "." ]; then
-        git log --name-only --pretty=format: --since="$since_date" -- . ':(exclude)**/AGENTS.md' 2>/dev/null | sort -u | grep -v '^$' | head -20
+        project_git log --name-only --pretty=format: --since="$since_date" -- . ':(exclude)**/AGENTS.md' 2>/dev/null | sort -u | grep -v '^$' | head -20
     else
-        git log --name-only --pretty=format: --since="$since_date" -- "$scope_path" ':(exclude)**/AGENTS.md' 2>/dev/null | sort -u | grep -v '^$' | head -20
+        project_git log --name-only --pretty=format: --since="$since_date" -- "$scope_path" ':(exclude)**/AGENTS.md' 2>/dev/null | sort -u | grep -v '^$' | head -20
     fi
 }
 

@@ -3,12 +3,16 @@
 # SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Analyze git history for patterns (commit conventions, branching, releases)
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # the pre-commit hook runs shellcheck without
+# -x, so it cannot follow this source no matter how the path is written.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git.sh"
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
 # Check if we're in a git repository
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
+if ! project_git rev-parse --git-dir > /dev/null 2>&1; then
     echo '{"error": "Not a git repository"}'
     exit 0
 fi
@@ -29,7 +33,7 @@ count_matches() {
 # Analyze commit message conventions
 analyze_commit_convention() {
     local commits
-    commits=$(git log --oneline -"$SAMPLE_SIZE" --pretty=format:"%s" 2>/dev/null || echo "")
+    commits=$(project_git log --oneline -"$SAMPLE_SIZE" --pretty=format:"%s" 2>/dev/null || echo "")
 
     if [ -z "$commits" ]; then
         echo '{"convention": "unknown", "confidence": 0}'
@@ -113,7 +117,7 @@ analyze_commit_convention() {
 # Analyze branch naming
 analyze_branch_naming() {
     local branches
-    branches=$(git branch -r 2>/dev/null | grep -v HEAD | sed 's/.*\///' | head -50 || echo "")
+    branches=$(project_git branch -r 2>/dev/null | grep -v HEAD | sed 's/.*\///' | head -50 || echo "")
 
     if [ -z "$branches" ]; then
         echo '{"pattern": "unknown", "stats": {"total_branches": 0}}'
@@ -180,10 +184,10 @@ analyze_branch_naming() {
 # Analyze merge strategy
 analyze_merge_strategy() {
     local merge_commits
-    merge_commits=$(git log --oneline -"$SAMPLE_SIZE" --merges 2>/dev/null | wc -l || echo "0")
+    merge_commits=$(project_git log --oneline -"$SAMPLE_SIZE" --merges 2>/dev/null | wc -l || echo "0")
 
     local total_commits
-    total_commits=$(git log --oneline -"$SAMPLE_SIZE" 2>/dev/null | wc -l || echo "0")
+    total_commits=$(project_git log --oneline -"$SAMPLE_SIZE" 2>/dev/null | wc -l || echo "0")
 
     if [ "$total_commits" -eq 0 ]; then
         echo '{"strategy": "unknown"}'
@@ -203,7 +207,7 @@ analyze_merge_strategy() {
 
     # Check for squash patterns in commit messages
     local squash_patterns
-    squash_patterns=$(git log --oneline -"$SAMPLE_SIZE" 2>/dev/null | grep -cE '\(#[0-9]+\)$' || echo "0")
+    squash_patterns=$(project_git log --oneline -"$SAMPLE_SIZE" 2>/dev/null | grep -cE '\(#[0-9]+\)$' || echo "0")
 
     if [ "$squash_patterns" -gt $((total_commits / 3)) ]; then
         strategy="squash-and-merge"
@@ -227,7 +231,7 @@ analyze_merge_strategy() {
 # Analyze release tagging
 analyze_releases() {
     local tags
-    tags=$(git tag -l 2>/dev/null | tail -20 || echo "")
+    tags=$(project_git tag -l 2>/dev/null | tail -20 || echo "")
 
     if [ -z "$tags" ]; then
         echo '{"pattern": "none", "total_tags": 0}'
@@ -258,7 +262,7 @@ analyze_releases() {
 
     # Get latest tag
     local latest_tag
-    latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+    latest_tag=$(project_git describe --tags --abbrev=0 2>/dev/null || echo "")
 
     jq -n \
         --arg pattern "$pattern" \
@@ -280,13 +284,13 @@ analyze_releases() {
 # Analyze default branch
 analyze_default_branch() {
     local default_branch
-    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "")
+    default_branch=$(project_git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "")
 
     if [ -z "$default_branch" ]; then
         # Try to detect from common names
-        if git show-ref --verify --quiet refs/heads/main 2>/dev/null; then
+        if project_git show-ref --verify --quiet refs/heads/main 2>/dev/null; then
             default_branch="main"
-        elif git show-ref --verify --quiet refs/heads/master 2>/dev/null; then
+        elif project_git show-ref --verify --quiet refs/heads/master 2>/dev/null; then
             default_branch="master"
         fi
     fi

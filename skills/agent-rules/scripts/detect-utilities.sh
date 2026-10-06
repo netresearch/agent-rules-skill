@@ -3,12 +3,16 @@
 # SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Detect utility files and libraries to prevent reinvention
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # the pre-commit hook runs shellcheck without
+# -x, so it cannot follow this source no matter how the path is written.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git.sh"
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
 # Check if git is available
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
+if ! project_git rev-parse --git-dir > /dev/null 2>&1; then
     echo ""
     exit 0
 fi
