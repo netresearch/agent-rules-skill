@@ -90,5 +90,34 @@ make_fixture "$FX"
     || fail "AGENTS.md is not mode 644 under umask 022"
 pass "a generated AGENTS.md follows the umask"
 
+# --- Test 6: --force keeps the mode of an existing AGENTS.md
+FX="$WORK/keep-mode"
+make_fixture "$FX"
+printf 'private\n' > "$FX/AGENTS.md"
+chmod 600 "$FX/AGENTS.md"
+(umask 022 && generate "$FX" --force) || fail "generate-agents.sh --force errored"
+[ "$(stat -c %a "$FX/AGENTS.md" 2>/dev/null || stat -f %Lp "$FX/AGENTS.md")" = 600 ] \
+    || fail "--force widened the mode of an existing AGENTS.md"
+pass "--force keeps the mode of an existing AGENTS.md"
+
+# --- Test 7: a directory named AGENTS.md is refused, not written into
+FX="$WORK/dir-target"
+make_fixture "$FX"
+mkdir "$FX/AGENTS.md"
+generate "$FX" --force && fail "a directory named AGENTS.md was reported as written"
+[ -z "$(ls -A "$FX/AGENTS.md")" ] || fail "a file was moved into the AGENTS.md directory"
+pass "a directory named AGENTS.md is refused"
+
+# --- Test 8: a scope directory that is a symlink out of the project is skipped
+FX="$WORK/scope-dir-link"
+make_fixture "$FX"
+mkdir -p "$WORK/outside-skill" "$FX/skills"
+printf -- '---\nname: x\ndescription: "Use when testing."\n---\n' > "$WORK/outside-skill/SKILL.md"
+ln -s ../../outside-skill "$FX/skills/evil"
+generate "$FX" || fail "generate-agents.sh errored"
+[ -e "$WORK/outside-skill/AGENTS.md" ] && fail "a scoped AGENTS.md was written through a symlinked directory"
+[ "$(ls -A "$WORK/outside-skill")" = SKILL.md ] || fail "files were created in the symlinked scope's target"
+pass "a scope directory resolving outside the project is skipped"
+
 echo ""
 echo "All AGENTS.md write-boundary tests passed."

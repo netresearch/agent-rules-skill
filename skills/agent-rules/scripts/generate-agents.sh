@@ -115,6 +115,8 @@ fi
 
 # Convert to absolute path before cd (so subsequent script calls work)
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+# Physical path of the project, for keeping scoped writes inside it.
+PROJECT_REAL="$(cd "$PROJECT_DIR" && pwd -P)"
 cd "$PROJECT_DIR"
 
 # --json emits the write manifest instead of the prose, the same way the
@@ -1397,6 +1399,16 @@ else
         SCOPE_PATH=$(echo "$scope" | jq -r '.path')
         SCOPE_TYPE=$(echo "$scope" | jq -r '.type')
         SCOPE_FILE="$PROJECT_DIR/$SCOPE_PATH/AGENTS.md"
+
+        # A scope directory that resolves outside the project (through a
+        # symlink) is skipped: its AGENTS.md and compatibility links would be
+        # written there.
+        scope_real="$(cd "$PROJECT_DIR/$SCOPE_PATH" 2>/dev/null && pwd -P)" || scope_real=""
+        if [[ "$scope_real" != "$PROJECT_REAL" && "$scope_real" != "$PROJECT_REAL"/* ]]; then
+            emit_op keep agents-file "$SCOPE_FILE" reason "resolves outside the project"
+            echo "⚠️  Skipped: $SCOPE_PATH resolves outside the project"
+            continue
+        fi
 
         if { [ -e "$SCOPE_FILE" ] || [ -L "$SCOPE_FILE" ]; } && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
             emit_op keep agents-file "$SCOPE_FILE" reason "already exists"
