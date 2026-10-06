@@ -3,12 +3,16 @@
 # SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Generate file map (dir → purpose) for AGENTS.md
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # the pre-commit hook runs shellcheck without
+# -x, so it cannot follow this source no matter how the path is written.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git.sh"
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
 # Check if git is available
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
+if ! project_git rev-parse --git-dir > /dev/null 2>&1; then
     echo "# Not a git repository - cannot generate file map" >&2
     echo ""
     exit 0
@@ -91,7 +95,7 @@ declare -A DIR_PURPOSES=(
 
 # Get top-level directories with file counts
 get_directories() {
-    git ls-files | cut -d/ -f1 | sort | uniq -c | sort -rn | while read -r count dir; do
+    project_git ls-files | cut -d/ -f1 | sort | uniq -c | sort -rn | while read -r count dir; do
         # Skip files (no directory)
         [[ "$dir" == *.* ]] && continue
         # Skip hidden except .github/.gitlab

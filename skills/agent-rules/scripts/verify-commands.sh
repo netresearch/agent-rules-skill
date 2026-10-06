@@ -15,6 +15,7 @@ fi
 
 PROJECT_DIR="."
 JSON=false
+UPDATE_VERIFIED=false
 
 # Parse flags. Preserves the original positional semantics (PROJECT_DIR="${1:-.}"):
 # the first non-flag argument becomes PROJECT_DIR, defaulting to "." when absent.
@@ -22,6 +23,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --json)
             JSON=true
+            shift
+            ;;
+        --update-verified)
+            UPDATE_VERIFIED=true
             shift
             ;;
         --help|-h)
@@ -32,11 +37,13 @@ Verify that commands documented in AGENTS.md actually exist (and optionally run)
 
 Options:
   --json                Emit machine-readable JSON on stdout (human output suppressed)
+  --update-verified     On success, record today's date in the "Last verified"
+                        marker of AGENTS.md (without it, AGENTS.md is not changed)
   --help, -h            Show this help message
 
 Environment variables:
   VERBOSE=true          Show detailed [INFO] output on stderr
-  DRY_RUN=true          Skip writing the JSON sidecar and updating timestamps
+  DRY_RUN=true          Skip writing the JSON sidecar and the --update-verified date
   SMOKE_TEST=true       Actually run safe commands (not just check existence)
   TIMEOUT=SECONDS       Per-command timeout for smoke tests (default: 60)
   OUTPUT_JSON=PATH      Sidecar results file (default: PROJECT_DIR/.agents/command-verification.json)
@@ -59,6 +66,10 @@ VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 SMOKE_TEST="${SMOKE_TEST:-false}"
 TIMEOUT="${TIMEOUT:-60}"
+# The default sidecar lives inside the analysed project, so it is only written
+# when its directory is a real directory there (see write_json_results).
+OUTPUT_JSON_IS_DEFAULT=false
+[ -z "${OUTPUT_JSON:-}" ] && OUTPUT_JSON_IS_DEFAULT=true
 OUTPUT_JSON="${OUTPUT_JSON:-$PROJECT_DIR/.agents/command-verification.json}"
 
 # Colors
@@ -111,8 +122,15 @@ SKIPPED=0
 # JSON results storage
 declare -A COMMAND_RESULTS
 
-# Initialize JSON output directory (always needed for results)
-mkdir -p "$(dirname "$OUTPUT_JSON")"
+# Initialize JSON output directory (always needed for results). A symlinked
+# .agents directory in the analysed project would put the sidecar outside it.
+SIDECAR_DIR="$(dirname "$OUTPUT_JSON")"
+SIDECAR_WRITABLE=true
+if [ "$OUTPUT_JSON_IS_DEFAULT" = true ] && [ -L "$SIDECAR_DIR" ]; then
+    SIDECAR_WRITABLE=false
+else
+    mkdir -p "$SIDECAR_DIR"
+fi
 
 # Check if a command is safe to execute using a whitelist approach.
 # Only commands whose base binary is in the ALLOWED_COMMANDS list are permitted.
@@ -130,17 +148,23 @@ is_safe_command() {
     # redirection (< >), grouping ({ } ( )), globs that could expand into
     # further arguments, and newlines. A documented build command needs none
     # of them; anything that does is not verifiable by smoke-running it.
-    if [[ "$cmd" == *[\;\&\|\`\$\<\>\{\}\(\)\*\?\!$'\n']* ]]; then
+    # A backslash is rejected too: bash -c would remove it, so "-ex\ec" would
+    # reach the program as an option the checks below look for by name.
+    if [[ "$cmd" == *[\;\&\|\`\$\<\>\{\}\(\)\*\?\!\\$'\n']* ]]; then
         return 1
     fi
 
     # Whitelist of known safe base commands.
     # These are common build/dev tools that are safe to invoke for verification.
+    # Inspection tools whose own options can run a program or write a file are
+    # not on it (sed, awk, sort, uniq, less, find, rg, ag, yq, file): each has
+    # several such options, and none of them is a build command whose
+    # documentation needs verifying.
     local -a ALLOWED_COMMANDS=(
-        # Version control
+        # Version control (only `git --version`, see has_safe_arguments)
         git
         # File inspection
-        ls cat head tail less wc file stat find grep egrep fgrep rg ag sed awk sort uniq diff
+        ls cat head tail wc stat grep egrep fgrep diff
         # Build tools / package managers
         make go npm yarn pnpm bun composer cargo deno gradle gradlew python python3 pip pip3
         poetry uv pytest php phpunit node ruby bundle gem mvn ant
@@ -155,7 +179,7 @@ is_safe_command() {
         # verify that a documented build command works, and they are the two
         # entries that turn an allowlisted base command into an outbound
         # request (#104). Such commands are reported as not smoke-tested.
-        jq yq
+        jq
         # Testing
         jest vitest mocha
     )
@@ -169,15 +193,43 @@ is_safe_command() {
         return 0
     fi
 
-    # Check against whitelist
+    # Check against whitelist, then the arguments
     for allowed in "${ALLOWED_COMMANDS[@]}"; do
         if [[ "$base_cmd" == "$allowed" ]]; then
-            return 0
+            has_safe_arguments "$base_cmd" "$cmd"
+            return
         fi
     done
 
     # Not in whitelist - reject
     return 1
+}
+
+# The first word decides nothing for a tool whose own arguments can run a
+# command or write a file. These are allowed only in the forms that do
+# neither. Quotes are removed before comparing, as bash -c would remove them.
+has_safe_arguments() {
+    local base="$1" cmd="$2"
+    local -a words=()
+    read -ra words <<<"${cmd//[\'\"]/}"
+    case "$base" in
+        git)
+            # Any other git command reads the analysed repository's config,
+            # which can name commands git runs (core.fsmonitor, filters,
+            # aliases, diff drivers).
+            [[ ${#words[@]} -eq 2 && ( "${words[1]}" == "--version" || "${words[1]}" == "version" ) ]]
+            return
+            ;;
+        docker|podman)
+            # Informational subcommands only, named first (no global options).
+            [[ ${#words[@]} -ge 2 ]] || return 1
+            case "${words[1]}" in
+                version|--version|info|ps|images) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+    esac
+    return 0
 }
 
 # Portable milliseconds timestamp (works on both GNU and BSD date)
@@ -229,34 +281,28 @@ smoke_test_command() {
 }
 
 # Write results to JSON file
+# The document is built by jq, so any command text is encoded correctly. It is
+# written to a temporary file beside the target and renamed into place: a
+# symlink at the target is replaced, never written through.
 write_json_results() {
-    local timestamp
+    if [ "$SIDECAR_WRITABLE" != true ]; then
+        warn "Not writing $OUTPUT_JSON: $SIDECAR_DIR is a symlink"
+        return 0
+    fi
+
+    local timestamp commands='{}' cmd tmp
     # Portable ISO 8601 timestamp (works on both GNU and BSD date)
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    {
-        echo "{"
-        echo '  "verified_at": "'"$timestamp"'",'
-        echo '  "smoke_tested": '"$SMOKE_TEST"','
-        echo '  "commands": {'
+    for cmd in "${!COMMAND_RESULTS[@]}"; do
+        commands=$(jq -c --arg k "$cmd" --argjson v "${COMMAND_RESULTS[$cmd]}" '. + {($k): $v}' <<<"$commands")
+    done
 
-        local first=true
-        for cmd in "${!COMMAND_RESULTS[@]}"; do
-            if [ "$first" = true ]; then
-                first=false
-            else
-                echo ","
-            fi
-            # Escape the command string for JSON
-            local escaped_cmd
-            escaped_cmd=$(echo "$cmd" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            printf '    "%s": %s' "$escaped_cmd" "${COMMAND_RESULTS[$cmd]}"
-        done
-
-        echo ""
-        echo "  }"
-        echo "}"
-    } > "$OUTPUT_JSON"
+    tmp=$(mktemp "$SIDECAR_DIR/.command-verification.XXXXXX")
+    jq -n --arg t "$timestamp" --arg smoke "$SMOKE_TEST" --argjson c "$commands" \
+        '{verified_at: $t, smoke_tested: ($smoke == "true"), commands: $c}' > "$tmp"
+    [ -L "$OUTPUT_JSON" ] && rm -f "$OUTPUT_JSON"
+    mv -f "$tmp" "$OUTPUT_JSON"
 
     log "Results written to $OUTPUT_JSON"
 }
@@ -283,6 +329,91 @@ extract_commands() {
     # Includes: npm, yarn, pnpm, bun, make, go, composer, cargo, python, pip, poetry, uv, deno, gradle, php, vendor/bin
     # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
     grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |python |pip |poetry |uv |deno |gradle |php |vendor/bin/)[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/`//g' || true
+}
+
+# Print the makefile make would read in the current directory and every file
+# it includes, without running make: even `make -n` expands $(shell ...) while
+# it parses, which would run the project's commands just to look up a target.
+# An include naming a variable needs make to expand it and is skipped; globs
+# are expanded; a file outside the project or a symlinked one is ignored.
+makefile_files() {
+    local first="" f word match real root
+    for f in GNUmakefile makefile Makefile; do
+        if [ -f "$f" ]; then first="$f"; break; fi
+    done
+    [ -n "$first" ] || return 0
+    root="$(pwd -P)"
+    local -a queue=("$first")
+    local -A seen=()
+    while [ "${#queue[@]}" -gt 0 ]; do
+        f="${queue[0]}"
+        queue=("${queue[@]:1}")
+        # A symlinked makefile is skipped; the directory is resolved with
+        # cd/pwd -P because macOS realpath has no -e.
+        [ -L "$f" ] && continue
+        [ -f "$f" ] || continue
+        real="$(cd "$(dirname "$f")" 2>/dev/null && pwd -P)/$(basename "$f")" || continue
+        [[ "$real" == "$root"/* ]] || continue
+        [ -n "${seen[$real]:-}" ] && continue
+        seen[$real]=1
+        printf '%s\n' "$f"
+        while IFS= read -r word; do
+            [[ "$word" == *'$'* ]] && continue
+            while IFS= read -r match; do
+                [ -n "$match" ] && queue+=("$match")
+            done < <(compgen -G "$word" || true)
+        done < <(awk '/^[ \t]*(-|s)?include[ \t]/ {
+                     sub(/^[ \t]*(-|s)?include[ \t]+/, ""); sub(/[ \t]*#.*/, "")
+                     n = split($0, w, /[ \t]+/)
+                     for (i = 1; i <= n; i++) if (w[i] != "") print w[i]
+                 }' "$f")
+    done
+}
+
+# Print the targets of the makefile and its includes, read as text: explicit
+# targets, names listed as .PHONY prerequisites (make accepts those), and
+# pattern rules such as plan-% (matched by makefile_has_target). Variable
+# assignments (VAR = x, VAR := x, VAR ::= x, export VAR := x), recipe lines,
+# define blocks and other special targets are not targets.
+makefile_targets() {
+    local f
+    while IFS= read -r f; do
+        awk '
+            /^define[ \t]/ || /^define$/ { in_define = 1; next }
+            in_define { if ($0 ~ /^endef/) in_define = 0; next }
+            /^\t/ || /^[ \t]*#/ { next }
+            {
+                line = $0
+                sub(/[ \t]*#.*/, "", line)
+                p = index(line, ":")
+                if (p == 0) next
+                head = substr(line, 1, p - 1)
+                rest = substr(line, p + 1)
+                if (rest ~ /^:?=/ || head ~ /[=$]/) next
+                if (head ~ /^[ \t]*\.PHONY[ \t]*$/) {
+                    n = split(rest, t, /[ \t]+/)
+                    for (i = 1; i <= n; i++) if (t[i] != "" && t[i] !~ /\$/) print t[i]
+                    next
+                }
+                n = split(head, t, /[ \t]+/)
+                for (i = 1; i <= n; i++)
+                    if (t[i] != "" && t[i] !~ /^\./) print t[i]
+            }' "$f"
+    done < <(makefile_files)
+}
+
+# Is <target> a target of the makefile in the current directory, by name or
+# through a pattern rule?
+makefile_has_target() {
+    local target="$1" targets t
+    targets="$(makefile_targets)"
+    grep -qxF -- "$target" <<<"$targets" && return 0
+    while IFS= read -r t; do
+        [[ "$t" == *%* ]] || continue
+        # shellcheck disable=SC2053  # the pattern is meant to match as a glob
+        [[ "$target" == ${t//%/*} ]] && return 0
+    done <<<"$targets"
+    return 1
 }
 
 # Verify a single command exists (not that it succeeds, just that it's callable)
@@ -362,7 +493,7 @@ verify_command() {
             local target="${cmd#make }"
             target="${target%% *}"
             if [ -f "Makefile" ] || [ -f "makefile" ] || [ -f "GNUmakefile" ]; then
-                if make -n "$target" > /dev/null 2>&1; then
+                if makefile_has_target "$target"; then
                     if [ "$SMOKE_TEST" = true ]; then
                         # Use make -n (dry run) for smoke test to avoid side effects
                         if smoke_test_command "make -n $target"; then
@@ -711,11 +842,11 @@ else
     # Write JSON results
     if [ "$DRY_RUN" = false ] && [ ${#COMMAND_RESULTS[@]} -gt 0 ]; then
         write_json_results
-        echo "Verification results saved to $OUTPUT_JSON"
+        [ "$SIDECAR_WRITABLE" = true ] && echo "Verification results saved to $OUTPUT_JSON"
     fi
 
-    # Update verified timestamp if not dry-run
-    if [ "$DRY_RUN" = false ] && [ -w "$AGENTS_FILE" ]; then
+    # A verification run changes the file it checks only when asked to.
+    if [ "$DRY_RUN" = false ] && [ "$UPDATE_VERIFIED" = true ] && [ -w "$AGENTS_FILE" ]; then
         TODAY=$(date +%Y-%m-%d)
         if grep -q "Last verified:" "$AGENTS_FILE"; then
             # Portable sed -i: use backup extension then remove backup

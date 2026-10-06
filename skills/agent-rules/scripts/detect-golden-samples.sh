@@ -3,12 +3,16 @@
 # SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Detect golden sample files (canonical patterns to follow)
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # the pre-commit hook runs shellcheck without
+# -x, so it cannot follow this source no matter how the path is written.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git.sh"
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
 # Check if git is available
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
+if ! project_git rev-parse --git-dir > /dev/null 2>&1; then
     echo ""
     exit 0
 fi
@@ -19,7 +23,7 @@ LANGUAGE=$(echo "$PROJECT_INFO" | jq -r '.language')
 
 # Find high-churn files (frequently modified = important)
 get_high_churn_files() {
-    git log --name-only --pretty=format: --since="6 months ago" 2>/dev/null | \
+    project_git log --name-only --pretty=format: --since="6 months ago" 2>/dev/null | \
         grep -v '^$' | \
         sort | uniq -c | sort -rn | head -20
 }

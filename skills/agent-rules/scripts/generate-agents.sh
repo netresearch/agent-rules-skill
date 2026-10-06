@@ -115,6 +115,8 @@ fi
 
 # Convert to absolute path before cd (so subsequent script calls work)
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+# Physical path of the project, for keeping scoped writes inside it.
+PROJECT_REAL="$(cd "$PROJECT_DIR" && pwd -P)"
 cd "$PROJECT_DIR"
 
 # --json emits the write manifest instead of the prose, the same way the
@@ -365,7 +367,7 @@ enforce_byte_budget() {
 
     # Write pruned content
     if [ "$pruned" = true ]; then
-        echo "$content" > "$file"
+        printf '%s\n' "$content" | replace_file "$file"
         local new_size
         new_size=$(wc -c < "$file")
         echo "⚠️  Pruned due to size budget ($size → $new_size bytes)"
@@ -388,6 +390,22 @@ PROJECT_TYPE=$(echo "$PROJECT_INFO" | jq -r '.type')
 # Detect scopes
 log "Detecting scopes..."
 SCOPES_INFO=$("$SCRIPT_DIR/detect-scopes.sh" "$PROJECT_DIR")
+# A scope directory that resolves outside the project (through a symlink) is
+# dropped before anything uses the list: its AGENTS.md and compatibility links
+# would be written there, and the root index would point at it.
+outside_scopes=()
+while IFS= read -r scope_path; do
+    [ -n "$scope_path" ] || continue
+    scope_real="$(cd "$PROJECT_DIR/$scope_path" 2>/dev/null && pwd -P)" || scope_real=""
+    if [[ "$scope_real" != "$PROJECT_REAL" && "$scope_real" != "$PROJECT_REAL"/* ]]; then
+        outside_scopes+=("$scope_path")
+        emit_op keep agents-file "$PROJECT_DIR/$scope_path/AGENTS.md" reason "resolves outside the project"
+        echo "⚠️  Skipped: $scope_path resolves outside the project"
+    fi
+done < <(echo "$SCOPES_INFO" | jq -r '.scopes[]?.path')
+if [ "${#outside_scopes[@]}" -gt 0 ]; then
+    SCOPES_INFO=$(echo "$SCOPES_INFO" | jq --args '.scopes |= map(select(.path as $p | $ARGS.positional | index($p) | not))' "${outside_scopes[@]}")
+fi
 [ "$VERBOSE" = true ] && echo "$SCOPES_INFO" | jq . >&2
 
 # Map language to stack filter for extract-commands.sh
@@ -744,6 +762,7 @@ build_module_boundaries() {
 }
 
 # Helper: Build workflow section from git history
+# build_workflow_info <git history json> [github settings json]
 build_workflow_info() {
     local git_json="$1"
     local workflow=""
@@ -773,16 +792,25 @@ build_workflow_info() {
         esac
     fi
 
-    # Merge strategy
-    local merge_strategy
+    # Merge strategy. History says what was done; the repository settings, when
+    # known, say what is allowed now. A method the settings do not allow is not
+    # advice, and when they allow exactly one, that one is.
+    local merge_strategy method allowed
     merge_strategy=$(echo "$git_json" | jq -r '.merge_strategy.strategy // "unknown"')
     case "$merge_strategy" in
-        "squash-and-merge")
-            workflow="$workflow- PRs: Squash and merge\n"
-            ;;
-        "merge-commits")
-            workflow="$workflow- PRs: Create merge commits\n"
-            ;;
+        "squash-and-merge") method=squash ;;
+        "merge-commits") method=merge ;;
+        *) method="" ;;
+    esac
+    allowed=$(echo "${2:-{\}}" | jq -r '(.merge_strategies // []) | join(" ")' 2>/dev/null || true)
+    if [ -n "$allowed" ]; then
+        [[ -n "$method" && " $allowed " != *" $method "* ]] && method=""
+        [[ -z "$method" && "$allowed" != *" "* ]] && method="$allowed"
+    fi
+    case "$method" in
+        squash) workflow="$workflow- PRs: Squash and merge\n" ;;
+        merge) workflow="$workflow- PRs: Create merge commits\n" ;;
+        rebase) workflow="$workflow- PRs: Rebase and merge\n" ;;
     esac
 
     # Branch naming
@@ -820,7 +848,9 @@ build_workflow_info() {
 # Generate root AGENTS.md
 ROOT_FILE="$PROJECT_DIR/AGENTS.md"
 
-if [ -f "$ROOT_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+# A symlink counts as existing, dangling or not: [ -f ] follows it, and a
+# dangling one would read as absent and be written at its target.
+if { [ -e "$ROOT_FILE" ] || [ -L "$ROOT_FILE" ]; } && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
     emit_op keep agents-file "$ROOT_FILE" reason "already exists"
     log "Root AGENTS.md already exists, skipping (use --force to regenerate)"
 elif [ "$DRY_RUN" = true ]; then
@@ -913,7 +943,7 @@ else
     vars[UTILITIES_LIST]="$UTILITIES_LIST"
 
     # Add workflow conventions from git analysis to heuristics
-    workflow_info=$(build_workflow_info "$GIT_HISTORY")
+    workflow_info=$(build_workflow_info "$GIT_HISTORY" "$GITHUB_SETTINGS")
     workflow_heuristics=""
     # Convert workflow info to heuristic table rows
     if echo "$workflow_info" | grep -q "Commits:"; then
@@ -1326,9 +1356,8 @@ if [ "$CLAUDE_SHIM" = true ]; then
         emit_op write shim "$CLAUDE_FILE"
         echo "[DRY-RUN] Would create: $CLAUDE_FILE"
     else
-        # Replace a symlink rather than write through it.
-        [ -L "$CLAUDE_FILE" ] && rm -f "$CLAUDE_FILE"
-        cat > "$CLAUDE_FILE" << 'CLAUDESHIM'
+        # replace_file replaces a symlink rather than writing through it.
+        replace_file "$CLAUDE_FILE" << 'CLAUDESHIM'
 <!-- Auto-generated shim for Claude Code compatibility -->
 <!-- Source of truth: AGENTS.md -->
 <!-- Re-generate with: generate-agents.sh --claude-shim -->
@@ -1387,7 +1416,8 @@ else
         SCOPE_TYPE=$(echo "$scope" | jq -r '.type')
         SCOPE_FILE="$PROJECT_DIR/$SCOPE_PATH/AGENTS.md"
 
-        if [ -f "$SCOPE_FILE" ] && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
+
+        if { [ -e "$SCOPE_FILE" ] || [ -L "$SCOPE_FILE" ]; } && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
             emit_op keep agents-file "$SCOPE_FILE" reason "already exists"
             log "Scoped AGENTS.md already exists: $SCOPE_PATH, skipping"
             continue
@@ -2387,10 +2417,9 @@ else
                         emit_op write compat-file "$SYMLINK_FILE" note "@AGENTS.md import file"
                         echo "[DRY-RUN] Would write import file: $SYMLINK_FILE (@AGENTS.md)"
                     else
-                        rm -f "$SYMLINK_FILE"
                         printf '%s\n\n%s\n' \
                             '<!-- Regular file, not a symlink: the TYPO3 docs renderer (Flysystem) rejects symbolic links inside Documentation/. -->' \
-                            '@AGENTS.md' > "$SYMLINK_FILE"
+                            '@AGENTS.md' | replace_file "$SYMLINK_FILE"
                         emit_op write compat-file "$SYMLINK_FILE" note "@AGENTS.md import file"
                         echo "   ↳ Import file: $SCOPE_PATH/$symlink_name (@AGENTS.md, symlink-hostile directory)"
                     fi

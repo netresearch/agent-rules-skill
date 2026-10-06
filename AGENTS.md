@@ -40,7 +40,7 @@ LICENSE/         → project files
 | When | Do |
 |------|-----|
 | Committing | Use Conventional Commits (feat:, fix:, docs:, etc.) |
-| Merging PRs | Squash and merge |
+| Merging PRs | Create merge commits |
 | Adding dependency | Ask first - we minimize deps |
 | Unsure about pattern | Check Golden Samples above |
 <!-- AGENTS-GENERATED:END heuristics -->
@@ -48,7 +48,7 @@ LICENSE/         → project files
 ## Repository Settings
 <!-- AGENTS-GENERATED:START repo-settings -->
 - **Default branch:** `main`
-- **Merge strategy:** squash, merge, rebase
+- **Merge strategy:** merge
 <!-- AGENTS-GENERATED:END repo-settings -->
 
 ## Boundaries

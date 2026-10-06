@@ -51,12 +51,13 @@ pass "plain allowlisted command is still smoke-tested"
 
 # --- Test 3: the predicate itself, per shell construct
 eval "$(awk '/^is_safe_command\(\) \{/,/^\}/' "$VERIFY")"
+eval "$(awk '/^has_safe_arguments\(\) \{/,/^\}/' "$VERIFY")"
 expect() {
     local cmd="$1" want="$2" got
     if is_safe_command "$cmd"; then got=allow; else got=reject; fi
     [ "$got" = "$want" ] || fail "is_safe_command: want $want, got $got for <$cmd>"
 }
-expect 'git status' allow
+expect 'git --version' allow
 expect 'npm test' allow
 expect 'make -n test' allow
 expect 'vendor/bin/phpunit --filter Foo' allow
@@ -75,6 +76,41 @@ expect 'bash -n scripts/*.sh' reject          # glob
 expect 'rm -rf /' reject                      # not on the allowlist
 expect 'curl http://example.com' reject       # network fetch, deliberately dropped
 pass "is_safe_command rejects every shell construct that can chain a command"
+
+# --- Test 4: the first word alone decides nothing.
+# git and docker/podman are smoke-tested only in informational forms. Inspection
+# tools whose own options can run a program or write a file are not smoke-tested
+# at all; a blocklist of their options would always miss one.
+expect 'git status' reject                    # reads repository config that can name commands
+expect 'git -c core.pager=x log' reject       # config on the command line
+expect 'git version' allow
+expect 'docker ps' allow
+expect 'docker run alpine touch x' reject
+expect 'podman -H tcp://x ps' reject
+expect 'find . -name x' reject
+expect 'rg TODO src' reject
+expect 'rg --hostname-bin=./x foo' reject
+expect 'ag TODO' reject
+expect 'yq .a f.yaml' reject
+expect 'file -C -m m' reject
+expect 'sed -n p README.md' reject
+expect 'awk -f x.awk README.md' reject
+expect 'sort -o out README.md' reject
+expect 'grep -n TODO README.md' allow
+expect 'cat README.md' allow
+expect 'jq . package.json' allow
+expect 'ls -la' allow
+pass "is_safe_command judges git and docker by their arguments and leaves out inspection tools that run programs"
+
+# --- Test 5: the git case end to end. A repository's own config can name a
+# command that `git status` runs; that command must not run.
+FX="$WORK/git-config"
+write_agents "$FX" "git status"
+git -C "$FX" init -q
+git -C "$FX" config core.fsmonitor "touch $FX/PWNED; false"
+OUT="$(cd "$FX" && SMOKE_TEST=true bash "$VERIFY" . 2>&1)" || true
+[ -e "$FX/PWNED" ] && fail "a command from the repository's git config ran during the smoke test"
+pass "git status is not smoke-run in the analysed repository"
 
 echo ""
 echo "All command allowlist tests passed."

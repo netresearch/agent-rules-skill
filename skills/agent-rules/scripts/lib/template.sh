@@ -181,7 +181,31 @@ render_template() {
     content=$(echo "$content" | cat -s)
 
     # Write output
-    printf '%s\n' "$content" > "$output_file"
+    printf '%s\n' "$content" | replace_file "$output_file"
+}
+
+# Write stdin to <file> by replacement: a temporary file in the same directory
+# is renamed over the target, so a symlink there is replaced, never followed.
+# An existing regular file keeps its mode; a new file gets the mode the umask
+# gives a newly created file, not the 0600 of a temporary file. A directory at
+# the path is refused (mv would move the file into it).
+replace_file() {
+    local file="$1" dir tmp mode
+    if [ -d "$file" ] && [ ! -L "$file" ]; then
+        echo "Error: $file is a directory; not writing it" >&2
+        return 1
+    fi
+    dir="$(dirname "$file")"
+    if [ -f "$file" ] && [ ! -L "$file" ]; then
+        mode="$(stat -c %a "$file" 2>/dev/null || stat -f %Lp "$file")"
+    else
+        mode="$(printf '%o' $(( 0666 & ~0$(umask) )))"
+    fi
+    tmp="$(mktemp "$dir/.agents-write.XXXXXX")"
+    cat > "$tmp"
+    chmod "$mode" "$tmp"
+    [ -L "$file" ] && rm -f "$file"
+    mv -f "$tmp" "$file"
 }
 
 # Validate rendered content has no remaining placeholders
@@ -355,7 +379,8 @@ update_generated_sections() {
 
     # If existing file doesn't have markers, just overwrite
     if ! has_generated_markers "$existing_file"; then
-        mv "$temp_rendered" "$output_file"
+        replace_file "$output_file" < "$temp_rendered"
+        rm -f "$temp_rendered"
         return 0
     fi
 
@@ -400,7 +425,7 @@ update_generated_sections() {
     result=$(echo "$result" | sed "s/Last updated: [0-9-]*/Last updated: $today/")
 
     # Write result
-    echo "$result" > "$output_file"
+    printf '%s\n' "$result" | replace_file "$output_file"
 
     # Clean up
     rm -f "$temp_rendered"

@@ -5,6 +5,10 @@
 # Returns JSON with ruleset details for AGENTS.md generation
 # Falls back gracefully if unavailable (no auth, not GitHub, no rulesets)
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091  # the pre-commit hook runs shellcheck without
+# -x, so it cannot follow this source no matter how the path is written.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/git.sh"
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
@@ -22,7 +26,7 @@ command -v gh &>/dev/null || bail
 gh auth status &>/dev/null 2>&1 || bail
 
 # Check this is a git repo with a remote
-REMOTE_URL=$(git remote get-url origin 2>/dev/null) || bail
+REMOTE_URL=$(project_git remote get-url origin 2>/dev/null) || bail
 
 # Check it's a GitHub repo
 [[ "$REMOTE_URL" =~ github\.com ]] || bail
