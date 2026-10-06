@@ -84,6 +84,8 @@ git -C "$fx" config extensions.partialClone origin
 git -C "$fx" config remote.origin.url ssh://example.invalid/x.git
 git -C "$fx" config remote.origin.promisor true
 git -C "$fx" config core.sshCommand "touch $WORK/transport.ran; false"
+# The project may allow ssh explicitly; that must not reopen the transport.
+git -C "$fx" config protocol.ssh.allow always
 for script in analyze-git-history.sh check-freshness.sh; do
     (cd "$fx" && timeout 60 bash "$SCRIPTS_DIR/$script" "$fx" >/dev/null 2>&1)
     [ $? -eq 124 ] && fail "$script timed out"
