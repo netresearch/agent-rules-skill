@@ -59,6 +59,10 @@ VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 SMOKE_TEST="${SMOKE_TEST:-false}"
 TIMEOUT="${TIMEOUT:-60}"
+# The default sidecar lives inside the analysed project, so it is only written
+# when its directory is a real directory there (see write_json_results).
+OUTPUT_JSON_IS_DEFAULT=false
+[ -z "${OUTPUT_JSON:-}" ] && OUTPUT_JSON_IS_DEFAULT=true
 OUTPUT_JSON="${OUTPUT_JSON:-$PROJECT_DIR/.agents/command-verification.json}"
 
 # Colors
@@ -111,8 +115,15 @@ SKIPPED=0
 # JSON results storage
 declare -A COMMAND_RESULTS
 
-# Initialize JSON output directory (always needed for results)
-mkdir -p "$(dirname "$OUTPUT_JSON")"
+# Initialize JSON output directory (always needed for results). A symlinked
+# .agents directory in the analysed project would put the sidecar outside it.
+SIDECAR_DIR="$(dirname "$OUTPUT_JSON")"
+SIDECAR_WRITABLE=true
+if [ "$OUTPUT_JSON_IS_DEFAULT" = true ] && [ -L "$SIDECAR_DIR" ]; then
+    SIDECAR_WRITABLE=false
+else
+    mkdir -p "$SIDECAR_DIR"
+fi
 
 # Check if a command is safe to execute using a whitelist approach.
 # Only commands whose base binary is in the ALLOWED_COMMANDS list are permitted.
@@ -280,34 +291,28 @@ smoke_test_command() {
 }
 
 # Write results to JSON file
+# The document is built by jq, so any command text is encoded correctly. It is
+# written to a temporary file beside the target and renamed into place: a
+# symlink at the target is replaced, never written through.
 write_json_results() {
-    local timestamp
+    if [ "$SIDECAR_WRITABLE" != true ]; then
+        warn "Not writing $OUTPUT_JSON: $SIDECAR_DIR is a symlink"
+        return 0
+    fi
+
+    local timestamp commands='{}' cmd tmp
     # Portable ISO 8601 timestamp (works on both GNU and BSD date)
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    {
-        echo "{"
-        echo '  "verified_at": "'"$timestamp"'",'
-        echo '  "smoke_tested": '"$SMOKE_TEST"','
-        echo '  "commands": {'
+    for cmd in "${!COMMAND_RESULTS[@]}"; do
+        commands=$(jq -c --arg k "$cmd" --argjson v "${COMMAND_RESULTS[$cmd]}" '. + {($k): $v}' <<<"$commands")
+    done
 
-        local first=true
-        for cmd in "${!COMMAND_RESULTS[@]}"; do
-            if [ "$first" = true ]; then
-                first=false
-            else
-                echo ","
-            fi
-            # Escape the command string for JSON
-            local escaped_cmd
-            escaped_cmd=$(echo "$cmd" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            printf '    "%s": %s' "$escaped_cmd" "${COMMAND_RESULTS[$cmd]}"
-        done
-
-        echo ""
-        echo "  }"
-        echo "}"
-    } > "$OUTPUT_JSON"
+    tmp=$(mktemp "$SIDECAR_DIR/.command-verification.XXXXXX")
+    jq -n --arg t "$timestamp" --arg smoke "$SMOKE_TEST" --argjson c "$commands" \
+        '{verified_at: $t, smoke_tested: ($smoke == "true"), commands: $c}' > "$tmp"
+    [ -L "$OUTPUT_JSON" ] && rm -f "$OUTPUT_JSON"
+    mv -f "$tmp" "$OUTPUT_JSON"
 
     log "Results written to $OUTPUT_JSON"
 }
@@ -843,7 +848,7 @@ else
     # Write JSON results
     if [ "$DRY_RUN" = false ] && [ ${#COMMAND_RESULTS[@]} -gt 0 ]; then
         write_json_results
-        echo "Verification results saved to $OUTPUT_JSON"
+        [ "$SIDECAR_WRITABLE" = true ] && echo "Verification results saved to $OUTPUT_JSON"
     fi
 
     # Update verified timestamp if not dry-run
