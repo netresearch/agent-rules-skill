@@ -77,32 +77,30 @@ expect 'rm -rf /' reject                      # not on the allowlist
 expect 'curl http://example.com' reject       # network fetch, deliberately dropped
 pass "is_safe_command rejects every shell construct that can chain a command"
 
-# --- Test 4: an allowlisted tool is judged by its arguments too.
-# A tool whose options run a command or write a file is only smoke-tested in
-# the forms that do neither; the first word alone decides nothing.
+# --- Test 4: the first word alone decides nothing.
+# git and docker/podman are smoke-tested only in informational forms. Inspection
+# tools whose own options can run a program or write a file are not smoke-tested
+# at all; a blocklist of their options would always miss one.
 expect 'git status' reject                    # reads repository config that can name commands
 expect 'git -c core.pager=x log' reject       # config on the command line
 expect 'git version' allow
-expect 'find . -name x' allow
-expect 'find . -exec touch x ;' reject        # the ; alone is already rejected
-expect 'find . -execdir touch x +' reject
-expect 'find . -delete' reject
-expect 'find . -fprintf out x' reject
-expect "find . '-exec' touch x +" reject      # quoting does not hide an option
-expect 'find . -ex\ec touch x +' reject       # neither does a backslash
-expect 'rg --pre touch x' reject
-expect 'rg --pre=touch x' reject
-expect 'rg TODO src' allow
-expect 'yq -i .a=1 f.yaml' reject
-expect 'yq --inplace .a=1 f.yaml' reject
-expect 'yq .a f.yaml' allow
 expect 'docker ps' allow
 expect 'docker run alpine touch x' reject
 expect 'podman -H tcp://x ps' reject
-expect 'sed -n p README.md' reject            # its script language runs commands
+expect 'find . -name x' reject
+expect 'rg TODO src' reject
+expect 'rg --hostname-bin=./x foo' reject
+expect 'ag TODO' reject
+expect 'yq .a f.yaml' reject
+expect 'file -C -m m' reject
+expect 'sed -n p README.md' reject
 expect 'awk -f x.awk README.md' reject
 expect 'sort -o out README.md' reject
-pass "is_safe_command judges the arguments of tools whose options run commands or write files"
+expect 'grep -n TODO README.md' allow
+expect 'cat README.md' allow
+expect 'jq . package.json' allow
+expect 'ls -la' allow
+pass "is_safe_command judges git and docker by their arguments and leaves out inspection tools that run programs"
 
 # --- Test 5: the git case end to end. A repository's own config can name a
 # command that `git status` runs; that command must not run.
