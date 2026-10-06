@@ -744,6 +744,7 @@ build_module_boundaries() {
 }
 
 # Helper: Build workflow section from git history
+# build_workflow_info <git history json> [github settings json]
 build_workflow_info() {
     local git_json="$1"
     local workflow=""
@@ -773,16 +774,25 @@ build_workflow_info() {
         esac
     fi
 
-    # Merge strategy
-    local merge_strategy
+    # Merge strategy. History says what was done; the repository settings, when
+    # known, say what is allowed now. A method the settings do not allow is not
+    # advice, and when they allow exactly one, that one is.
+    local merge_strategy method allowed
     merge_strategy=$(echo "$git_json" | jq -r '.merge_strategy.strategy // "unknown"')
     case "$merge_strategy" in
-        "squash-and-merge")
-            workflow="$workflow- PRs: Squash and merge\n"
-            ;;
-        "merge-commits")
-            workflow="$workflow- PRs: Create merge commits\n"
-            ;;
+        "squash-and-merge") method=squash ;;
+        "merge-commits") method=merge ;;
+        *) method="" ;;
+    esac
+    allowed=$(echo "${2:-{\}}" | jq -r '(.merge_strategies // []) | join(" ")' 2>/dev/null || true)
+    if [ -n "$allowed" ]; then
+        [[ -n "$method" && " $allowed " != *" $method "* ]] && method=""
+        [[ -z "$method" && "$allowed" != *" "* ]] && method="$allowed"
+    fi
+    case "$method" in
+        squash) workflow="$workflow- PRs: Squash and merge\n" ;;
+        merge) workflow="$workflow- PRs: Create merge commits\n" ;;
+        rebase) workflow="$workflow- PRs: Rebase and merge\n" ;;
     esac
 
     # Branch naming
@@ -915,7 +925,7 @@ else
     vars[UTILITIES_LIST]="$UTILITIES_LIST"
 
     # Add workflow conventions from git analysis to heuristics
-    workflow_info=$(build_workflow_info "$GIT_HISTORY")
+    workflow_info=$(build_workflow_info "$GIT_HISTORY" "$GITHUB_SETTINGS")
     workflow_heuristics=""
     # Convert workflow info to heuristic table rows
     if echo "$workflow_info" | grep -q "Commits:"; then
