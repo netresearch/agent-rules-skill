@@ -64,6 +64,35 @@ else
     echo "⚠️  SKIP: ssh-keygen not found, signature program case not run"
 fi
 
+# A partial clone fetches a missing object from its promisor remote on demand,
+# running the transport command the project's config names.
+fx="$WORK/partial"
+mkdir -p "$fx/src"
+printf 'package main\n' > "$fx/src/main.go"
+# An old "Last updated" date makes check-freshness.sh list the commits since.
+printf '<!-- Last updated: 2000-01-01 -->\n# AGENTS.md\n' > "$fx/AGENTS.md"
+git -C "$fx" init -q
+git -C "$fx" add -A
+git -C "$fx" -c user.email=t@t.t -c user.name=t commit -qm init
+echo 'package util' > "$fx/src/util.go"
+git -C "$fx" add -A
+git -C "$fx" -c user.email=t@t.t -c user.name=t commit -qm second
+tree="$(git -C "$fx" rev-parse 'HEAD~1^{tree}')"
+rm -f "$fx/.git/objects/${tree:0:2}/${tree:2}"
+git -C "$fx" config core.repositoryformatversion 1
+git -C "$fx" config extensions.partialClone origin
+git -C "$fx" config remote.origin.url ssh://example.invalid/x.git
+git -C "$fx" config remote.origin.promisor true
+git -C "$fx" config core.sshCommand "touch $WORK/transport.ran; false"
+# The project may allow ssh explicitly; that must not reopen the transport.
+git -C "$fx" config protocol.ssh.allow always
+for script in analyze-git-history.sh check-freshness.sh; do
+    (cd "$fx" && timeout 60 bash "$SCRIPTS_DIR/$script" "$fx" >/dev/null 2>&1)
+    [ $? -eq 124 ] && fail "$script timed out"
+    [ -e "$WORK/transport.ran" ] && fail "$script ran the promisor remote's transport command"
+done
+pass "no script fetches a missing object from the analysed project's remote"
+
 # Run from a git hook, GIT_DIR and GIT_INDEX_FILE point at the calling
 # repository; the scripts still answer for the analysed project.
 fx="$WORK/located"
