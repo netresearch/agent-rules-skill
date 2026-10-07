@@ -125,7 +125,7 @@ analyze_branch_naming() {
     fi
 
     local total_branches
-    total_branches=$(echo "$branches" | grep -c . || echo "0")
+    total_branches=$(count_matches '.' "$branches")
 
     if [ "$total_branches" -eq 0 ]; then
         echo '{"pattern": "unknown", "stats": {"total_branches": 0}}'
@@ -206,8 +206,9 @@ analyze_merge_strategy() {
     fi
 
     # Check for squash patterns in commit messages
-    local squash_patterns
-    squash_patterns=$(project_git log --oneline -"$SAMPLE_SIZE" 2>/dev/null | grep -cE '\(#[0-9]+\)$' || echo "0")
+    local squash_log squash_patterns
+    squash_log=$(project_git log --oneline -"$SAMPLE_SIZE" 2>/dev/null || echo "")
+    squash_patterns=$(count_matches '\(#[0-9]+\)$' "$squash_log")
 
     if [ "$squash_patterns" -gt $((total_commits / 3)) ]; then
         strategy="squash-and-merge"
@@ -243,11 +244,11 @@ analyze_releases() {
 
     # Check for semver pattern (v1.2.3 or 1.2.3)
     local semver_count
-    semver_count=$(echo "$tags" | grep -cE '^v?[0-9]+\.[0-9]+\.[0-9]+' 2>/dev/null || echo "0")
+    semver_count=$(count_matches '^v?[0-9]+\.[0-9]+\.[0-9]+' "$tags")
 
     # Check for calver pattern (2024.01.15 or similar)
     local calver_count
-    calver_count=$(echo "$tags" | grep -cE '^[0-9]{4}\.[0-9]{2}' 2>/dev/null || echo "0")
+    calver_count=$(count_matches '^[0-9]{4}\.[0-9]{2}' "$tags")
 
     local pattern="custom"
     if [ "$semver_count" -gt $((total_tags / 2)) ]; then
@@ -257,8 +258,9 @@ analyze_releases() {
     fi
 
     # Check for v prefix
-    local has_v_prefix
-    has_v_prefix=$([[ $(echo "$tags" | grep -cE '^v' || echo "0") -gt $((total_tags / 2)) ]] && echo "true" || echo "false")
+    local v_prefix_count has_v_prefix
+    v_prefix_count=$(count_matches '^v' "$tags")
+    has_v_prefix=$([[ "$v_prefix_count" -gt $((total_tags / 2)) ]] && echo "true" || echo "false")
 
     # Get latest tag
     local latest_tag

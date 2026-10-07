@@ -320,7 +320,7 @@ enforce_byte_budget() {
     # Strategy 1: Reduce golden samples to 5
     if echo "$content" | grep -q "AGENTS-GENERATED:START golden-samples"; then
         local sample_count
-        sample_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START golden-samples/,/AGENTS-GENERATED:END golden-samples/p' | grep -c "^|" || echo 0)
+        sample_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START golden-samples/,/AGENTS-GENERATED:END golden-samples/p' | grep -c "^|") || sample_count=0
         if [ "$sample_count" -gt 7 ]; then  # header + separator + 5 data rows = 7
             content=$(echo "$content" | awk '
                 /AGENTS-GENERATED:START golden-samples/ { in_section=1; count=0; print; next }
@@ -336,7 +336,7 @@ enforce_byte_budget() {
     # Strategy 2: Reduce heuristics to 5
     if echo "$content" | grep -q "AGENTS-GENERATED:START heuristics"; then
         local heuristic_count
-        heuristic_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START heuristics/,/AGENTS-GENERATED:END heuristics/p' | grep -c "^|" || echo 0)
+        heuristic_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START heuristics/,/AGENTS-GENERATED:END heuristics/p' | grep -c "^|") || heuristic_count=0
         if [ "$heuristic_count" -gt 7 ]; then  # header + separator + 5 data rows = 7
             content=$(echo "$content" | awk '
                 /AGENTS-GENERATED:START heuristics/ { in_section=1; count=0; print; next }
@@ -352,7 +352,7 @@ enforce_byte_budget() {
     # Strategy 3: Reduce utilities to 5
     if echo "$content" | grep -q "AGENTS-GENERATED:START utilities"; then
         local utility_count
-        utility_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START utilities/,/AGENTS-GENERATED:END utilities/p' | grep -c "^|" || echo 0)
+        utility_count=$(echo "$content" | sed -n '/AGENTS-GENERATED:START utilities/,/AGENTS-GENERATED:END utilities/p' | grep -c "^|") || utility_count=0
         if [ "$utility_count" -gt 7 ]; then  # header + separator + 5 data rows = 7
             content=$(echo "$content" | awk '
                 /AGENTS-GENERATED:START utilities/ { in_section=1; count=0; print; next }
@@ -2234,11 +2234,11 @@ else
 
             "gitlab-ci")
                 # Count pipeline stages/jobs
-                job_count=$(grep -cE "^[a-zA-Z_-]+:$" .gitlab-ci.yml 2>/dev/null || echo "0")
+                job_count=$(grep -cE "^[a-zA-Z_-]+:$" .gitlab-ci.yml 2>/dev/null) || job_count=0
                 scope_vars[JOB_COUNT_LINE]="- Jobs defined: ~$job_count"
 
                 # Check for includes
-                include_count=$(grep -cE "^  *- " .gitlab-ci.yml 2>/dev/null | head -1 || echo "0")
+                include_count=$(grep -cE "^  *- " .gitlab-ci.yml 2>/dev/null) || include_count=0
                 [ "$include_count" -gt 0 ] && \
                     scope_vars[INCLUDES_LINE]="- Includes external files/templates"
 
