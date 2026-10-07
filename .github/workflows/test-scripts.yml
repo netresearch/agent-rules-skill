@@ -7,6 +7,10 @@ name: Test Scripts
 # Thin caller of the shared script-check reusable, so the checkout pin and
 # harden-runner are maintained centrally. The tests only need git, jq and
 # bash, all preinstalled on the runner.
+#
+# The pull_request trigger has no paths filter: a required check that a
+# workflow skips for a pull request stays "expected" and blocks the merge, so
+# the check can only be required when it reports on every pull request.
 
 on:
   push:
@@ -15,9 +19,6 @@ on:
       - 'skills/agent-rules/scripts/**'
       - 'skills/agent-rules/assets/**'
   pull_request:
-    paths:
-      - 'skills/agent-rules/scripts/**'
-      - 'skills/agent-rules/assets/**'
   workflow_dispatch:
 
 permissions: {}
