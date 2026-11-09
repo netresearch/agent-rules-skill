@@ -116,9 +116,11 @@ mechanical:
     target: AGENTS.md
     # Python tools added: a Python repository documents `uv run`, `uvx`,
     # `pytest`, `python -m`, `ruff`, `tox` or `nox` and failed this check.
-    # `tox`/`nox` carry word boundaries so "toxic" or "equinox" in prose do not
-    # count; the pattern runs under grep -P and the -E fallback alike.
-    pattern: '(composer|npm|make|ddev|docker|pytest|uv run|uvx|python3? -m|ruff|\btox\b|\bnox\b)'
+    # The tool names must stand alone: not inside a word ("toxic", "equinox")
+    # and not as a config file name (`pytest.ini`, `tox.ini`, `ruff.toml`),
+    # while a sentence-ending "Run pytest." still counts. No lookahead, so the
+    # pattern runs under grep -P and the -E fallback alike.
+    pattern: '(composer|npm|make|ddev|docker|uv run|uvx|python3? -m|\b(pytest|ruff|tox|nox)([^.a-z]|\.([^a-z]|$)|$))'
     severity: warning
     desc: "AGENTS.md should document build/run commands"
 
