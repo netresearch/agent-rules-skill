@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Netresearch DTT GmbH
+
+// Templates fill tables through whole-line placeholders such as
+// `{{GOLDEN_SAMPLES}}` directly below the header row; generate-agents.sh
+// replaces each with complete `| ... |` rows. markdownlint sees the bare
+// placeholder as a malformed row (MD055 pipe style, MD056 column count).
+// A disable comment inside the template would be copied into every generated
+// AGENTS.md, so the exception lives here and covers only this directory.
+// Merged with the repository root config.
+{
+  "config": {
+    "MD055": false,
+    "MD056": false
+  }
+}
