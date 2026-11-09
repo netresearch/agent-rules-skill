@@ -114,7 +114,11 @@ mechanical:
   - id: AG-11
     type: regex
     target: AGENTS.md
-    pattern: "(composer|npm|make|ddev|docker)"
+    # Python tools added: a Python repository documents `uv run`, `uvx`,
+    # `pytest`, `python -m`, `ruff`, `tox` or `nox` and failed this check.
+    # `tox`/`nox` carry word boundaries so "toxic" or "equinox" in prose do not
+    # count; the pattern runs under grep -P and the -E fallback alike.
+    pattern: '(composer|npm|make|ddev|docker|pytest|uv run|uvx|python3? -m|ruff|\btox\b|\bnox\b)'
     severity: warning
     desc: "AGENTS.md should document build/run commands"
 
