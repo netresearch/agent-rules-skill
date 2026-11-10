@@ -1110,6 +1110,44 @@ ${workflow_heuristics}"
     }
     vars[CONTRIBUTION_RULES]=$(build_contribution_rules)
 
+    # Changelog: where changes are recorded. Only facts the tree shows; who
+    # writes the entry (each PR or the release PR) is not derivable from files,
+    # so it is marked for the agent to fill in from the last merged PRs.
+    build_changelog_rule() {
+        local file format where="" docs_page="" f
+        file=$(echo "$DOCS_INFO" | jq -r '.changelog.file // empty' 2>/dev/null)
+        format=$(echo "$DOCS_INFO" | jq -r '.changelog.format // empty' 2>/dev/null)
+        for f in Documentation/Changelog.rst Documentation/Changelog/Index.rst Documentation/ChangeLog/Index.rst; do
+            if [ -f "$f" ]; then
+                docs_page="$f"
+                break
+            fi
+        done
+
+        if [ -n "$file" ]; then
+            where="changes are recorded in [\`$file\`]($file)"
+            [ "$format" = "keepachangelog" ] && where="$where (Keep a Changelog)"
+        elif [ -n "$docs_page" ]; then
+            where="changes are recorded in [\`$docs_page\`]($docs_page)"
+            docs_page=""
+        fi
+        if [ -d "changelog.d" ]; then
+            if [ -f "changelog.d/README.md" ]; then
+                where="$where; pull requests add a fragment under \`changelog.d/\` (format: [\`changelog.d/README.md\`](changelog.d/README.md))"
+            else
+                where="$where; fragments live under \`changelog.d/\`"
+            fi
+        fi
+        [ -n "$docs_page" ] && where="$where; the manual's changelog page is \`$docs_page\`"
+
+        if [ -z "$where" ]; then
+            printf '%s' "TODO: no changelog file found — name where changes are recorded (for example the release notes) and which pull request writes them"
+        else
+            printf '%s' "${where#; }. TODO: name which pull request writes the entry (each PR or the release PR), as the last merged PRs show it"
+        fi
+    }
+    vars[CHANGELOG_RULE]=$(build_changelog_rule)
+
     # Codebase state - detect migrations, deprecations
     codebase_state=""
     [ -d "migrations" ] || [ -d "db/migrate" ] && codebase_state="$codebase_state\n- Database migrations present in migrations/"

@@ -37,6 +37,7 @@
 - Before any edit, verify `pwd` resolves inside the intended repo worktree — not `.bare/`, not `~/.claude/skills/…`, not `~/.claude/plugins/cache/…` (those are read-only caches that get clobbered on update)
 - For upstream dependency fixes: run **full** test suite, not just affected tests
 - Force-push only with `--force-with-lease`
+- **Changelog:** {{CHANGELOG_RULE}}
 
 ### Ask First
 - Adding new dependencies

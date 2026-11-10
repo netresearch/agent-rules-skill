@@ -57,6 +57,7 @@ LICENSE/         → project files
 - Run pre-commit checks before committing
 - Add tests for new code paths
 - Use conventional commit format: `type(scope): subject`
+- **Changelog:** there is no `CHANGELOG.md`; the release notes of each GitHub release are generated from the titles of the merged PRs (`generate_release_notes` in the reusable `netresearch/skill-repo-skill` release workflow), so a PR's title is its changelog entry
 
 ### Ask First
 - Adding new dependencies
