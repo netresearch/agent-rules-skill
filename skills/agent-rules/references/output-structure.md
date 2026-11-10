@@ -15,6 +15,7 @@ Root AGENTS.md (~50-80 lines) contains agent-optimized sections:
 | **Utilities List** | Existing helpers to reuse | Table: Need / Use / Location |
 | **Heuristics** | Quick decision rules | Table: When / Do |
 | **Boundaries** | Always/Ask/Never rules | Three-tier list |
+| **Changelog** (required, AG-32) | Where changes are recorded, in which format, and which PR writes the entry (each PR or the release PR, as the last merged PRs show) | `**Changelog:**` bullet under Always Do, or a `## Changelog` section |
 | **Codebase State** | Migrations, tech debt, known issues | Bullet list |
 | **Terminology** | Domain-specific terms | Table: Term / Means |
 | **Scope Index** | Links to scoped files | List with descriptions |

@@ -195,6 +195,17 @@ mechanical:
     severity: info
     desc: "AGENTS.md should have Critical/Constraints section for important warnings"
 
+  # === CHANGELOG ===
+  - id: AG-32
+    type: regex
+    target: AGENTS.md
+    # Either a "## Changelog" section or a "**Changelog:**" bullet: the root
+    # templates emit the bullet under Always Do, and a root AGENTS.md at the
+    # 150-line cap (AH-02) has no room for a section of its own.
+    pattern: "(^#+ Changelog|\\*\\*Changelog)"
+    severity: error
+    desc: "AGENTS.md must say where changes are recorded (a Changelog section or a **Changelog:** entry)"
+
   # === POINTER PRINCIPLE ===
   - id: AG-26
     type: regex
@@ -320,6 +331,19 @@ llm_reviews:
       Report any inconsistencies or contradictions found.
     severity: warning
     desc: "AGENTS.md must be consistent with other documentation"
+
+  - id: AG-33
+    domain: repo-health
+    prompt: |
+      Check the Changelog entry of the root AGENTS.md against the repository:
+      1. Does it name the file or page where changes are recorded (CHANGELOG.md, a changelog.d/ fragment directory, a Documentation changelog page, or the release notes when there is no file)?
+      2. Does it name the format (heading shape, sections) and link the fragment directory's README if one exists?
+      3. Does it say which pull request writes the entry (each feature/fix PR, or the release PR)? Compare with the last 20-40 merged PRs: which of them changed the changelog files?
+      4. Is a "TODO" left from generation?
+
+      Report each missing or contradicted point with the evidence (PR numbers, file paths).
+    severity: warning
+    desc: "The AGENTS.md Changelog entry must name the file, the format and who writes the entry, as recent merged PRs show it"
 
   - id: AG-30
     domain: repo-health
