@@ -42,16 +42,16 @@ delete_branch() {
 }
 
 settings '{"default_branch":"main","allow_merge_commit":true,"delete_branch_on_merge":true}'
-[ "$(delete_branch)" = "true" ] || fail "delete_branch_on_merge true was not reported as true"
+[[ "$(delete_branch)" = "true" ]] || fail "delete_branch_on_merge true was not reported as true"
 pass "delete_branch_on_merge true is reported as true"
 
 settings '{"default_branch":"main","allow_merge_commit":true,"delete_branch_on_merge":false}'
-[ "$(delete_branch)" = "false" ] || fail "delete_branch_on_merge false was not reported as false"
+[[ "$(delete_branch)" = "false" ]] || fail "delete_branch_on_merge false was not reported as false"
 pass "delete_branch_on_merge false is reported as false"
 
 settings '{"default_branch":"main","allow_merge_commit":true}'
 got="$(delete_branch)"
-[ "$got" = "null" ] || fail "a missing delete_branch_on_merge was reported as $got, not null"
+[[ "$got" = "null" ]] || fail "a missing delete_branch_on_merge was reported as $got, not null"
 pass "a missing delete_branch_on_merge (non-admin caller) is reported as null"
 
 echo ""
