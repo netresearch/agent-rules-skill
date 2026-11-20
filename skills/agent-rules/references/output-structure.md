@@ -47,6 +47,27 @@ Place `## Approved learnings` **after `## Key Decisions` and before `## Boundari
 
 If the approved-learnings section would push AGENTS.md over the harness 150-line cap (`AH-02`), prune rules that no longer apply or move them to a scoped `AGENTS.md` next to the code they govern, rather than letting the section grow unbounded.
 
+### Name the repository's own skills
+
+A repository that ships skills for its own work lists each one in its
+AGENTS.md, with one sentence on what it is for, in the same commit that adds
+the skill. A skill only the frontmatter `description` announces is applied when
+a request happens to match its wording; one recurring task ("check every data
+source for updates") missed its skill three times that way and was done by hand
+each time. Before taking up a recurring task, look for an existing skill in the
+repository, not only in the installed list.
+
+Claude Code loads a repository's skills from `.claude/skills/<name>/SKILL.md`,
+not from a `skills/` directory elsewhere in the tree. When the files have to
+stay in another directory, a symlink `.claude/skills/<name>` →
+`../../skills/<name>` loads them. Where nested and parent directories, git
+worktrees and skills added during a session are concerned, follow
+[the skills documentation](https://code.claude.com/docs/en/skills). Prove that a
+skill loads by having a fresh session invoke it, for example
+`claude --print --permission-mode plan 'Load the skill <name> and return only its first heading.'`
+run inside the repository; an answer that only lists the skill proves nothing,
+because the list can come from reading the directory.
+
 ## When to Customize vs Auto-Generate
 
 ### Auto-Generate These Sections
