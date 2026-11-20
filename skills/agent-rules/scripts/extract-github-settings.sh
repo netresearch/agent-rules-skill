@@ -39,7 +39,9 @@ ALLOW_SQUASH=$(echo "$REPO_INFO" | jq -r '.allow_squash_merge // false')
 ALLOW_MERGE=$(echo "$REPO_INFO" | jq -r '.allow_merge_commit // false')
 ALLOW_REBASE=$(echo "$REPO_INFO" | jq -r '.allow_rebase_merge // false')
 DEFAULT_BRANCH=$(echo "$REPO_INFO" | jq -r '.default_branch // "main"')
-DELETE_BRANCH=$(echo "$REPO_INFO" | jq -r '.delete_branch_on_merge // false')
+# The REST API returns delete_branch_on_merge to admins only; for everyone
+# else the key is absent. Keep that as null: `// false` would report it off.
+DELETE_BRANCH=$(echo "$REPO_INFO" | jq -c '.delete_branch_on_merge')
 
 # Build merge strategies array
 STRATEGIES="[]"
