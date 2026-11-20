@@ -47,6 +47,38 @@ Place `## Approved learnings` **after `## Key Decisions` and before `## Boundari
 
 If the approved-learnings section would push AGENTS.md over the harness 150-line cap (`AH-02`), prune rules that no longer apply or move them to a scoped `AGENTS.md` next to the code they govern, rather than letting the section grow unbounded.
 
+### Name the repository's own skills
+
+A repository that ships skills for its own work lists each one in its
+AGENTS.md, with one sentence on what it is for, in the same commit that adds
+the skill. A skill only the frontmatter `description` announces is applied when
+a request happens to match its wording; one recurring task ("check every data
+source for updates") missed its skill three times that way and was done by hand
+each time. Before taking up a recurring task, look for an existing skill in the
+repository, not only in the installed list.
+
+Claude Code loads a repository's project skills from
+`.claude/skills/<name>/SKILL.md`, not from a `skills/` directory elsewhere in
+the tree; a plugin's `skills/` directory loads only where that plugin is
+installed and enabled. When the files have to
+stay in another directory, a symlink `.claude/skills/<name>` →
+`../../skills/<name>` loads them. Where nested and parent directories, git
+worktrees and skills added during a session are concerned, follow
+[the skills documentation](https://code.claude.com/docs/en/skills). Prove that a
+skill loads by having a fresh session invoke it, run inside the repository:
+
+```bash
+claude --print --output-format stream-json --verbose --permission-mode plan \
+  'Load the skill <name> and return only its first heading.' \
+  | jq -c 'select(.type=="assistant") | .message.content[]
+           | select(.type=="tool_use" and .name=="Skill") | .input'
+```
+
+A `{"skill":"<name>"}` line is the proof. The returned heading or a list of
+skills is not, because the session can read `SKILL.md` or the directory as
+files. Run it where no personal skill of the same name is installed: a
+personal skill takes precedence over a project skill.
+
 ## When to Customize vs Auto-Generate
 
 ### Auto-Generate These Sections
