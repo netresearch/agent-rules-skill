@@ -265,6 +265,11 @@ smoke_test_command() {
 
     end_time=$(get_time_ms)
     duration_ms=$((end_time - start_time))
+    # A wall clock that steps back during the run gives a negative difference,
+    # which the "duration_ms": [0-9]+ readers below would not match.
+    if [[ $duration_ms -lt 0 ]]; then
+        duration_ms=0
+    fi
 
     # Store result
     if [ $exit_code -eq 0 ]; then
