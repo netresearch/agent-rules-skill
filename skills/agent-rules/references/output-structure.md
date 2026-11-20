@@ -57,16 +57,27 @@ source for updates") missed its skill three times that way and was done by hand
 each time. Before taking up a recurring task, look for an existing skill in the
 repository, not only in the installed list.
 
-Claude Code loads a repository's skills from `.claude/skills/<name>/SKILL.md`,
-not from a `skills/` directory elsewhere in the tree. When the files have to
+Claude Code loads a repository's project skills from
+`.claude/skills/<name>/SKILL.md`, not from a `skills/` directory elsewhere in
+the tree; a plugin's `skills/` directory loads only where that plugin is
+installed and enabled. When the files have to
 stay in another directory, a symlink `.claude/skills/<name>` →
 `../../skills/<name>` loads them. Where nested and parent directories, git
 worktrees and skills added during a session are concerned, follow
 [the skills documentation](https://code.claude.com/docs/en/skills). Prove that a
-skill loads by having a fresh session invoke it, for example
-`claude --print --permission-mode plan 'Load the skill <name> and return only its first heading.'`
-run inside the repository; an answer that only lists the skill proves nothing,
-because the list can come from reading the directory.
+skill loads by having a fresh session invoke it, run inside the repository:
+
+```bash
+claude --print --output-format stream-json --verbose --permission-mode plan \
+  'Load the skill <name> and return only its first heading.' \
+  | jq -c 'select(.type=="assistant") | .message.content[]
+           | select(.type=="tool_use" and .name=="Skill") | .input'
+```
+
+A `{"skill":"<name>"}` line is the proof. The returned heading or a list of
+skills is not, because the session can read `SKILL.md` or the directory as
+files. Run it where no personal skill of the same name is installed: a
+personal skill takes precedence over a project skill.
 
 ## When to Customize vs Auto-Generate
 
