@@ -30,7 +30,6 @@
 <!-- AGENTS-GENERATED:START filemap -->
 ```
 skills/          → project files
-assets/          → static assets (images, fonts)
 LICENSE/         → project files
 ```
 <!-- AGENTS-GENERATED:END filemap -->
