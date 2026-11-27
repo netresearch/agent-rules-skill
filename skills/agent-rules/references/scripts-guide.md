@@ -167,10 +167,10 @@ bash ${CLAUDE_SKILL_DIR}/scripts/verify-commands.sh /path/to/project
 ```
 
 This script:
-- Extracts commands from AGENTS.md table cells, inline code naming a known tool or a repo-local script (also after `VAR=value` assignments), and the lines of fenced `bash`/`sh`/`shell`/`console` blocks; paths in file and directory tables are not commands
+- Extracts commands from AGENTS.md table cells, inline code naming a known tool or a repo-local script (also after `VAR=value` assignments), and the lines of fenced `bash`/`sh`/`shell`/`zsh` blocks (in `console`/`shell-session` blocks only the lines with a `$` prompt; heredoc bodies and fences nested in another fence are skipped). A single word with a slash is a command only when it names an executable file of the project; otherwise it is a path, so file maps and paths named in prose are not commands
 - Accepts a relative, absolute or `.` project path and finds the same commands for each
 - Verifies npm/yarn scripts exist in package.json
-- Verifies make targets exist in Makefile
+- Verifies make targets exist in Makefile, also after `VAR=value` and in the `-C` directory
 - Verifies composer scripts exist in composer.json, also under `--working-dir`/`-d`
 - Verifies repo-local scripts exist; a missing one fails the run
 - Never runs a command taken from a fenced block, also not with `SMOKE_TEST=true`: fenced lines are examples

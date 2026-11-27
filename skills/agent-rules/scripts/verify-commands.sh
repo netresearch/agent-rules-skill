@@ -134,6 +134,8 @@ if [[ ! -r "$AGENTS_FILE" ]] || ! AGENTS_CONTENT="$(cat -- "$AGENTS_FILE")"; the
     error "cannot read $AGENTS_FILE"
     exit 1
 fi
+# A CRLF file would hide every fence line from the patterns below.
+AGENTS_CONTENT="${AGENTS_CONTENT//$'\r'/}"
 
 cd "$PROJECT_DIR"
 
@@ -345,29 +347,62 @@ write_json_results() {
     log "Results written to $OUTPUT_JSON"
 }
 
+# A fence closes only with the character it opened with, at least as long,
+# and nothing else on the line (CommonMark); a shorter or other fence inside
+# is content. Intervals ({3,}) are avoided for mawk.
+FENCE_AWK_LIB='
+function closes(l,   c) {
+    c = substr(fence, 1, 1)
+    if (length(l) < length(fence)) return 0
+    return (c == "~") ? (l ~ /^~+$/) : (l ~ /^`+$/)
+}
+function opens(line) {
+    if (!match(line, /^[ \t]*(```+|~~~+)/)) return 0
+    fence = substr(line, RSTART, RLENGTH); sub(/^[ \t]*/, "", fence)
+    info = substr(line, RSTART + RLENGTH); sub(/^[ \t]*/, "", info)
+    split(info, w, /[ \t{]/); lang = w[1]
+    return 1
+}
+function trimmed(s) { sub(/^[ \t]*/, "", s); sub(/[ \t]*$/, "", s); return s }
+'
+
 # The text of AGENTS.md outside fenced code blocks.
 outside_fences() {
-    awk '
-        /^[ \t]*(```|~~~)/ { in_fence = !in_fence; next }
-        !in_fence { print }
+    awk "$FENCE_AWK_LIB"'
+        in_fence { if (closes(trimmed($0))) in_fence = 0; next }
+        opens($0) { in_fence = 1; next }
+        { print }
     ' <<<"$AGENTS_CONTENT"
 }
 
-# The lines of fenced bash/sh/shell/console/zsh blocks, one command each:
-# backslash continuations joined, a "$ " prompt and trailing "# comments"
-# removed, blank and comment lines dropped.
+# The lines of fenced shell blocks, one command each. bash/sh/shell/zsh
+# blocks: every line. console/shell-session blocks: only "$ " lines, the rest
+# is output. Backslash continuations are joined, a "$ " prompt and trailing
+# "# comments" removed, blank and comment lines and heredoc bodies dropped.
 fenced_shell_lines() {
-    awk '
-        !in_fence && /^[ \t]*(```|~~~)[ \t]*(bash|sh|shell|console|zsh|shell-session)[ \t]*$/ { in_fence = 1; shell = 1; next }
-        !in_fence && /^[ \t]*(```|~~~)/ { in_fence = 1; shell = 0; next }
-        in_fence && /^[ \t]*(```|~~~)[ \t]*$/ { in_fence = 0; shell = 0; acc = ""; next }
-        in_fence && shell {
+    awk "$FENCE_AWK_LIB"'
+        in_fence && closes(trimmed($0)) { in_fence = 0; shell = 0; acc = ""; here = ""; next }
+        in_fence && !shell { next }
+        !in_fence {
+            if (opens($0)) {
+                in_fence = 1; acc = ""; here = ""
+                shell = (lang ~ /^(bash|sh|shell|zsh)$/) ? 1 : ((lang ~ /^(console|shell-session)$/) ? 2 : 0)
+            }
+            next
+        }
+        here != "" { if (trimmed($0) == here) here = ""; next }
+        {
             line = $0
+            if (acc == "" && shell == 2 && trimmed(line) !~ /^\$[ \t]/) next
             if (line ~ /\\$/) { acc = acc substr(line, 1, length(line) - 1) " "; next }
             line = acc line; acc = ""
             sub(/^[ \t]+/, "", line)
             sub(/^\$[ \t]+/, "", line)
             if (line ~ /^#/) next
+            if (match(line, /<<-?[ \t]*[\047"]?[A-Za-z_][A-Za-z0-9_]*/)) {
+                here = substr(line, RSTART, RLENGTH)
+                sub(/^<<-?[ \t]*[\047"]?/, "", here)
+            }
             sub(/[ \t]+#.*$/, "", line)
             sub(/[ \t]+$/, "", line)
             gsub(/[ \t]+/, " ", line)
@@ -390,6 +425,16 @@ is_repo_local_path() {
     [[ "$word" =~ \.(sh|bash|py|php|pl|rb|js|mjs|ts)$ ]]
 }
 
+# <cmd> without leading VAR=value assignments.
+command_rest() {
+    local rest="$1"
+    while [[ "$rest" =~ ^[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+(.*)$ ]]; do
+        rest="${BASH_REMATCH[1]}"
+    done
+    printf '%s
+' "$rest"
+}
+
 # The command word of <cmd>: leading VAR=value assignments skipped.
 command_word() {
     local rest="$1"
@@ -400,18 +445,18 @@ command_word() {
 }
 
 # Is a single backticked word a path rather than a command (a file map, a
-# directory table, a file named in prose)? A directory, an existing file that
-# is not executable, and a missing file that is not a script are paths. A
-# missing script stays a command, so that a lost script is reported.
+# directory table, a file named in prose)? A word without arguments that
+# contains a slash is a command only when it names an executable file of
+# the project; anything else with a slash is a path. A word without a slash
+# is a path only when it names a directory or a non-executable file.
 is_path_cell() {
     local cell="$1"
     [[ "$cell" == *[[:space:]]* ]] && return 1
     [[ "$cell" == */ ]] && return 0
     [[ -d "$cell" ]] && return 0
-    [[ -f "$cell" ]] && [[ ! -x "$cell" ]] && return 0
-    if [[ ! -e "$cell" ]] && [[ "$cell" == */* ]] && [[ ! "$cell" =~ \.(sh|bash|py|php|pl|rb|js|mjs|ts)$ ]]; then
-        return 0
-    fi
+    [[ -f "$cell" && -x "$cell" ]] && return 1
+    [[ -f "$cell" ]] && return 0
+    [[ "$cell" == */* ]] && return 0
     return 1
 }
 
@@ -568,6 +613,9 @@ verify_command() {
 
     # The base command: the first word after any VAR=value assignments
     base_cmd="$(command_word "$cmd")"
+    # The command without VAR=value assignments, for parsing its arguments
+    local run
+    run="$(command_rest "$cmd")"
 
     # Skip placeholders
     if [[ "$cmd" == *"<"* ]] || [[ "$cmd" == *"{{{"* ]]; then
@@ -587,7 +635,7 @@ verify_command() {
     case "$base_cmd" in
         npm|yarn|pnpm|bun)
             # Check if package.json script exists
-            local script="${cmd#* }"
+            local script="${run#* }"
             script="${script#run }"
             script="${script%% *}"
             if [ -f "package.json" ]; then
@@ -634,14 +682,53 @@ verify_command() {
             ;;
 
         make)
-            # Check if Makefile target exists
-            local target="${cmd#make }"
-            target="${target%% *}"
-            if [ -f "Makefile" ] || [ -f "makefile" ] || [ -f "GNUmakefile" ]; then
-                if makefile_has_target "$target"; then
+            # The target is the first word that is no option and no VAR=value;
+            # -C/--directory names the directory to look in. A custom makefile
+            # (-f/--file) is not read: such a command is skipped.
+            local target="" make_dir="." make_file="" expect="" w
+            local -a mwords=()
+            read -ra mwords <<<"${run#make}"
+            for w in "${mwords[@]}"; do
+                if [[ -n "$expect" ]]; then
+                    [[ "$expect" = dir ]] && make_dir="$w"
+                    [[ "$expect" = file ]] && make_file="$w"
+                    expect=""; continue
+                fi
+                case "$w" in
+                    -C|--directory) expect="dir" ;;
+                    --directory=*) make_dir="${w#--directory=}" ;;
+                    -C*) make_dir="${w#-C}" ;;
+                    -f|--file|--makefile) expect="file" ;;
+                    --file=*|--makefile=*|-f*) make_file="${w#*=}" ;;
+                    -I|-o|-W|--include-dir|--old-file|--what-if) expect="skip" ;;
+                    -*) ;;
+                    *=*) ;;
+                    *) target="$w"; break ;;
+                esac
+            done
+            if [[ -n "$make_file" ]]; then
+                warn "Not checked (custom makefile): $cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": null, "reason": "custom makefile"}'
+                ((SKIPPED+=1))
+                return 0
+            fi
+            if [[ ! -d "$make_dir" ]]; then
+                error "make directory not found: $make_dir (in $cmd)"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((FAILED+=1))
+                return 0
+            fi
+            if [[ -z "$target" ]]; then
+                target="(default)"
+            fi
+            if (cd "$make_dir" && { [ -f "Makefile" ] || [ -f "makefile" ] || [ -f "GNUmakefile" ]; }); then
+                if [[ "$target" = "(default)" ]] || (cd "$make_dir" && makefile_has_target "$target"); then
                     if [ "$SMOKE_TEST" = true ]; then
                         # Use make -n (dry run) for smoke test to avoid side effects
-                        if smoke_test_command "make -n $target"; then
+                        local make_smoke="make -n"
+                        [[ "$make_dir" != "." ]] && make_smoke="make -C $make_dir -n"
+                        [[ "$target" != "(default)" ]] && make_smoke="$make_smoke $target"
+                        if smoke_test_command "$make_smoke"; then
                             local duration="${COMMAND_RESULTS[$cmd]}"
                             duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                             success "make target works: $target (~${duration}ms)"

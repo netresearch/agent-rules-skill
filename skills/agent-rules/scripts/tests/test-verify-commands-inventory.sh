@@ -26,18 +26,22 @@ touch "$FX/build/keep"
 # A fenced example that deletes the sentinel when run.
 printf 'import os\nos.remove("build/keep")\n' > "$FX/wipe.py"
 # make -n still runs a "+" recipe line: a smoke test of "make wipe" deletes it.
-printf 'wipe:\n\t+rm -f build/keep\n' > "$FX/Makefile"
+printf 'wipe:\n\t+rm -f build/keep\n\ntest:\n\techo test\n' > "$FX/Makefile"
+mkdir -p "$FX/sub"
+printf 'build:\n\techo build\n' > "$FX/sub/Makefile"
 cat > "$FX/AGENTS.md" <<'AGENTS'
 # Fixture
 
 - Check the interpreter: `python3 --version`
 - Run `scripts/check.sh --fast` before a commit, or `SF_BASE=origin/main scripts/check.sh --diff`.
-- Documented but gone: `scripts/gone.sh`.
+- Documented but gone: `scripts/gone.sh --check`.
+- Entry point `src/main.ts`; helpers in `tools/run.py`.
 
 | Path | Purpose |
 |------|---------|
 | `src/` | sources |
 | `docs/` | documentation |
+| `tools/run.py` | helper |
 
 ## Verify it
 
@@ -46,7 +50,31 @@ ls docs                 # list the documentation
 $ composer --working-dir=app ci:test
 python3 wipe.py
 make wipe
+CI=1 make test
+make -C sub build
+cat > config.py <<'EOF'
+from app import settings
+EOF
 ```
+
+~~~sh
+python3 -V
+~~~
+
+```bash title="listing"
+ls src
+```
+
+```console
+$ python3 --help
+tests/test_gone.py .... [100%]
+```
+
+````markdown
+```bash
+make nested-example
+```
+````
 AGENTS
 
 inventory() {
@@ -79,16 +107,19 @@ pass "a relative path is resolved once"
 
 # 2. Inline, repo-local, env-prefixed and fenced commands are found.
 for c in 'python3 --version' 'scripts/check.sh --fast' 'SF_BASE=origin/main scripts/check.sh --diff' \
-         'scripts/gone.sh' 'ls docs' 'composer --working-dir=app ci:test' 'python3 wipe.py'; do
+         'scripts/gone.sh --check' 'ls docs' 'composer --working-dir=app ci:test' 'python3 wipe.py' \
+         'CI=1 make test' 'make -C sub build' 'python3 -V' 'ls src' 'python3 --help'; do
     grep -qxF -- "$c" <<<"$INV_ABS" || fail "'$c' is missing from the inventory: $INV_ABS"
 done
 pass "inline, repo-local, env-prefixed and fenced commands are found"
 
 # 3. A directory table holds paths, not commands; comments and prompts are cut.
-for c in 'src/' 'docs/' 'ls docs                 # list the documentation' '$ composer --working-dir=app ci:test'; do
+for c in 'src/' 'docs/' 'ls docs                 # list the documentation' '$ composer --working-dir=app ci:test' \
+         'src/main.ts' 'tools/run.py' 'from app import settings' 'EOF' 'tests/test_gone.py .... [100%]' \
+         'make nested-example'; do
     grep -qxF -- "$c" <<<"$INV_ABS" && fail "'$c' was taken for a command: $INV_ABS"
 done
-pass "paths in a table are not commands; comments and prompts are removed"
+pass "paths are not commands; comments, prompts, console output, heredoc bodies and nested examples are dropped"
 
 # 4. Sources are recorded, a missing repo-local script fails the run.
 [[ "$(jq -r '.inventory[] | select(.cmd == "python3 wipe.py") | .source' <<<"$ABS")" = fenced ]] \
@@ -99,12 +130,23 @@ OUT="$(cd "$WORK" && DRY_RUN=true bash "$VERIFY" "$FX" 2>&1)"; rc=$?
 grep -q "repo-local command not found: scripts/gone.sh" <<<"$OUT" || fail "no diagnostic for scripts/gone.sh (output was: $OUT)"
 grep -q "repo-local command exists: scripts/check.sh" <<<"$OUT" || fail "scripts/check.sh not verified (output was: $OUT)"
 grep -q "composer script exists: ci:test" <<<"$OUT" || fail "--working-dir composer script not found (output was: $OUT)"
+grep -q "make target exists: test" <<<"$OUT" || fail "an env-prefixed make target was not found (output was: $OUT)"
+grep -q "make target exists: build" <<<"$OUT" || fail "make -C sub build was not looked up in sub/ (output was: $OUT)"
 pass "a missing repo-local script fails; --working-dir is honoured"
 
 # 5. A fenced example is never executed, even with SMOKE_TEST=true.
 (cd "$WORK" && SMOKE_TEST=true DRY_RUN=true bash "$VERIFY" "$FX" >/dev/null 2>&1) || true
 [[ -e "$FX/build/keep" ]] || fail "a fenced example was executed (build/keep is gone)"
 pass "fenced examples are not executed by the smoke test"
+
+# 5b. A CRLF AGENTS.md loses no fenced command.
+CRLF="$WORK/crlf"
+mkdir -p "$CRLF"
+# shellcheck disable=SC2016  # backticks are markdown, not substitution
+printf '# x\r\n\r\n```bash\r\npython3 --version\r\n```\r\n' > "$CRLF/AGENTS.md"
+OUT="$(DRY_RUN=true bash "$VERIFY" "$CRLF" --json 2>/dev/null)"
+[[ "$(jq -r '.found' <<<"$OUT")" = 1 ]] || fail "a CRLF fenced command was lost (output was: $OUT)"
+pass "a CRLF AGENTS.md keeps its fenced commands"
 
 # 6. A missing directory and an unreadable AGENTS.md are diagnostics, not success.
 OUT="$(bash "$VERIFY" "$WORK/does-not-exist" 2>&1)"; rc=$?
