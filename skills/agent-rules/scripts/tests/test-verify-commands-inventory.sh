@@ -318,5 +318,145 @@ grep -qxF './scripts/gone.sh' <<<"$(inventory "$OUT")" || fail "a line after a h
 [[ "$rc" -eq 1 ]] || fail "a missing script after a here-string exits $rc, expected 1 (output was: $OUT)"
 pass "a here-string does not start a heredoc"
 
+# 13. A cd into a plain directory that does not exist fails the run; the lines
+# after it cannot be checked and carry no directory.
+MD="$WORK/missing-dir"
+mkdir -p "$MD"
+cat > "$MD/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+cd frontend
+npm run lint
+./scripts/build.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$MD" 2>&1)"; rc=$?
+[[ "$rc" -eq 1 ]] || fail "a cd into a missing directory exits $rc, expected 1 (output was: $OUT)"
+grep -q "directory not found: frontend" <<<"$OUT" || fail "no diagnostic for the missing cd directory (output was: $OUT)"
+grep -q "Not checked.*./scripts/build.sh" <<<"$OUT" || fail "a line after the missing directory was not reported as unchecked (output was: $OUT)"
+OUT="$(DRY_RUN=true bash "$VERIFY" "$MD" --json 2>/dev/null)"
+[[ "$(jq -r '.summary.failed' <<<"$OUT")" = 1 ]] || fail "the missing cd directory is not one failure (output was: $OUT)"
+[[ "$(jq -r '[.inventory[] | select(.cmd == "npm run lint" and has("dir") and .dir == null)] | length' <<<"$OUT")" = 1 ]] \
+    || fail "a line after a missing cd directory keeps a directory in the inventory (output was: $OUT)"
+pass "a cd into a missing directory fails; the lines after it are not checked"
+
+# 14. A cd through a symlink that leads out of the project is not followed.
+OP="$WORK/outside-link/proj"
+mkdir -p "$OP" "$WORK/outside-link/elsewhere/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$WORK/outside-link/elsewhere/scripts/x.sh"
+chmod +x "$WORK/outside-link/elsewhere/scripts/x.sh"
+ln -s ../elsewhere "$OP/link"
+cat > "$OP/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+cd link
+./scripts/x.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$OP" 2>&1)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "a cd through an outside symlink exits $rc (output was: $OUT)"
+grep -q "Not checked.*./scripts/x.sh" <<<"$OUT" || fail "a line after a cd out of the project was checked (output was: $OUT)"
+OUT="$(DRY_RUN=true bash "$VERIFY" "$OP" --json 2>/dev/null)"
+[[ "$(jq -r '[.inventory[] | select(.cmd == "./scripts/x.sh" and has("dir") and .dir == null)] | length' <<<"$OUT")" = 1 ]] \
+    || fail "a line after a cd out of the project keeps a directory in the inventory (output was: $OUT)"
+pass "a cd out of the project is not followed"
+
+# 15. Once a cd cannot be followed, a later cd in the same block does not
+# make the lines after it checkable again.
+ST="$WORK/sticky"
+# A directory literally named "?" makes a non-sticky "?/web" resolvable, so
+# only the sticky rule keeps the line after it unchecked.
+mkdir -p "$ST/web" "$ST/?/web"
+cat > "$ST/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+cd ../somewhere
+cd web
+./scripts/gone.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$ST" 2>&1)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "a cd after an unfollowable cd was followed: exit $rc (output was: $OUT)"
+grep -q "Not checked.*./scripts/gone.sh" <<<"$OUT" || fail "a line after an unfollowable cd was checked (output was: $OUT)"
+pass "an unfollowable cd leaves the rest of its block unchecked"
+
+# 16. npm and composer smoke tests that run another command line file the
+# result under the documented command.
+NC="$WORK/npm-composer"
+mkdir -p "$NC"
+printf '{"scripts": {"test": "echo t"}}\n' > "$NC/package.json"
+printf '{}\n' > "$NC/composer.json"
+# shellcheck disable=SC2016  # backticks are markdown, not substitution
+printf '# x\n\n- `npm test`\n- `composer install`\n' > "$NC/AGENTS.md"
+OUT="$(SMOKE_TEST=true DRY_RUN=true bash "$VERIFY" "$NC" --json 2>/dev/null)"
+for c in 'npm test' 'composer install'; do
+    [[ "$(jq -r --arg c "$c" '[.commands[] | select(.cmd == $c)] | length' <<<"$OUT")" = 1 ]] \
+        || fail "the smoke result of '$c' is not filed under it (output was: $OUT)"
+done
+[[ "$(jq -r '[.commands[] | select(.cmd | test("\\|\\|"))] | length' <<<"$OUT")" = 0 ]] \
+    || fail "an internal smoke command line appears in commands[] (output was: $OUT)"
+pass "npm and composer smoke results are filed under the documented command"
+
+# 17. A documented command that equals another check's internal command line
+# keeps its own result.
+PR="$WORK/prior"
+mkdir -p "$PR/vendor/bin"
+printf '#!/bin/sh\nexit 0\n' > "$PR/vendor/bin/phpunit"
+chmod +x "$PR/vendor/bin/phpunit"
+# shellcheck disable=SC2016  # backticks are markdown, not substitution
+printf '# x\n\n- `vendor/bin/phpunit --help`\n- `vendor/bin/phpunit --testsuite unit`\n' > "$PR/AGENTS.md"
+OUT="$(SMOKE_TEST=true DRY_RUN=true bash "$VERIFY" "$PR" --json 2>/dev/null)"
+for c in 'vendor/bin/phpunit --help' 'vendor/bin/phpunit --testsuite unit'; do
+    [[ "$(jq -r --arg c "$c" '.commands[] | select(.cmd == $c) | .detail.runs' <<<"$OUT")" = true ]] \
+        || fail "'$c' lost its result (output was: $OUT)"
+done
+pass "a documented command equal to an internal command line keeps its result"
+
+# 18. The same command at the root and after a cd is two inventory entries.
+DD="$WORK/dedup"
+mkdir -p "$DD/web"
+printf '{"scripts": {"lint": "x"}}\n' > "$DD/package.json"
+printf '{"scripts": {"lint": "x"}}\n' > "$DD/web/package.json"
+cat > "$DD/AGENTS.md" <<'AGENTS'
+# x
+
+- Lint: `npm run lint`
+
+```bash
+cd web
+npm run lint
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$DD" --json 2>/dev/null)"
+[[ "$(jq -r '[.inventory[] | select(.cmd == "npm run lint")] | length' <<<"$OUT")" = 2 ]] \
+    || fail "the same command at the root and in web/ is not two inventory entries (output was: $OUT)"
+pass "the same command in two directories is two inventory entries"
+
+# 19. After a line checked in a cd directory, the next line is checked at the
+# project root again.
+BK="$WORK/back-to-root"
+mkdir -p "$BK/web/scripts" "$BK/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$BK/web/scripts/build.sh"
+printf '#!/bin/sh\nexit 0\n' > "$BK/scripts/root-only.sh"
+chmod +x "$BK/web/scripts/build.sh" "$BK/scripts/root-only.sh"
+cat > "$BK/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+cd web
+./scripts/build.sh
+```
+
+```bash
+./scripts/root-only.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$BK" 2>&1)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "a root line after a cd-directory line was not checked at the root: exit $rc (output was: $OUT)"
+pass "the check returns to the project root after a line in a cd directory"
+
 echo ""
 echo "All inventory tests passed."

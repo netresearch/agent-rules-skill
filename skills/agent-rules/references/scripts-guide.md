@@ -173,9 +173,9 @@ This script:
 - Verifies make targets exist in Makefile, also after `VAR=value`, `-j`/`-l` with a number and in the `-C` directory
 - Verifies composer scripts exist in composer.json, also under `--working-dir`/`-d`
 - Verifies repo-local scripts exist, also when run through `sh`/`bash`; a missing one fails the run
-- Follows a plain `cd <dir>` into the project inside a fenced block: the lines after it are checked in that directory. After any other `cd` (`..`, an absolute path, a variable, `cd x && …`) the rest of that block is reported as not checked, never as failed
+- Follows a plain `cd <dir>` into the project inside a fenced block: the lines after it are checked in that directory. A plain `cd <dir>` whose directory does not exist fails the run (`directory not found`). After a `cd` that cannot be followed (`..`, an absolute path, a variable, `cd -`, `cd x && …`, a directory outside the project or missing) the rest of that block is reported as not checked
 - Never runs a command taken from a fenced block, also not with `SMOKE_TEST=true`: fenced lines are examples
-- Exits 1 when a documented command is missing or AGENTS.md cannot be read, and 3 when AGENTS.md documents no command (`--allow-empty` accepts that); `--json` reports `status` (`verified`, `unverified`, `failed`, `empty`), `found` and the `inventory` with each command's source (and `dir` for a fenced line after a `cd`: the directory, or `null` when the `cd` could not be followed)
+- Exits 1 when a documented command is missing or AGENTS.md cannot be read, and 3 when AGENTS.md documents no command (`--allow-empty` accepts that); `--json` reports `status` (`verified`, `unverified`, `failed`, `empty`), `found` and the `inventory` with each command's source (and `dir` for a fenced line after a `cd`: the directory it was checked in, or `null` when the `cd` could not be followed, including a missing directory or one outside the project)
 - With `--update-verified`, records the date in the "Last verified" marker of AGENTS.md on success; without it, AGENTS.md is not changed
 
 Options:

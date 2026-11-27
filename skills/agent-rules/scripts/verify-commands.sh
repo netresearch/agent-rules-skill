@@ -52,8 +52,10 @@ repo-local script, and the lines of fenced bash/sh/shell/console blocks.
 Commands from fenced blocks are examples: they are checked for existence but
 never run, also not with SMOKE_TEST=true. A plain "cd <dir>" into the project
 inside a fenced block is followed: the lines after it are checked in that
-directory. After any other cd (.., an absolute path, a variable, cd x && ...)
-the rest of the block is reported as not checked, never as failed.
+directory. A plain "cd <dir>" whose directory does not exist fails the run.
+After a cd that cannot be followed (.., an absolute path, a variable, cd -,
+cd x && ..., a directory outside the project or missing) the rest of the
+block is reported as not checked.
 
 Exit status:
   0  every found command verified or skipped, none failed
@@ -1125,7 +1127,12 @@ echo ""
 # A command taken only from a fenced block is an example: check that it
 # exists, never run it.
 # A line after a cd in its block is checked in that directory, which must be
-# inside the project; after a cd this check cannot follow it is not checked.
+# inside the project; after a cd this check cannot follow it is not checked,
+# and its inventory entry gets "dir": null. A plain "cd <dir>" line whose
+# directory does not exist is a failure: the instructions name a directory the
+# project no longer has.
+UNFOLLOWED=()
+CD_PLAIN_RE='^cd ([A-Za-z0-9_./-]+)$'
 for entry in "${entries[@]}"; do
     cmd="${entry#*$'\t'}"
     kind="${entry%%$'\t'*}"
@@ -1135,12 +1142,25 @@ for entry in "${entries[@]}"; do
             dir="${kind#fenced:}"
             if [[ "$dir" = "?" ]] || ! cd "$dir" 2>/dev/null || [[ "$(pwd -P)" != "$PROJECT_DIR"/* ]]; then
                 cd "$PROJECT_DIR"
+                if [[ "$dir" != "?" ]]; then
+                    UNFOLLOWED+=("$dir"$'\t'"$cmd")
+                fi
                 warn "Not checked (follows a cd in its fenced block that cannot be followed): $cmd"
                 COMMAND_RESULTS["$cmd"]='{"exists": null, "reason": "unknown directory"}'
                 ((SKIPPED+=1))
                 continue
             fi
             echo "In $dir/ (after cd in a fenced block):"
+        fi
+        if [[ "$cmd" =~ $CD_PLAIN_RE ]]; then
+            cd_to="${BASH_REMATCH[1]}"
+            if [[ "$cd_to" != [/-]* && ! "$cd_to" =~ (^|/)\.\.(/|$) && ! -d "$cd_to" ]]; then
+                error "directory not found: $cd_to (in $cmd)"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((FAILED+=1))
+                cd "$PROJECT_DIR"
+                continue
+            fi
         fi
         SMOKE_TEST_SAVED="$SMOKE_TEST"
         SMOKE_TEST=false
@@ -1151,6 +1171,14 @@ for entry in "${entries[@]}"; do
         verify_command "$cmd"
     fi
 done
+
+# Lines whose cd could not be followed carry no directory in the inventory.
+if [[ ${#UNFOLLOWED[@]} -gt 0 ]]; then
+    INVENTORY_JSON="$(printf '%s\n' "${UNFOLLOWED[@]}" | jq -Rsc --argjson inv "$INVENTORY_JSON" '
+        [split("\n")[] | select(length > 0) | split("\t") | {d: .[0], c: (.[1:] | join("\t"))}] as $u
+        | $inv | map(. as $e
+            | if ($e.dir != null) and any($u[]; .d == $e.dir and .c == $e.cmd) then .dir = null else . end)')"
+fi
 
 if [[ "$FAILED" -gt 0 ]]; then
     STATUS=failed
