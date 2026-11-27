@@ -114,8 +114,9 @@ done
 pass "a CLAUDE.md the generator made (symlink, import, shim) is removed; --dry-run keeps it"
 
 # --- Test 8: a CLAUDE.md of the user's own is kept and reported, also with
-# --force while it holds rules; --force removes a foreign symlink as a link,
-# never written through.
+# --force while it holds rules. --force removes a CLAUDE.md symlink only when
+# it points to the AGENTS.md of its directory; a symlink to any other target
+# is kept, named in the report, and never written through.
 FX="$WORK/user-claude"
 make_fixture "$FX"
 printf '# my own rules\n' > "$FX/CLAUDE.md"
@@ -131,13 +132,22 @@ mkdir -p "$WORK/claude-target"
 ln -s ../claude-target/CLAUDE.md "$FX/CLAUDE.md"
 bash "$GENERATE" "$FX" >/dev/null 2>&1 || fail "generate-agents.sh errored"
 [[ "$(readlink "$FX/CLAUDE.md")" = "../claude-target/CLAUDE.md" ]] || fail "a foreign CLAUDE.md symlink was removed without --force"
-bash "$GENERATE" "$FX" --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
-[[ -L "$FX/CLAUDE.md" ]] && fail "--force did not remove the foreign CLAUDE.md symlink"
+OUT="$(bash "$GENERATE" "$FX" --force 2>&1)" || fail "generate-agents.sh errored"
+[[ "$(readlink "$FX/CLAUDE.md")" = "../claude-target/CLAUDE.md" ]] || fail "--force removed a CLAUDE.md symlink to another target"
+grep -q "Kept: CLAUDE.md despite --force" <<<"$OUT" || fail "--force did not report the kept CLAUDE.md symlink (output was: $OUT)"
+grep -qF "../claude-target/CLAUDE.md" <<<"$OUT" || fail "the report does not name the symlink target (output was: $OUT)"
 [[ -e "$WORK/claude-target/CLAUDE.md" ]] && fail "a file was written through the CLAUDE.md symlink"
+FX2="$WORK/own-claude-link-force"
+make_fixture "$FX2"
+ln -s AGENTS.md "$FX2/CLAUDE.md"
+bash "$GENERATE" "$FX2" --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[[ -L "$FX2/CLAUDE.md" ]] && fail "--force did not remove a CLAUDE.md symlink to the AGENTS.md of its directory"
+FX="$WORK/claude-shim"
+make_fixture "$FX"
 OUT="$(bash "$GENERATE" "$FX" --claude-shim 2>&1)" || fail "generate-agents.sh errored with --claude-shim"
 { [[ -e "$FX/CLAUDE.md" ]] || [[ -L "$FX/CLAUDE.md" ]]; } && fail "--claude-shim created a CLAUDE.md"
 grep -q -- "--claude-shim is ignored" <<<"$OUT" || fail "--claude-shim gave no notice (output was: $OUT)"
-pass "a user CLAUDE.md is kept and reported (also with --force), --force removes a foreign symlink without writing through, --claude-shim creates none"
+pass "a user CLAUDE.md is kept and reported (also with --force); --force removes a symlink to AGENTS.md but keeps one to another target; --claude-shim creates none"
 
 # --- Test 9: a user's CLAUDE.md that also imports AGENTS.md is still theirs
 FX="$WORK/user-claude-import"

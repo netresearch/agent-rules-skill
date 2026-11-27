@@ -20,7 +20,7 @@ Options:
 - `--update` - Update existing files only (preserves human edits outside generated markers)
 - `--claude-shim` - Ignored: no CLAUDE.md is created, AGENTS.md is the only instruction file
 - `--no-symlinks` - Do not create GEMINI.md at any level. It is created by default at every level where an AGENTS.md is generated, which enables Gemini CLI native loading. No CLAUDE.md is created at any level; one the generator made earlier is removed
-- `--force` - Replace existing GEMINI.md files that are not ours, and remove a CLAUDE.md that is not ours when it is a symlink or empty. A CLAUDE.md that holds rules beyond the `@AGENTS.md` import line is kept and reported even with `--force`: move its rules into AGENTS.md (or `~/.claude/CLAUDE.md` for personal ones), then remove it
+- `--force` - Replace existing GEMINI.md files that are not ours, and remove a CLAUDE.md that is not ours when it is empty. A CLAUDE.md that holds rules beyond the `@AGENTS.md` import line, or a symlink to anything but the AGENTS.md of its directory, is kept and reported even with `--force`: move its rules into AGENTS.md (or `~/.claude/CLAUDE.md` for personal ones), then remove it
 
 ### Write manifest (`--json`)
 
