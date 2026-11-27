@@ -260,7 +260,7 @@ OUT="$(DRY_RUN=true bash "$VERIFY" "$MONO" --json 2>/dev/null)"; rc=$?
 [[ "$(jq -r '.summary.failed' <<<"$OUT")" = 0 ]] || fail "a command after cd web failed (output was: $OUT)"
 [[ "$(jq -r '[.inventory[] | select(.cmd == "npm run lint" and .dir == "web")] | length' <<<"$OUT")" = 1 ]] \
     || fail "npm run lint is not recorded in web/ (output was: $OUT)"
-[[ "$(jq -r '[.inventory[] | select(.cmd == "./scripts/not-here.sh" and .dir == null)] | length' <<<"$OUT")" = 1 ]] \
+[[ "$(jq -r '[.inventory[] | select(.cmd == "./scripts/not-here.sh" and has("dir") and .dir == null)] | length' <<<"$OUT")" = 1 ]] \
     || fail "a line after an unresolvable cd is not recorded without a directory (output was: $OUT)"
 OUT="$(DRY_RUN=true bash "$VERIFY" "$MONO" 2>&1)"
 grep -q "repo-local command exists: ./scripts/build.sh" <<<"$OUT" || fail "./scripts/build.sh was not found in web/ (output was: $OUT)"
