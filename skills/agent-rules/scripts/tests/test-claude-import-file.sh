@@ -41,7 +41,7 @@ bash "$GENERATE" "$FX" --style=thin >/dev/null 2>&1 || fail "generate-agents.sh 
 [ -f "$FX/Documentation/AGENTS.md" ] \
     || fail "fixture did not produce a scoped Documentation/AGENTS.md (scope not detected; fix the fixture)"
 [ -e "$FX/Documentation/GEMINI.md" ] || fail "no Documentation/GEMINI.md generated"
-if [ -L "$FX/Documentation/GEMINI.md" ]; then
+if [[ -L "$FX/Documentation/GEMINI.md" ]]; then
     fail "Documentation/GEMINI.md is a symlink -- breaks TYPO3 docs rendering (#82)"
 fi
 grep -qE '^@AGENTS\.md[[:space:]]*$' "$FX/Documentation/GEMINI.md" \
@@ -51,7 +51,7 @@ pass "generator emits @AGENTS.md import file in Documentation/"
 # Non-hostile scope dirs still get a GEMINI.md symlink; no CLAUDE.md anywhere.
 [ -L "$FX/src/GEMINI.md" ] || fail "src/GEMINI.md should be a symlink (src scope needs >=5 source files)"
 for d in . src Documentation; do
-    { [ -e "$FX/$d/CLAUDE.md" ] || [ -L "$FX/$d/CLAUDE.md" ]; } && fail "a CLAUDE.md was created in $d"
+    { [[ -e "$FX/$d/CLAUDE.md" ]] || [[ -L "$FX/$d/CLAUDE.md" ]]; } && fail "a CLAUDE.md was created in $d"
 done
 pass "non-hostile scope dirs get GEMINI.md symlinks, and no CLAUDE.md is created"
 
@@ -66,6 +66,7 @@ for kind in import symlink; do
     case "$kind" in
         import) printf '@AGENTS.md\n' > "$FX/Documentation/CLAUDE.md" ;;
         symlink) ln -s AGENTS.md "$FX/Documentation/CLAUDE.md" ;;
+        *) fail "unknown kind: $kind" ;;
     esac
     out=$(bash "$VALIDATE" "$FX" 2>&1)
     grep -q "Remove CLAUDE.md.*Documentation" <<<"$out" \

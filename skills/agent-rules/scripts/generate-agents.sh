@@ -1386,9 +1386,9 @@ fi
 # removed as a link, its target is never touched.
 remove_own_claude_md() {
     local file="$1" label="$2"
-    [ -e "$file" ] || [ -L "$file" ] || return 0
-    if [ "$FORCE" = true ] || compat_file_is_ours "$file" || { [ ! -L "$file" ] && head -n 1 "$file" 2>/dev/null | grep -qF 'Auto-generated shim for Claude Code compatibility'; }; then
-        if [ "$DRY_RUN" = true ]; then
+    [[ -e "$file" ]] || [[ -L "$file" ]] || return 0
+    if [[ "$FORCE" = true ]] || compat_file_is_ours "$file" || { [[ ! -L "$file" ]] && head -n 1 "$file" 2>/dev/null | grep -qF 'Auto-generated shim for Claude Code compatibility'; }; then
+        if [[ "$DRY_RUN" = true ]]; then
             emit_op remove compat-file "$file"
             echo "[DRY-RUN] Would remove: $file (AGENTS.md is the only instruction file)"
         else
@@ -1409,7 +1409,7 @@ remove_own_claude_md "$PROJECT_DIR/CLAUDE.md" CLAUDE.md
 
 # Create the GEMINI.md compatibility symlink if requested (root level)
 # Subdirectory symlinks are created after scoped files are generated (see below).
-if [ "$CREATE_SYMLINKS" = true ]; then
+if [[ "$CREATE_SYMLINKS" = true ]]; then
     # shellcheck disable=SC2043  # one compatibility file now (CLAUDE.md is no longer created)
     for symlink_name in GEMINI.md; do
         SYMLINK_FILE="$PROJECT_DIR/$symlink_name"

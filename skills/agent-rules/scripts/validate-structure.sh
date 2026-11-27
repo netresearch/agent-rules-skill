@@ -258,11 +258,11 @@ check_no_claude_md() {
     [ -z "$rel_dir" ] && rel_dir="(root)"
     local f found=()
     for f in CLAUDE.md .claude/CLAUDE.md; do
-        if [ -e "$dir/$f" ] || [ -L "$dir/$f" ]; then
+        if [[ -e "$dir/$f" ]] || [[ -L "$dir/$f" ]]; then
             found+=("$f")
         fi
     done
-    if [ ${#found[@]} -eq 0 ]; then
+    if [[ ${#found[@]} -eq 0 ]]; then
         success "No CLAUDE.md beside AGENTS.md: $rel_dir"
         return 0
     fi
