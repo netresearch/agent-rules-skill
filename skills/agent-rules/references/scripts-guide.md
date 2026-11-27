@@ -18,9 +18,9 @@ Options:
 - `--style=thin` - Use thin root template (~30 lines, default)
 - `--style=verbose` - Use verbose root template (~100-200 lines)
 - `--update` - Update existing files only (preserves human edits outside generated markers)
-- `--claude-shim` - Generate CLAUDE.md that imports AGENTS.md (root only, legacy)
-- `--no-symlinks` - Do not create CLAUDE.md/GEMINI.md at any level. They are created by default at every level where an AGENTS.md is generated, which is what enables Claude Code on-demand loading and Gemini CLI native loading.
-- `--force` - Replace existing CLAUDE.md/GEMINI.md files that are not ours
+- `--claude-shim` - Ignored: no CLAUDE.md is created, AGENTS.md is the only instruction file
+- `--no-symlinks` - Do not create GEMINI.md at any level. It is created by default at every level where an AGENTS.md is generated, which enables Gemini CLI native loading. No CLAUDE.md is created at any level; one the generator made earlier is removed
+- `--force` - Replace existing GEMINI.md files that are not ours, and remove a CLAUDE.md that is not ours when it holds nothing beyond comments, blank lines and `@AGENTS.md` import lines (an empty one too). Even with `--force`, a CLAUDE.md with rules or one that cannot be read is kept and reported: move its rules into AGENTS.md (or `~/.claude/CLAUDE.md` for personal ones), then remove it. A CLAUDE.md symlink is removed only when it resolves to the AGENTS.md of its own directory, written in any form (for example `AGENTS.md`, `./AGENTS.md` or an absolute path) and also through a chain of links; any other symlink is kept and reported with its target: a link to another AGENTS.md as removable by hand, a link that points to nothing as removable, any other link with the step to move the rules it points to
 
 ### Write manifest (`--json`)
 
@@ -38,11 +38,11 @@ bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project --dry-run -
   "schema": 1,
   "dry_run": true,
   "project": "/path/to/project",
-  "summary": { "write": 1, "symlink": 1, "keep": 1 },
+  "summary": { "write": 1, "symlink": 1, "remove": 1 },
   "operations": [
     { "op": "write",   "kind": "agents-file", "path": "AGENTS.md" },
-    { "op": "symlink", "kind": "compat-file", "path": "CLAUDE.md", "target": "AGENTS.md" },
-    { "op": "keep",    "kind": "compat-file", "path": "GEMINI.md", "reason": "regular file" }
+    { "op": "remove",  "kind": "compat-file", "path": "CLAUDE.md" },
+    { "op": "symlink", "kind": "compat-file", "path": "GEMINI.md", "target": "AGENTS.md" }
   ]
 }
 ```

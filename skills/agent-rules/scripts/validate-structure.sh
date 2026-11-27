@@ -245,39 +245,29 @@ check_scope_links() {
     fi
 }
 
-# Check CLAUDE.md symlink exists alongside an AGENTS.md file
-check_claude_symlink() {
+# AGENTS.md is the only instruction file: Claude Code (v2.1.277 and later)
+# reads AGENTS.md directly, but by default only when no CLAUDE.md,
+# .claude/CLAUDE.md or CLAUDE.local.md exists in the directory or above it, so
+# a CLAUDE.md next to an AGENTS.md (file, symlink or @AGENTS.md import) is
+# reported for removal. https://code.claude.com/docs/en/memory#agents-md
+check_no_claude_md() {
     local agents_file="$1"
     local dir
     dir=$(dirname "$agents_file")
-    local claude_file="$dir/CLAUDE.md"
     local rel_dir="${dir#"$PROJECT_DIR"}"
     [ -z "$rel_dir" ] && rel_dir="(root)"
-
-    if [ -L "$claude_file" ]; then
-        local target
-        target=$(readlink "$claude_file")
-        if [ "$target" = "AGENTS.md" ]; then
-            success "CLAUDE.md symlink correct: $rel_dir"
-            return 0
-        else
-            error "CLAUDE.md symlink points to '$target', expected 'AGENTS.md': $rel_dir"
-            return 1
+    local f found=()
+    for f in CLAUDE.md .claude/CLAUDE.md CLAUDE.local.md; do
+        if [[ -e "$dir/$f" ]] || [[ -L "$dir/$f" ]]; then
+            found+=("$f")
         fi
-    elif [ -f "$claude_file" ]; then
-        # A regular file with an @AGENTS.md import line is fully valid: some
-        # directories cannot hold symlinks (the TYPO3 docs renderer lists
-        # Documentation/ via Flysystem, which aborts on symlinks -- #82).
-        if grep -qE '^@AGENTS\.md[[:space:]]*$' "$claude_file"; then
-            success "CLAUDE.md import file (@AGENTS.md): $rel_dir"
-            return 0
-        fi
-        warning "CLAUDE.md is a regular file, not a symlink to AGENTS.md (add an '@AGENTS.md' import line or replace with a symlink): $rel_dir"
-        return 1
-    else
-        error "Missing CLAUDE.md symlink to AGENTS.md: $rel_dir (Claude Code won't read AGENTS.md without it)"
-        return 1
+    done
+    if [[ ${#found[@]} -eq 0 ]]; then
+        success "No CLAUDE.md beside AGENTS.md: $rel_dir"
+        return 0
     fi
+    warning "Remove ${found[*]} after moving any rules in it into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones): AGENTS.md is the only instruction file, and Claude Code reads AGENTS.md itself (v2.1.277+) only when no CLAUDE.md exists: $rel_dir"
+    return 1
 }
 
 # In JSON mode, route all human-readable output to /dev/null and reserve the
@@ -305,8 +295,8 @@ else
     echo ""
 fi
 
-# Check CLAUDE.md symlinks
-echo "=== CLAUDE.md Symlinks ==="
+# Check that no CLAUDE.md sits beside an AGENTS.md
+echo "=== No CLAUDE.md ==="
 ALL_AGENTS_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
     -not -path "*/references/examples/*" \
     -not -path "*/examples/*" \
@@ -318,9 +308,9 @@ ALL_AGENTS_FILES=$(find "$PROJECT_DIR" -name "AGENTS.md" \
 
 if [ -n "$ALL_AGENTS_FILES" ]; then
     while read -r file; do
-        check_claude_symlink "$file"
+        check_no_claude_md "$file"
         sym_rel="${file#"$PROJECT_DIR"/}"; sym_rel="${sym_rel#./}"
-        record_check "$sym_rel" "claude_symlink"
+        record_check "$sym_rel" "no_claude_md"
     done <<< "$ALL_AGENTS_FILES"
 fi
 echo ""

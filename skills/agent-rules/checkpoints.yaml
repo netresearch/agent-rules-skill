@@ -243,16 +243,14 @@ mechanical:
   - id: AG-31
     type: script
     severity: warning
-    desc: "CLAUDE.md must exist when Claude Code environment detected (.claude/ directory present)"
-    # Was type "conditional" with "check_command:" — neither is read by the
-    # runner, so this reported SKIPPED everywhere. The old body was also
-    # inverted: `test -d .claude && test -f CLAUDE.md` FAILS when .claude/ is
-    # absent, which is exactly when the rule does not apply. An `if` with no
-    # else exits 0 in that case, so a repo without .claude/ passes.
+    desc: "No CLAUDE.md beside the root AGENTS.md: AGENTS.md is the only instruction file, and Claude Code (v2.1.277+) reads it only while no CLAUDE.md, .claude/CLAUDE.md or CLAUDE.local.md exists (https://code.claude.com/docs/en/memory#agents-md)"
+    # Until 2026-11 this required a CLAUDE.md when .claude/ existed; Claude
+    # Code now reads AGENTS.md itself and a CLAUDE.md takes precedence over it.
+    # -L as well as -e: a dangling CLAUDE.md symlink counts too.
     command: |
-      if test -d .claude
+      if test -f AGENTS.md
       then
-        test -f CLAUDE.md
+        ! { test -e CLAUDE.md || test -L CLAUDE.md || test -e .claude/CLAUDE.md || test -e CLAUDE.local.md; }
       fi
     tags: [claude-code, compatibility]
 

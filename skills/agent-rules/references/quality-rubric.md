@@ -18,7 +18,7 @@ layers that are **kept separate on purpose**:
 
 | Axis | Max | Source | What it measures |
 |------|-----|--------|------------------|
-| Structure | 25 | `validate-structure.sh --json` | Managed header, thin root, precedence, scope links, CLAUDE.md symlink, required scoped sections |
+| Structure | 25 | `validate-structure.sh --json` | Managed header, thin root, precedence, scope links, no CLAUDE.md beside an AGENTS.md, required scoped sections |
 | Currency | 20 | `check-freshness.sh --json` | Commits in scope since the file's "Last updated" date |
 | Content | 20 | `verify-content.sh --json` | Documented files/commands/counts that match reality |
 | Commands | 15 | `verify-commands.sh --json` | Documented commands that actually run (root only) |
@@ -75,8 +75,10 @@ trailer to 0 of 6 — the same as deleting both, 0 of 4. So in the runs above
 the rules were reaching the session the whole time, and what the skeleton
 fixes is compliance, not delivery. "Not followed" and "not loaded" look
 identical in the output and have different fixes; verify which one you have
-before rewriting content. Claude Code reaches the rules only through
-`CLAUDE.md`, never by the AGENTS.md name alone; see
+before rewriting content. In that setup the rules reached Claude Code through
+the `CLAUDE.md` import; which Claude Code version the runs used is not recorded.
+From v2.1.277 Claude Code reads `AGENTS.md` itself, but only while no
+`CLAUDE.md` exists, so the current setup is AGENTS.md alone; see
 [`ai-tool-compatibility.md`](ai-tool-compatibility.md).
 
 ### How to feed it back: `--review`

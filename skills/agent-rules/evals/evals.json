@@ -206,30 +206,30 @@
     },
     {
       "id": 14,
-      "eval_name": "symlink-creation",
-      "prompt": "Generate AGENTS.md for this project with CLAUDE.md and GEMINI.md symlinks for cross-agent compatibility. Verify symlinks are correct at every level.",
-      "expected_output": "Root and scoped AGENTS.md files plus CLAUDE.md and GEMINI.md symlinks at every directory that has an AGENTS.md.",
+      "eval_name": "agents-md-only",
+      "prompt": "Generate AGENTS.md for this project for cross-agent compatibility, including Claude Code and Gemini CLI. Verify what exists at every level.",
+      "expected_output": "Root and scoped AGENTS.md files, GEMINI.md symlinks at every directory that has an AGENTS.md, and no CLAUDE.md anywhere: Claude Code (v2.1.277+) reads AGENTS.md itself, and a CLAUDE.md would take precedence over it.",
       "files": [],
       "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
       "assertions": [
-        "Root CLAUDE.md exists and is a symlink to AGENTS.md",
+        "No CLAUDE.md (file, symlink or @AGENTS.md import) exists at the root or in any scoped directory",
         "Root GEMINI.md exists and is a symlink to AGENTS.md",
-        "Subdirectory AGENTS.md files also have CLAUDE.md symlinks",
+        "Subdirectory AGENTS.md files also have GEMINI.md symlinks",
         "All symlinks use relative paths (not absolute)",
         "Root AGENTS.md lists all scoped AGENTS.md paths in an index"
       ]
     },
     {
       "id": 15,
-      "eval_name": "symlink-safety-no-overwrite",
-      "prompt": "This project already has a CLAUDE.md with custom content (not a symlink). Generate AGENTS.md with --symlinks. Verify that the existing CLAUDE.md is NOT overwritten.",
-      "expected_output": "The existing non-symlink CLAUDE.md should be preserved. A warning should be logged.",
+      "eval_name": "user-claude-md-kept",
+      "prompt": "This project already has a CLAUDE.md with custom content (not a symlink). Generate AGENTS.md. What happens to the existing CLAUDE.md?",
+      "expected_output": "The existing CLAUDE.md is kept and reported, also with --force, because it holds rules of its own. The report says to move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones) and then remove it, because while it exists Claude Code reads it instead of AGENTS.md.",
       "files": [],
       "project_path": "/home/cybot/projects/ldap-selfservice-password-changer",
       "assertions": [
-        "Existing non-symlink CLAUDE.md is preserved without --force",
-        "A log message warns that CLAUDE.md exists and is not a symlink",
-        "AGENTS.md itself is not affected by --symlinks flag"
+        "Existing user CLAUDE.md with rules is not changed or deleted, also not with --force",
+        "A message reports the kept CLAUDE.md and says to move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones) before removing it",
+        "States that a CLAUDE.md makes Claude Code read it instead of AGENTS.md"
       ]
     },
     {
@@ -411,12 +411,12 @@
       "id": 28,
       "eval_name": "scaffold-includes-agents-md",
       "prompt": "Scaffold a brand-new extension repository: composer.json, CI workflow, test runner. What belongs in the initial commits?",
-      "expected_output": "AGENTS.md (plus CLAUDE.md/GEMINI.md symlinks), generated via detect -> extract -> generate -> verify, belongs in the initial scaffold commits, not deferred - the scaffolding session holds every fact, while retrofitting later requires a full re-verification pass against a codebase no longer in anyone's context.",
+      "expected_output": "AGENTS.md (plus GEMINI.md symlinks, and no CLAUDE.md), generated via detect -> extract -> generate -> verify, belongs in the initial scaffold commits, not deferred - the scaffolding session holds every fact, while retrofitting later requires a full re-verification pass against a codebase no longer in anyone's context.",
       "files": [],
       "project_path": "",
       "assertions": [
         "Puts AGENTS.md in the INITIAL scaffold commits rather than deferring it to later",
-        "Mentions the CLAUDE.md / GEMINI.md symlinks alongside it",
+        "Does not add a CLAUDE.md beside AGENTS.md (file, symlink or import)",
         "Gives the reason: the scaffolding session holds every fact, while retrofitting requires re-verifying against a codebase nobody has in context any more"
       ]
     }
