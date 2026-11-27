@@ -1396,15 +1396,36 @@ fi
 # "@import AGENTS.md" (the old shim). A file with rules of its own beside an
 # @AGENTS.md line is the user's: the validator used to suggest adding that
 # line to a user's CLAUDE.md.
-# The canonical path a CLAUDE.md symlink points to; the directory part is
-# resolved with cd/pwd -P (macOS realpath has no -e), the file need not exist.
-# Empty when the directory of the target does not exist.
+# <path> with its directory part resolved by cd/pwd -P (macOS realpath has no
+# -e); the last component is kept as written and need not exist. Empty when
+# the directory does not exist.
+claude_canonical_path() {
+    local d
+    d="$(cd "$(dirname "$1")" 2>/dev/null && pwd -P)" || return 0
+    printf '%s/%s\n' "$d" "$(basename "$1")"
+}
+
+# The hops of the symlink chain that starts at <file>, one canonical path per
+# line, at most 40 (a loop ends there). The last line is where the chain ends.
+claude_link_hops() {
+    local t="$1" l n=0
+    while [[ -L "$t" ]] && [[ $n -lt 40 ]]; do
+        l="$(readlink "$t")" || return 0
+        [[ "$l" = /* ]] || l="$(dirname "$t")/$l"
+        t="$(claude_canonical_path "$l")"
+        [[ -n "$t" ]] || return 0
+        printf '%s\n' "$t"
+        n=$((n + 1))
+    done
+}
+
+# Where a CLAUDE.md symlink chain ends, as a canonical path; empty when a hop
+# leads into a directory that does not exist.
 claude_link_target() {
-    local file="$1" t d
-    t="$(readlink "$file")" || return 0
-    [[ "$t" = /* ]] || t="$(dirname "$file")/$t"
-    d="$(cd "$(dirname "$t")" 2>/dev/null && pwd -P)" || return 0
-    printf '%s/%s\n' "$d" "$(basename "$t")"
+    local t
+    t="$(claude_link_hops "$1" | tail -n 1)"
+    [[ -L "$t" ]] && return 0
+    printf '%s\n' "$t"
 }
 
 # The AGENTS.md beside <file>, as a canonical path.
@@ -1415,9 +1436,11 @@ claude_own_agents_md() {
 claude_md_is_generated() {
     local file="$1" body
     if [[ -L "$file" ]]; then
-        # Ours when it resolves to the AGENTS.md of its own directory, however
-        # it is written (AGENTS.md, ./AGENTS.md, an absolute path).
-        [[ "$(claude_link_target "$file")" = "$(claude_own_agents_md "$file")" ]]
+        # Ours when a hop of its chain is the AGENTS.md of its own directory,
+        # however it is written (AGENTS.md, ./AGENTS.md, an absolute path, a
+        # chain through another link). The chain is not followed past that
+        # AGENTS.md, which may itself be a symlink.
+        grep -qxF -- "$(claude_own_agents_md "$file")" < <(claude_link_hops "$file")
         return
     fi
     body="$(sed -e 's/<!--.*-->//g' -e '/^[[:space:]]*$/d' "$file" 2>/dev/null)" || return 1

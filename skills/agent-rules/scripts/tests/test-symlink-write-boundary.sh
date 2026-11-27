@@ -257,5 +257,25 @@ else
     pass "symlinks are judged by their resolved target; --force removes empty and import-only files (unreadable not testable as root)"
 fi
 
+# --- Test 12: a symlink chain counts as ours when one of its hops is the
+# AGENTS.md of its directory, also when that AGENTS.md is itself a symlink
+FX="$WORK/link-chain"
+make_fixture "$FX"
+bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+ln -s AGENTS.md "$FX/X.md"
+ln -s X.md "$FX/CLAUDE.md"
+bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[[ -L "$FX/CLAUDE.md" ]] && fail "a CLAUDE.md -> X.md -> AGENTS.md chain was kept"
+FX="$WORK/agents-is-link"
+make_fixture "$FX"
+mkdir -p "$FX/docs"
+printf '# docs rules\n' > "$FX/docs/AGENTS.md"
+ln -s docs/AGENTS.md "$FX/AGENTS.md"
+ln -s AGENTS.md "$FX/CLAUDE.md"
+bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[[ -L "$FX/CLAUDE.md" ]] && fail "a CLAUDE.md symlink to a symlinked AGENTS.md was kept"
+grep -qx '# docs rules' "$FX/docs/AGENTS.md" || fail "the AGENTS.md a symlink chain ends in was changed"
+pass "a CLAUDE.md symlink chain through the AGENTS.md of its directory is ours"
+
 echo ""
 echo "All symlink write-boundary tests passed."
