@@ -37,4 +37,4 @@ skills/agent-rules/
 
 ## Integration with Other Skills
 
-The skill is packaged as an [Agent Skill](https://agentskills.io) and can be installed via the Netresearch marketplace, npx, Composer, or git clone. It is consumed by Claude Code, Cursor, GitHub Copilot, and other skills-compatible AI agents. Generated AGENTS.md files can be symlinked to platform-specific names (CLAUDE.md, GEMINI.md) for cross-agent compatibility.
+The skill is packaged as an [Agent Skill](https://agentskills.io) and can be installed via the Netresearch marketplace, npx, Composer, or git clone. It is consumed by Claude Code, Cursor, GitHub Copilot, and other skills-compatible AI agents. AGENTS.md is the only instruction file: Claude Code (v2.1.277+) reads it directly, so no CLAUDE.md is generated; Gemini CLI gets a GEMINI.md symlink.

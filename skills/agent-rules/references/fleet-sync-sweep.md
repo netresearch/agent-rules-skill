@@ -16,7 +16,7 @@ Four phases, in this order. The expensive mistake is starting the per-repo work 
 
 ## The playbook file
 
-It must state, at minimum: the worktree convention with absolute paths, the exact verification commands and their pass criteria, the required sections for scoped files, the CLAUDE.md convention including directories where symlinks are forbidden, commit/PR conventions (signing, conventional commits, no bot attribution, issue-before-PR where the repo demands it), and a fixed report format the agent must end with.
+It must state, at minimum: the worktree convention with absolute paths, the exact verification commands and their pass criteria, the required sections for scoped files, that no CLAUDE.md is created and an existing one is removed (AGENTS.md is the only instruction file), the GEMINI.md convention including directories where symlinks are forbidden, commit/PR conventions (signing, conventional commits, no bot attribution, issue-before-PR where the repo demands it), and a fixed report format the agent must end with.
 
 Two clauses do the heavy lifting:
 

@@ -61,7 +61,7 @@ See `references/scripts-guide.md` for full options.
 - **Structured over Prose** -- tables parse faster than paragraphs
 - **Never Fabricate** -- only document what exists; verify every command and path
 - **Pointer Principle** -- point to files, don't duplicate content
-- **Auto Symlinks** -- CLAUDE.md/GEMINI.md by default ([`ai-tool-compatibility.md`](references/ai-tool-compatibility.md))
+- **AGENTS.md only** -- no CLAUDE.md (Claude Code v2.1.277+ reads AGENTS.md; a CLAUDE.md would replace it); GEMINI.md symlinks by default ([`ai-tool-compatibility.md`](references/ai-tool-compatibility.md))
 
 ## References
 

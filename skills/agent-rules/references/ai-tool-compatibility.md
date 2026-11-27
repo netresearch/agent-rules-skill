@@ -5,7 +5,7 @@
 
 How AGENTS.md integrates with different AI coding tools, and what mitigations are needed for each.
 
-## Compatibility Matrix (March 2026)
+## Compatibility Matrix (March 2026; Claude Code row November 2026)
 
 | Agent | Native AGENTS.md | Subdirectory Auto-Load | Own Format | Mitigation |
 |-------|:-:|:-:|---|---|
@@ -19,121 +19,60 @@ How AGENTS.md integrates with different AI coding tools, and what mitigations ar
 | **JetBrains Junie** | Yes | Needs config path | `.junie/guidelines.md` | Set Guidelines path for monorepos |
 | **Gemini CLI** | Via config | Yes (excellent) | `GEMINI.md` | Symlink or settings.json config |
 | **Aider** | Via config | No auto-discovery | `CONVENTIONS.md` | `.aider.conf.yml` config |
-| **Claude Code** | **No** | On-demand (CLAUDE.md only) | `CLAUDE.md` | **Auto-created when `.claude/` detected** |
+| **Claude Code** | Yes (v2.1.277+) | On-demand | `CLAUDE.md` | **None — and no CLAUDE.md** (it would take precedence over AGENTS.md) |
 | **Continue.dev** | **No** | No | `.continue/rules/` | Copy/link into rules dir |
 | **Amazon Q** | **No** | No | `.amazonq/rules/` | Copy into rules dir |
 | **Cline** | **No** | No | `.clinerules/` | Copy/link into dir |
 | **Sourcegraph Cody** | **No** | No | `.sourcegraph/*.rule.md` | Copy content |
 | **Tabnine** | **No** | No | `.tabnine/guidelines/` | Copy content |
 
-## Symlink Strategy (Recommended)
+## AGENTS.md Is the Only Instruction File
 
-The most reliable cross-agent solution is to **symlink** agent-specific files to AGENTS.md.
-This keeps AGENTS.md as the single source of truth while enabling native loading in each tool.
-
-### What to create
-
-At **every level** where an AGENTS.md exists (root AND subdirectories):
-
-```bash
-# For each directory containing AGENTS.md:
-ln -s AGENTS.md CLAUDE.md    # Claude Code on-demand loading
-ln -s AGENTS.md GEMINI.md    # Gemini CLI on-demand loading
-```
-
-### Why subdirectory symlinks matter (verified behavior)
-
-Claude Code loads CLAUDE.md files **on demand** when the agent reads files in that directory.
-Without a CLAUDE.md symlink, subdirectory AGENTS.md files are **never auto-loaded** — even if
-the root AGENTS.md explicitly links to them and says "read nearest AGENTS.md."
-
-**Tested scenarios (March 2026):**
-
-| Setup | Result |
-|-------|--------|
-| Root CLAUDE.md symlink only, no subdirectory symlinks | Subdirectory AGENTS.md NOT loaded. Agent sees root links but does not proactively read them. |
-| Root + subdirectory CLAUDE.md symlinks | Subdirectory AGENTS.md auto-loaded when agent works in that directory. |
-| Root instructions say "read nearest AGENTS.md" | Agent acknowledges instruction but does NOT act on it without explicit prompting. |
-
-### Commit symlinks to git
-
-Symlinks are tiny (9 bytes each) and should be committed:
-
-```bash
-git add CLAUDE.md GEMINI.md
-git add internal/CLAUDE.md internal/GEMINI.md    # etc.
-```
-
-They work on all platforms (Linux, macOS, Windows with `core.symlinks=true`).
+Keep one instruction file per directory: **AGENTS.md**. Do not create a `CLAUDE.md` — not as a
+file, not as a symlink to AGENTS.md, not as an `@AGENTS.md` import — and remove an existing one.
+Gemini CLI still needs a `GEMINI.md` symlink or a config entry (see below); that is a separate
+tool and does not affect Claude Code.
 
 ## Claude Code
 
-Claude Code only reads `CLAUDE.md` files natively. AGENTS.md is not recognized.
+Claude Code reads AGENTS.md itself. Source: the Claude Code documentation,
+[How Claude remembers your project → AGENTS.md](https://code.claude.com/docs/en/memory#agents-md)
+(read 2026-11-27):
 
-**Feature request**: [anthropics/claude-code#6235](https://github.com/anthropics/claude-code/issues/6235) (3,294+ upvotes, no official response as of March 2026).
+- **Version**: "Reading `AGENTS.md` directly requires Claude Code v2.1.277 or later."
+- **Precedence (default setting `claude-md-or-agents-md`)**: Claude reads AGENTS.md "only when you
+  have no `CLAUDE.md` in your working directory or above it". A `CLAUDE.md`, `.claude/CLAUDE.md` or
+  `CLAUDE.local.md` in the working directory or any directory above it counts; when one exists,
+  Claude reads "Your `CLAUDE.md` files only". `~/.claude/CLAUDE.md`, the managed `CLAUDE.md` and
+  `.claude/rules/` do not count and load alongside AGENTS.md.
+- **Subdirectories**: a subdirectory's `AGENTS.md` loads "when Claude opens a file there with the
+  Read tool and that subdirectory has none of the three `CLAUDE.md` files of its own". No symlink is
+  needed for on-demand loading.
+- **Not read**: `AGENTS.local.md`, `AGENTS.override.md`, anything under `.agents/`.
+- **Imports**: `@path` imports inside AGENTS.md are expanded.
+- **Setting**: **Project instructions** in `/config` (`claude-md-or-agents-md` default,
+  `claude-md-and-agents-md`, `claude-md`, `managed-only`), or `pluginConfigs` →
+  `cc-plugin-agents-md@builtin` (before v2.1.285 the ID was `agents-md@builtin`) in user, `--settings`
+  or managed settings; project and local settings files are ignored for it.
+- **When support is unavailable** (Claude then reads `CLAUDE.md` files only): a version before
+  v2.1.277; the built-in plugin disabled with `/plugin`; in some cases the first session after an
+  upgrade from v2.1.276 or earlier. Before v2.1.281 some sessions (Amazon Bedrock, telemetry
+  disabled) also read `CLAUDE.md` only — update Claude Code there instead of adding a `CLAUDE.md`.
 
-### Loading behavior
+So a `CLAUDE.md` next to AGENTS.md is not a compatibility aid any more: under the default setting
+it **replaces** AGENTS.md for Claude, and a plain-text checkout of a `CLAUDE.md` symlink (Windows,
+`core.symlinks=false`) leaves a file that contains only the word `AGENTS.md`. A personal
+`CLAUDE.local.md` has the same effect; keep personal notes in `~/.claude/CLAUDE.md` instead.
 
-- **Root CLAUDE.md**: Auto-loaded at session start (always in context)
-- **Subdirectory CLAUDE.md**: Loaded on demand when agent reads/edits files in that directory
-- **AGENTS.md**: Never loaded natively — requires symlink
+To confirm what loaded, run `/context all` and check **Memory files**; an interactive session also
+prints a line such as `no CLAUDE.md found; AGENTS.md loaded: …`.
 
-### Default behavior
+### What the scripts do
 
-`generate-agents.sh` creates CLAUDE.md and GEMINI.md symlinks at every level where an AGENTS.md is
-generated. No flags required, so Claude Code and Gemini CLI users get working agent instructions out
-of the box.
-
-To opt out, pass `--no-symlinks`. It suppresses both files at every level, with no exceptions.
-
-Existing files are never taken over: a regular CLAUDE.md/GEMINI.md, or a symlink pointing anywhere
-other than AGENTS.md, is kept and reported, and only `--force` replaces it.
-
-### Manual symlinks (if not using the generator)
-
-```bash
-# Root
-ln -s AGENTS.md CLAUDE.md
-
-# Every subdirectory with its own AGENTS.md
-ln -s AGENTS.md src/CLAUDE.md
-ln -s AGENTS.md internal/CLAUDE.md
-ln -s AGENTS.md internal/web/CLAUDE.md
-```
-
-### Alternative: @import shim (root only, legacy)
-
-If you need Claude-specific overrides on top of AGENTS.md:
-
-```markdown
-<!-- CLAUDE.md -->
-@AGENTS.md
-
-<!-- Claude-specific overrides below -->
-```
-
-Note: `@import` only works at root level. Subdirectories still need symlinks for on-demand loading.
-
-### Alternative: SessionStart hook
-
-For skill users only — auto-create symlinks at session start:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "find . -name AGENTS.md -not -path './.git/*' | while read f; do dir=$(dirname \"$f\"); [ ! -e \"$dir/CLAUDE.md\" ] && ln -s AGENTS.md \"$dir/CLAUDE.md\"; done",
-        "timeout": 5
-      }]
-    }]
-  }
-}
-```
-
-This only helps users who have the hook installed. Committed symlinks are more reliable.
+- `generate-agents.sh` creates no `CLAUDE.md`. It removes a `CLAUDE.md` it made earlier (a symlink
+  to AGENTS.md, an `@AGENTS.md` import file, the old `--claude-shim` file); a `CLAUDE.md` of the
+  user's own is kept and reported, and `--force` removes it too. `--claude-shim` is ignored.
+- `validate-structure.sh` warns about every `CLAUDE.md` or `.claude/CLAUDE.md` beside an AGENTS.md.
 
 ## Google Gemini CLI
 
@@ -143,7 +82,7 @@ Gemini CLI reads `GEMINI.md` natively with excellent hierarchical support (globa
 
 **Option A: Symlink** (recommended)
 ```bash
-ln -s AGENTS.md GEMINI.md    # At every level
+ln -s AGENTS.md GEMINI.md    # At every level with an AGENTS.md; commit the symlink
 ```
 
 **Option B: settings.json config**
@@ -213,14 +152,11 @@ Feature requests are open for most of these tools.
 
 ## Generation Script Integration
 
-`generate-agents.sh` creates `CLAUDE.md` and `GEMINI.md` symlinks **by default** at every
-level where an AGENTS.md is generated. `--no-symlinks` turns that off; there is no environment
-detection that overrides the flag.
+`generate-agents.sh` creates a `GEMINI.md` symlink **by default** at every level where an
+AGENTS.md is generated (an `@AGENTS.md` import file in `Documentation/`, whose renderer rejects
+symlinks), and no `CLAUDE.md`. `--no-symlinks` turns the `GEMINI.md` files off.
 
 ```bash
-bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project              # Symlinks created by default
-bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project --no-symlinks # No CLAUDE.md/GEMINI.md at any level
+bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project              # GEMINI.md symlinks, no CLAUDE.md
+bash ${CLAUDE_SKILL_DIR}/scripts/generate-agents.sh /path/to/project --no-symlinks # no GEMINI.md either
 ```
-
-The `--claude-shim` flag creates a root-only CLAUDE.md with `@import` (legacy behavior).
-Use the default symlink behavior instead for full subdirectory support.
