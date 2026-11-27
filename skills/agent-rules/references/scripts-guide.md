@@ -170,11 +170,12 @@ This script:
 - Extracts commands from AGENTS.md table cells, inline code naming a known tool or a repo-local script (also after `VAR=value` assignments), and the lines of fenced `bash`/`sh`/`shell`/`zsh` blocks (in `console`/`shell-session` blocks only the lines with a `$` prompt; heredoc bodies and fences nested in another fence are skipped). A single word with a slash is a command only when it names an executable file of the project; otherwise it is a path, so file maps and paths named in prose are not commands
 - Accepts a relative, absolute or `.` project path and finds the same commands for each
 - Verifies npm/yarn scripts exist in package.json
-- Verifies make targets exist in Makefile, also after `VAR=value` and in the `-C` directory
+- Verifies make targets exist in Makefile, also after `VAR=value`, `-j`/`-l` with a number and in the `-C` directory
 - Verifies composer scripts exist in composer.json, also under `--working-dir`/`-d`
-- Verifies repo-local scripts exist; a missing one fails the run
+- Verifies repo-local scripts exist, also when run through `sh`/`bash`; a missing one fails the run
+- Follows a plain `cd <dir>` into the project inside a fenced block: the lines after it are checked in that directory. After any other `cd` (`..`, an absolute path, a variable, `cd x && …`) the rest of that block is reported as not checked, never as failed
 - Never runs a command taken from a fenced block, also not with `SMOKE_TEST=true`: fenced lines are examples
-- Exits 1 when a documented command is missing or AGENTS.md cannot be read, and 3 when AGENTS.md documents no command (`--allow-empty` accepts that); `--json` reports `status` (`verified`, `unverified`, `failed`, `empty`), `found` and the `inventory` with each command's source
+- Exits 1 when a documented command is missing or AGENTS.md cannot be read, and 3 when AGENTS.md documents no command (`--allow-empty` accepts that); `--json` reports `status` (`verified`, `unverified`, `failed`, `empty`), `found` and the `inventory` with each command's source (and `dir` for a fenced line after a `cd`: the directory, or `null` when the `cd` could not be followed)
 - With `--update-verified`, records the date in the "Last verified" marker of AGENTS.md on success; without it, AGENTS.md is not changed
 
 Options:

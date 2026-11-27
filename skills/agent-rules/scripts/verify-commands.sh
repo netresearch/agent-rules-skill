@@ -50,7 +50,10 @@ Options:
 Commands are taken from table cells, inline code naming a known tool or a
 repo-local script, and the lines of fenced bash/sh/shell/console blocks.
 Commands from fenced blocks are examples: they are checked for existence but
-never run, also not with SMOKE_TEST=true.
+never run, also not with SMOKE_TEST=true. A plain "cd <dir>" into the project
+inside a fenced block is followed: the lines after it are checked in that
+directory. After any other cd (.., an absolute path, a variable, cd x && ...)
+the rest of the block is reported as not checked, never as failed.
 
 Exit status:
   0  every found command verified or skipped, none failed
@@ -155,7 +158,9 @@ PASSED=0
 SKIPPED=0
 
 # JSON results storage
-declare -A COMMAND_RESULTS
+# Initialised: a run whose every command is skipped stores nothing, and an
+# unset array is an unbound variable under set -u when the JSON is built.
+declare -A COMMAND_RESULTS=()
 
 # Initialize JSON output directory (always needed for results). A symlinked
 # .agents directory in the analysed project would put the sidecar outside it.
@@ -320,6 +325,25 @@ smoke_test_command() {
     fi
 }
 
+# Smoke-test <run> and file its result under the documented command <cmd>.
+# A check often runs another command line than the one documented ("make -n
+# <target>", "phpunit --help"); reading the result under <cmd> then found
+# nothing (an unbound variable under set -u) and the run died.
+smoke_test_as() {
+    local run="$1" cmd="$2" rc=0 had=false prev=""
+    if [[ -n "${COMMAND_RESULTS[$run]+x}" ]]; then had=true; prev="${COMMAND_RESULTS[$run]}"; fi
+    smoke_test_command "$run" || rc=$?
+    if [[ "$run" != "$cmd" ]]; then
+        COMMAND_RESULTS["$cmd"]="${COMMAND_RESULTS[$run]}"
+        if [[ "$had" = true ]]; then
+            COMMAND_RESULTS["$run"]="$prev"
+        else
+            unset 'COMMAND_RESULTS[$run]'
+        fi
+    fi
+    return "$rc"
+}
+
 # Write results to JSON file
 # The document is built by jq, so any command text is encoded correctly. It is
 # written to a temporary file beside the target and renamed into place: a
@@ -379,13 +403,30 @@ outside_fences() {
 # blocks: every line. console/shell-session blocks: only "$ " lines, the rest
 # is output. Backslash continuations are joined, a "$ " prompt and trailing
 # "# comments" removed, blank and comment lines and heredoc bodies dropped.
+# Each line is printed as "fenced<TAB>line", or "fenced:<dir><TAB>line" after
+# a "cd <dir>" earlier in the same block ("fenced:?" after a cd this check
+# cannot follow), so that it can be checked where it runs.
 fenced_shell_lines() {
     awk "$FENCE_AWK_LIB"'
-        in_fence && closes(trimmed($0)) { in_fence = 0; shell = 0; acc = ""; here = ""; next }
+        # The directory after <line> when it is a cd, relative to the project
+        # root: only "cd <relative dir>" without .. is followed, anything else
+        # (cd, cd -, cd .., an absolute path, $VAR, cd x && y, pushd) is "?".
+        function cd_target(line, dir,   n, w, d) {
+            if (dir == "?") return "?"
+            n = split(line, w, " ")
+            if (w[1] != "cd" || n != 2) return "?"
+            d = w[2]
+            if (d !~ /^[A-Za-z0-9_.\/-]+$/ || d ~ /^[\/-]/ || d ~ /(^|\/)\.\.(\/|$)/) return "?"
+            while (sub(/^\.\//, "", d)) {}
+            sub(/\/+$/, "", d)
+            if (d == "" || d == ".") return dir
+            return (dir == "") ? d : dir "/" d
+        }
+        in_fence && closes(trimmed($0)) { in_fence = 0; shell = 0; acc = ""; here = ""; dir = ""; next }
         in_fence && !shell { next }
         !in_fence {
             if (opens($0)) {
-                in_fence = 1; acc = ""; here = ""
+                in_fence = 1; acc = ""; here = ""; dir = ""
                 shell = (lang ~ /^(bash|sh|shell|zsh)$/) ? 1 : ((lang ~ /^(console|shell-session)$/) ? 2 : 0)
             }
             next
@@ -399,14 +440,17 @@ fenced_shell_lines() {
             sub(/^[ \t]+/, "", line)
             sub(/^\$[ \t]+/, "", line)
             if (line ~ /^#/) next
-            if (match(line, /<<-?[ \t]*[\047"]?[A-Za-z_][A-Za-z0-9_]*/)) {
+            # A heredoc, not a here-string: the character before << is no <.
+            if (match(line, /(^|[^<])<<-?[ \t]*[\047"]?[A-Za-z_][A-Za-z0-9_]*/)) {
                 here = substr(line, RSTART, RLENGTH)
-                sub(/^<<-?[ \t]*[\047"]?/, "", here)
+                sub(/^[^<]?<<-?[ \t]*[\047"]?/, "", here)
             }
             sub(/[ \t]+#.*$/, "", line)
             sub(/[ \t]+$/, "", line)
             gsub(/[ \t]+/, " ", line)
-            if (line != "") print line
+            if (line == "") next
+            print (dir == "" ? "fenced" : "fenced:" dir) "\t" line
+            if (line ~ /^(cd|pushd|popd)( |$)/) dir = cd_target(line, dir)
         }
     ' <<<"$AGENTS_CONTENT"
 }
@@ -462,7 +506,8 @@ is_path_cell() {
 
 # Print "<source><TAB><command>" for every command documented in AGENTS.md.
 # <source> is "inline" (a table cell or inline code) or "fenced" (a line of a
-# fenced shell block). A command found both ways is reported once, as inline.
+# fenced shell block; "fenced:<dir>" after a cd, see fenced_shell_lines). A
+# command found both ways in the same directory is reported once, as inline.
 extract_commands() {
     local text cell span word bt=$'\x60'
     text="$(outside_fences)"
@@ -510,14 +555,15 @@ extract_commands() {
             esac
         done < <(grep -oE '`[^`]+`' <<<"$text" || true)
 
-        fenced_shell_lines | sed 's/^/fenced\t/'
+        fenced_shell_lines
     } | awk '
         {
             t = index($0, "\t"); kind = substr($0, 1, t - 1); c = substr($0, t + 1)
-            if (!(c in src)) { order[++n] = c; src[c] = kind; next }
-            if (kind == "inline") src[c] = "inline"
+            k = (kind ~ /:/) ? kind "\t" c : c
+            if (!(k in src)) { order[++n] = k; src[k] = kind; cmd[k] = c; next }
+            if (kind == "inline") src[k] = "inline"
         }
-        END { for (i = 1; i <= n; i++) printf "%s\t%s\n", src[order[i]], order[i] }
+        END { for (i = 1; i <= n; i++) printf "%s\t%s\n", src[order[i]], cmd[order[i]] }
     '
 }
 
@@ -654,7 +700,7 @@ verify_command() {
                             # Try to use --help or --dry-run to avoid full test run
                             test_cmd="$base_cmd run $script -- --help 2>/dev/null || $base_cmd run $script --dry-run 2>/dev/null || true"
                         fi
-                        if smoke_test_command "$test_cmd"; then
+                        if smoke_test_as "$test_cmd" "$cmd"; then
                             local duration="${COMMAND_RESULTS[$cmd]}"
                             duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                             success "$base_cmd script works: $script (~${duration}ms)"
@@ -683,18 +729,24 @@ verify_command() {
 
         make)
             # The target is the first word that is no option and no VAR=value;
-            # -C/--directory names the directory to look in. A custom makefile
-            # (-f/--file) is not read: such a command is skipped.
+            # -j/-l (--jobs/--load-average) take an optional number, skipped
+            # when it follows; -C/--directory names the directory to look in.
+            # A custom makefile (-f/--file) is not read: such a command is
+            # skipped.
             local target="" make_dir="." make_file="" expect="" w
             local -a mwords=()
             read -ra mwords <<<"${run#make}"
             for w in "${mwords[@]}"; do
-                if [[ -n "$expect" ]]; then
+                if [[ "$expect" = num ]]; then
+                    expect=""
+                    [[ "$w" =~ ^[0-9]+(\.[0-9]+)?$ ]] && continue
+                elif [[ -n "$expect" ]]; then
                     [[ "$expect" = dir ]] && make_dir="$w"
                     [[ "$expect" = file ]] && make_file="$w"
                     expect=""; continue
                 fi
                 case "$w" in
+                    -j|-l|--jobs|--load-average) expect="num" ;;
                     -C|--directory) expect="dir" ;;
                     --directory=*) make_dir="${w#--directory=}" ;;
                     -C*) make_dir="${w#-C}" ;;
@@ -728,7 +780,7 @@ verify_command() {
                         local make_smoke="make -n"
                         [[ "$make_dir" != "." ]] && make_smoke="make -C $make_dir -n"
                         [[ "$target" != "(default)" ]] && make_smoke="$make_smoke $target"
-                        if smoke_test_command "$make_smoke"; then
+                        if smoke_test_as "$make_smoke" "$cmd"; then
                             local duration="${COMMAND_RESULTS[$cmd]}"
                             duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                             success "make target works: $target (~${duration}ms)"
@@ -786,7 +838,7 @@ verify_command() {
                         if [[ "$script" =~ ^(install|update)$ ]]; then
                             test_cmd="composer $script --dry-run 2>/dev/null || true"
                         fi
-                        if smoke_test_command "$test_cmd"; then
+                        if smoke_test_as "$test_cmd" "$cmd"; then
                             local duration="${COMMAND_RESULTS[$cmd]}"
                             duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                             success "composer script works: $script (~${duration}ms)"
@@ -957,7 +1009,7 @@ verify_command() {
                     if [[ "$cmd" == *"phpunit"* ]] && [[ "$cmd" != *"--help"* ]]; then
                         test_cmd="$base_cmd --help"
                     fi
-                    if smoke_test_command "$test_cmd"; then
+                    if smoke_test_as "$test_cmd" "$cmd"; then
                         local duration="${COMMAND_RESULTS[$cmd]}"
                         duration=$(echo "$duration" | grep -oE '"duration_ms": [0-9]+' | cut -d: -f2 | tr -d ' ')
                         success "vendor binary works (~${duration}ms)"
@@ -981,7 +1033,7 @@ verify_command() {
         sh|bash)
             # A repo-local script run through the shell: "sh Build/x.sh"
             local script_path
-            script_path="$(awk '{for (i = 2; i <= NF; i++) if ($i !~ /^-/) { print $i; exit }}' <<<"${cmd#*"$base_cmd"}")"
+            script_path="$(awk '{for (i = 1; i <= NF; i++) if ($i !~ /^-/) { print $i; exit }}' <<<"${cmd#*"$base_cmd"}")"
             if [[ -n "$script_path" ]] && is_repo_local_path "$script_path"; then
                 if [[ -f "$script_path" ]]; then
                     success "repo-local command exists: $script_path"
@@ -1051,7 +1103,10 @@ verify_command() {
 # The inventory: every documented command once, with where it was found.
 mapfile -t entries < <(extract_commands | LC_ALL=C sort -t $'\t' -k2)
 INVENTORY_JSON="$(printf '%s\n' "${entries[@]}" | jq -Rsc '
-    split("\n") | map(select(length > 0) | split("\t") | {source: .[0], cmd: (.[1:] | join("\t"))})')"
+    split("\n") | map(select(length > 0) | split("\t") | {source: .[0], cmd: (.[1:] | join("\t"))}
+        | if (.source | startswith("fenced:")) then
+              .dir = (.source[7:] | if . == "?" then null else . end) | .source = "fenced"
+          else . end)')"
 
 # An empty inventory is not a verified one: nothing was checked.
 if [[ ${#entries[@]} -eq 0 ]]; then
@@ -1069,14 +1124,29 @@ echo ""
 
 # A command taken only from a fenced block is an example: check that it
 # exists, never run it.
+# A line after a cd in its block is checked in that directory, which must be
+# inside the project; after a cd this check cannot follow it is not checked.
 for entry in "${entries[@]}"; do
     cmd="${entry#*$'\t'}"
+    kind="${entry%%$'\t'*}"
     [[ -n "$cmd" ]] || continue
-    if [[ "${entry%%$'\t'*}" = fenced ]]; then
+    if [[ "$kind" = fenced* ]]; then
+        if [[ "$kind" = fenced:* ]]; then
+            dir="${kind#fenced:}"
+            if [[ "$dir" = "?" ]] || ! cd "$dir" 2>/dev/null || [[ "$(pwd -P)" != "$PROJECT_DIR"/* ]]; then
+                cd "$PROJECT_DIR"
+                warn "Not checked (follows a cd in its fenced block that cannot be followed): $cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": null, "reason": "unknown directory"}'
+                ((SKIPPED+=1))
+                continue
+            fi
+            echo "In $dir/ (after cd in a fenced block):"
+        fi
         SMOKE_TEST_SAVED="$SMOKE_TEST"
         SMOKE_TEST=false
         verify_command "$cmd"
         SMOKE_TEST="$SMOKE_TEST_SAVED"
+        cd "$PROJECT_DIR"
     else
         verify_command "$cmd"
     fi

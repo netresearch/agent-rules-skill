@@ -4,7 +4,9 @@
 # verify-commands.sh finds the same commands whatever form the project path
 # takes, reports input it cannot read, tells an empty inventory apart from
 # verified commands, finds commands in fenced shell blocks and repo-local
-# scripts, and never runs a command it took from a fenced example.
+# scripts (also run through sh/bash), follows a cd inside a fenced block,
+# reads make -j/-l and here-strings correctly, and never runs a command it
+# took from a fenced example, with the smoke-test run reaching its summary.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,6 +37,7 @@ cat > "$FX/AGENTS.md" <<'AGENTS'
 - Check the interpreter: `python3 --version`
 - Run `scripts/check.sh --fast` before a commit, or `SF_BASE=origin/main scripts/check.sh --diff`.
 - Documented but gone: `scripts/gone.sh --check`.
+- Build it: `make test`.
 - Entry point `src/main.ts`; helpers in `tools/run.py`.
 
 | Path | Purpose |
@@ -134,10 +137,37 @@ grep -q "make target exists: test" <<<"$OUT" || fail "an env-prefixed make targe
 grep -q "make target exists: build" <<<"$OUT" || fail "make -C sub build was not looked up in sub/ (output was: $OUT)"
 pass "a missing repo-local script fails; --working-dir is honoured"
 
-# 5. A fenced example is never executed, even with SMOKE_TEST=true.
-(cd "$WORK" && SMOKE_TEST=true DRY_RUN=true bash "$VERIFY" "$FX" >/dev/null 2>&1) || true
+# 5. A fenced example is never executed, even with SMOKE_TEST=true, and the
+# smoke-test run reaches its summary: a run that dies early (as the make smoke
+# test once did) cannot reach the fenced "make wipe" and would prove nothing.
+OUT="$(cd "$WORK" && SMOKE_TEST=true DRY_RUN=true bash "$VERIFY" "$FX" 2>&1)"; rc=$?
 [[ -e "$FX/build/keep" ]] || fail "a fenced example was executed (build/keep is gone)"
-pass "fenced examples are not executed by the smoke test"
+grep -q "Verification Summary" <<<"$OUT" || fail "the smoke-test run stopped before its summary (output was: $OUT)"
+grep -q "unbound variable" <<<"$OUT" && fail "the smoke-test run hit an unbound variable (output was: $OUT)"
+[[ "$rc" -eq 1 ]] || fail "the smoke-test run exits $rc, expected 1 for the missing scripts/gone.sh (output was: $OUT)"
+grep -q "make target works: test" <<<"$OUT" || fail "the inline make test was not smoke-tested (output was: $OUT)"
+OUT="$(cd "$WORK" && SMOKE_TEST=true DRY_RUN=true bash "$VERIFY" "$FX" --json 2>/dev/null)"
+[[ "$(jq -r '.commands[] | select(.cmd == "make test") | .detail.runs' <<<"$OUT")" = true ]] \
+    || fail "the make smoke result is not filed under the documented command (output was: $OUT)"
+[[ "$(jq -r '[.commands[] | select(.cmd | startswith("make -n"))] | length' <<<"$OUT")" = 0 ]] \
+    || fail "the internal make -n command appears in commands[] (output was: $OUT)"
+pass "fenced examples are not executed by the smoke test, and the run reaches its summary"
+
+# 5c. A smoke test run under another command line (phpunit --help) is filed
+# under the documented command.
+VB="$WORK/vendorbin"
+mkdir -p "$VB/vendor/bin"
+printf '#!/bin/sh\nexit 0\n' > "$VB/vendor/bin/phpunit"
+chmod +x "$VB/vendor/bin/phpunit"
+# shellcheck disable=SC2016  # backticks are markdown, not substitution
+printf '# x\n\n- Tests: `vendor/bin/phpunit --testsuite unit`\n' > "$VB/AGENTS.md"
+OUT="$(SMOKE_TEST=true DRY_RUN=true bash "$VERIFY" "$VB" --json 2>&1)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "a smoke-tested phpunit exits $rc (output was: $OUT)"
+[[ "$(jq -r '.commands[] | select(.cmd == "vendor/bin/phpunit --testsuite unit") | .detail.runs' <<<"$OUT")" = true ]] \
+    || fail "the phpunit smoke result is not filed under the documented command (output was: $OUT)"
+[[ "$(jq -r '[.commands[] | select(.cmd == "vendor/bin/phpunit --help")] | length' <<<"$OUT")" = 0 ]] \
+    || fail "the internal phpunit --help command appears in commands[] (output was: $OUT)"
+pass "a smoke test under another command line is filed under the documented command"
 
 # 5b. A CRLF AGENTS.md loses no fenced command.
 CRLF="$WORK/crlf"
@@ -183,6 +213,110 @@ OUT="$(DRY_RUN=true bash "$VERIFY" "$OK" --json 2>/dev/null)"; rc=$?
 [[ "$(jq -r '.status' <<<"$OUT")" = verified ]] || fail "a verified inventory is not reported as verified (output was: $OUT)"
 [[ "$(jq -r '.found' <<<"$OUT")" = 1 ]] || fail "found count is wrong (output was: $OUT)"
 pass "an empty inventory exits 3 with status empty; verified commands exit 0 with status verified"
+
+# 8. A script run through sh or bash is looked up: a missing one fails.
+SHB="$WORK/shbash"
+mkdir -p "$SHB/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$SHB/scripts/ok.sh"
+cat > "$SHB/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+bash scripts/gone.sh --check
+sh scripts/gone.sh
+bash scripts/ok.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$SHB" --json 2>/dev/null)"; rc=$?
+[[ "$rc" -eq 1 ]] || fail "a missing script run through sh/bash exits $rc, expected 1 (output was: $OUT)"
+[[ "$(jq -r '.summary.failed' <<<"$OUT")" = 2 ]] || fail "both missing sh/bash scripts must fail (output was: $OUT)"
+[[ "$(jq -r '.summary.passed' <<<"$OUT")" = 1 ]] || fail "bash scripts/ok.sh was not verified (output was: $OUT)"
+pass "a missing script run through sh or bash fails the run"
+
+# 9. A cd inside a fenced block moves the lines after it: they are checked
+# in that directory (monorepo), and a cd this check cannot follow leaves the
+# rest of the block unchecked, never failed.
+MONO="$WORK/mono"
+mkdir -p "$MONO/web/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$MONO/web/scripts/build.sh"
+chmod +x "$MONO/web/scripts/build.sh"
+printf '{"scripts": {"lint": "eslint ."}}\n' > "$MONO/web/package.json"
+cat > "$MONO/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+cd web
+./scripts/build.sh
+npm run lint
+```
+
+```bash
+cd ../elsewhere
+./scripts/not-here.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$MONO" --json 2>/dev/null)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "commands after cd web fail the run: exit $rc (output was: $OUT)"
+[[ "$(jq -r '.summary.failed' <<<"$OUT")" = 0 ]] || fail "a command after cd web failed (output was: $OUT)"
+[[ "$(jq -r '[.inventory[] | select(.cmd == "npm run lint" and .dir == "web")] | length' <<<"$OUT")" = 1 ]] \
+    || fail "npm run lint is not recorded in web/ (output was: $OUT)"
+[[ "$(jq -r '[.inventory[] | select(.cmd == "./scripts/not-here.sh" and .dir == null)] | length' <<<"$OUT")" = 1 ]] \
+    || fail "a line after an unresolvable cd is not recorded without a directory (output was: $OUT)"
+OUT="$(DRY_RUN=true bash "$VERIFY" "$MONO" 2>&1)"
+grep -q "repo-local command exists: ./scripts/build.sh" <<<"$OUT" || fail "./scripts/build.sh was not found in web/ (output was: $OUT)"
+grep -q "npm script exists: lint" <<<"$OUT" || fail "npm run lint was not looked up in web/ (output was: $OUT)"
+grep -q "Not checked.*./scripts/not-here.sh" <<<"$OUT" || fail "a line after an unresolvable cd was not reported as unchecked (output was: $OUT)"
+MISS="$WORK/mono-missing"
+mkdir -p "$MISS/web"
+cat > "$MISS/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+cd web
+./scripts/gone.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$MISS" 2>&1)"; rc=$?
+[[ "$rc" -eq 1 ]] || fail "a missing script after cd web exits $rc, expected 1 (output was: $OUT)"
+grep -q "repo-local command not found: ./scripts/gone.sh" <<<"$OUT" || fail "no diagnostic for web/scripts/gone.sh (output was: $OUT)"
+pass "a cd in a fenced block is followed; an unresolvable cd leaves the rest unchecked"
+
+# 10. A numeric argument of -j/-l is not the make target.
+MJ="$WORK/make-jobs"
+mkdir -p "$MJ"
+printf 'test:\n\techo test\n' > "$MJ/Makefile"
+# shellcheck disable=SC2016  # backticks are markdown, not substitution
+printf '# x\n\n- `make -j 4 test`\n- `make -j test`\n- `make --jobs 2 --load-average 1.5 test`\n' > "$MJ/AGENTS.md"
+OUT="$(DRY_RUN=true bash "$VERIFY" "$MJ" --json 2>/dev/null)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "make with -j/-l exits $rc (output was: $OUT)"
+[[ "$(jq -r '.summary.passed' <<<"$OUT")" = 3 ]] || fail "not every make -j/-l form found target test (output was: $OUT)"
+pass "a numeric -j/-l argument is not taken for the make target"
+
+# 12. A run whose commands were all skipped still emits its JSON document.
+PH="$WORK/placeholder"
+mkdir -p "$PH"
+# shellcheck disable=SC2016  # backticks are markdown, not substitution
+printf '# x\n\n- `make <target>`\n' > "$PH/AGENTS.md"
+OUT="$(DRY_RUN=true bash "$VERIFY" "$PH" --json 2>&1)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "a run with only skipped commands exits $rc (output was: $OUT)"
+[[ "$(jq -r '.summary.skipped' <<<"$OUT")" = 1 ]] || fail "a run with only skipped commands emits no JSON (output was: $OUT)"
+pass "a run with only skipped commands emits its JSON document"
+
+# 11. A here-string is no heredoc: the lines after it are still read.
+HS="$WORK/herestring"
+mkdir -p "$HS"
+cat > "$HS/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+grep -c x <<< hello
+./scripts/gone.sh
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$HS" --json 2>/dev/null)"; rc=$?
+grep -qxF './scripts/gone.sh' <<<"$(inventory "$OUT")" || fail "a line after a here-string was dropped (output was: $OUT)"
+[[ "$rc" -eq 1 ]] || fail "a missing script after a here-string exits $rc, expected 1 (output was: $OUT)"
+pass "a here-string does not start a heredoc"
 
 echo ""
 echo "All inventory tests passed."
