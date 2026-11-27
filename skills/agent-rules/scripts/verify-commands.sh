@@ -721,7 +721,7 @@ verify_command() {
             if [[ -z "$target" ]]; then
                 target="(default)"
             fi
-            if (cd "$make_dir" && { [ -f "Makefile" ] || [ -f "makefile" ] || [ -f "GNUmakefile" ]; }); then
+            if (cd "$make_dir" && { [[ -f "Makefile" ]] || [[ -f "makefile" ]] || [[ -f "GNUmakefile" ]]; }); then
                 if [[ "$target" = "(default)" ]] || (cd "$make_dir" && makefile_has_target "$target"); then
                     if [ "$SMOKE_TEST" = true ]; then
                         # Use make -n (dry run) for smoke test to avoid side effects
