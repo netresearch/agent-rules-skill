@@ -109,7 +109,7 @@ warn() {
 # Resolve the project directory once, before anything is derived from it: a
 # relative path joined to AGENTS.md and then used after the cd below would
 # point into the project twice (software-factory#131).
-if [ ! -d "$PROJECT_DIR" ]; then
+if [[ ! -d "$PROJECT_DIR" ]]; then
     error "project directory not found: $PROJECT_DIR"
     exit 1
 fi
@@ -130,7 +130,7 @@ if [ ! -f "$AGENTS_FILE" ]; then
     error "AGENTS.md not found at $AGENTS_FILE"
     exit 1
 fi
-if [ ! -r "$AGENTS_FILE" ] || ! AGENTS_CONTENT="$(cat -- "$AGENTS_FILE")"; then
+if [[ ! -r "$AGENTS_FILE" ]] || ! AGENTS_CONTENT="$(cat -- "$AGENTS_FILE")"; then
     error "cannot read $AGENTS_FILE"
     exit 1
 fi
@@ -384,7 +384,7 @@ is_repo_local_path() {
     [[ "$word" == */* && "$word" != /* && "$word" != vendor/bin/* ]] || return 1
     [[ "$word" =~ ^(\./)?[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+$ ]] || return 1
     [[ "$word" != *..* ]] || return 1
-    if [ -f "$word" ] && [ -x "$word" ]; then
+    if [[ -f "$word" ]] && [[ -x "$word" ]]; then
         return 0
     fi
     [[ "$word" =~ \.(sh|bash|py|php|pl|rb|js|mjs|ts)$ ]]
@@ -407,9 +407,9 @@ is_path_cell() {
     local cell="$1"
     [[ "$cell" == *[[:space:]]* ]] && return 1
     [[ "$cell" == */ ]] && return 0
-    [ -d "$cell" ] && return 0
-    [ -f "$cell" ] && [ ! -x "$cell" ] && return 0
-    if [ ! -e "$cell" ] && [[ "$cell" == */* ]] && [[ ! "$cell" =~ \.(sh|bash|py|php|pl|rb|js|mjs|ts)$ ]]; then
+    [[ -d "$cell" ]] && return 0
+    [[ -f "$cell" ]] && [[ ! -x "$cell" ]] && return 0
+    if [[ ! -e "$cell" ]] && [[ "$cell" == */* ]] && [[ ! "$cell" =~ \.(sh|bash|py|php|pl|rb|js|mjs|ts)$ ]]; then
         return 0
     fi
     return 1
@@ -675,7 +675,7 @@ verify_command() {
             local -a cwords=()
             read -ra cwords <<<"${cmd#*composer }"
             for word in "${cwords[@]}"; do
-                if [ "$expect_dir" = true ]; then composer_dir="$word"; expect_dir=false; continue; fi
+                if [[ "$expect_dir" = true ]]; then composer_dir="$word"; expect_dir=false; continue; fi
                 case "$word" in
                     --working-dir=*) composer_dir="${word#--working-dir=}" ;;
                     --working-dir|-d) expect_dir=true ;;
@@ -684,7 +684,7 @@ verify_command() {
                     *) script="$word"; break ;;
                 esac
             done
-            if [ -f "$composer_dir/composer.json" ]; then
+            if [[ -f "$composer_dir/composer.json" ]]; then
                 local script_exists=false
                 if [[ "$script" =~ ^(install|update|require|remove|dump-autoload)$ ]]; then
                     script_exists=true
@@ -895,8 +895,8 @@ verify_command() {
             # A repo-local script run through the shell: "sh Build/x.sh"
             local script_path
             script_path="$(awk '{for (i = 2; i <= NF; i++) if ($i !~ /^-/) { print $i; exit }}' <<<"${cmd#*"$base_cmd"}")"
-            if [ -n "$script_path" ] && is_repo_local_path "$script_path"; then
-                if [ -f "$script_path" ]; then
+            if [[ -n "$script_path" ]] && is_repo_local_path "$script_path"; then
+                if [[ -f "$script_path" ]]; then
                     success "repo-local command exists: $script_path"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
                     ((PASSED+=1))
@@ -920,11 +920,11 @@ verify_command() {
             # A repo-local script: a relative path inside the project. Its
             # existence is checked; it is never run (not on the allowlist).
             if is_repo_local_path "$base_cmd"; then
-                if [ -f "$base_cmd" ] && [ -x "$base_cmd" ]; then
+                if [[ -f "$base_cmd" ]] && [[ -x "$base_cmd" ]]; then
                     success "repo-local command exists: $base_cmd"
                     COMMAND_RESULTS["$cmd"]='{"exists": true}'
                     ((PASSED+=1))
-                elif [ -f "$base_cmd" ]; then
+                elif [[ -f "$base_cmd" ]]; then
                     warn "repo-local script is not executable: $base_cmd"
                     COMMAND_RESULTS["$cmd"]='{"exists": true, "executable": false}'
                     ((SKIPPED+=1))
@@ -967,13 +967,13 @@ INVENTORY_JSON="$(printf '%s\n' "${entries[@]}" | jq -Rsc '
     split("\n") | map(select(length > 0) | split("\t") | {source: .[0], cmd: (.[1:] | join("\t"))})')"
 
 # An empty inventory is not a verified one: nothing was checked.
-if [ ${#entries[@]} -eq 0 ]; then
+if [[ ${#entries[@]} -eq 0 ]]; then
     warn "No commands found in AGENTS.md: nothing was verified"
     if [[ "$JSON" = true ]]; then
         jq -nc --argjson p "$PASSED" --argjson s "$SKIPPED" --argjson f "$FAILED" \
             '{script:"verify-commands",schema:1,status:"empty",found:0,summary:{passed:$p,skipped:$s,failed:$f},inventory:[],commands:[]}' >&3
     fi
-    [ "$ALLOW_EMPTY" = true ] && exit 0
+    [[ "$ALLOW_EMPTY" = true ]] && exit 0
     exit 3
 fi
 
@@ -984,8 +984,8 @@ echo ""
 # exists, never run it.
 for entry in "${entries[@]}"; do
     cmd="${entry#*$'\t'}"
-    [ -n "$cmd" ] || continue
-    if [ "${entry%%$'\t'*}" = fenced ]; then
+    [[ -n "$cmd" ]] || continue
+    if [[ "${entry%%$'\t'*}" = fenced ]]; then
         SMOKE_TEST_SAVED="$SMOKE_TEST"
         SMOKE_TEST=false
         verify_command "$cmd"
@@ -995,9 +995,9 @@ for entry in "${entries[@]}"; do
     fi
 done
 
-if [ "$FAILED" -gt 0 ]; then
+if [[ "$FAILED" -gt 0 ]]; then
     STATUS=failed
-elif [ "$PASSED" -gt 0 ]; then
+elif [[ "$PASSED" -gt 0 ]]; then
     STATUS=verified
 else
     STATUS=unverified
