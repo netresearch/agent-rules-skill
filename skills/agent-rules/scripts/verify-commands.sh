@@ -16,6 +16,7 @@ fi
 PROJECT_DIR="."
 JSON=false
 UPDATE_VERIFIED=false
+ALLOW_EMPTY=false
 
 # Parse flags. Preserves the original positional semantics (PROJECT_DIR="${1:-.}"):
 # the first non-flag argument becomes PROJECT_DIR, defaulting to "." when absent.
@@ -29,6 +30,10 @@ while [[ $# -gt 0 ]]; do
             UPDATE_VERIFIED=true
             shift
             ;;
+        --allow-empty)
+            ALLOW_EMPTY=true
+            shift
+            ;;
         --help|-h)
             cat <<EOF
 Usage: verify-commands.sh [PROJECT_DIR] [OPTIONS]
@@ -39,7 +44,18 @@ Options:
   --json                Emit machine-readable JSON on stdout (human output suppressed)
   --update-verified     On success, record today's date in the "Last verified"
                         marker of AGENTS.md (without it, AGENTS.md is not changed)
+  --allow-empty         Exit 0 when AGENTS.md documents no command (default: exit 3)
   --help, -h            Show this help message
+
+Commands are taken from table cells, inline code naming a known tool or a
+repo-local script, and the lines of fenced bash/sh/shell/console blocks.
+Commands from fenced blocks are examples: they are checked for existence but
+never run, also not with SMOKE_TEST=true.
+
+Exit status:
+  0  every found command verified or skipped, none failed
+  1  a documented command is missing, or the input cannot be read
+  3  AGENTS.md documents no command at all (nothing was verified)
 
 Environment variables:
   VERBOSE=true          Show detailed [INFO] output on stderr
@@ -61,16 +77,10 @@ EOF
     esac
 done
 
-AGENTS_FILE="$PROJECT_DIR/AGENTS.md"
 VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 SMOKE_TEST="${SMOKE_TEST:-false}"
 TIMEOUT="${TIMEOUT:-60}"
-# The default sidecar lives inside the analysed project, so it is only written
-# when its directory is a real directory there (see write_json_results).
-OUTPUT_JSON_IS_DEFAULT=false
-[ -z "${OUTPUT_JSON:-}" ] && OUTPUT_JSON_IS_DEFAULT=true
-OUTPUT_JSON="${OUTPUT_JSON:-$PROJECT_DIR/.agents/command-verification.json}"
 
 # Colors
 RED='\033[0;31m'
@@ -96,9 +106,32 @@ warn() {
     echo -e "${YELLOW}[WARN]${NC} $*"
 }
 
-# Check if AGENTS.md exists
+# Resolve the project directory once, before anything is derived from it: a
+# relative path joined to AGENTS.md and then used after the cd below would
+# point into the project twice (software-factory#131).
+if [ ! -d "$PROJECT_DIR" ]; then
+    error "project directory not found: $PROJECT_DIR"
+    exit 1
+fi
+PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd -P)"
+AGENTS_FILE="$PROJECT_DIR/AGENTS.md"
+
+# The default sidecar lives inside the analysed project, so it is only written
+# when its directory is a real directory there (see write_json_results). A
+# relative OUTPUT_JSON is relative to where the script was started.
+OUTPUT_JSON_IS_DEFAULT=false
+[ -z "${OUTPUT_JSON:-}" ] && OUTPUT_JSON_IS_DEFAULT=true
+OUTPUT_JSON="${OUTPUT_JSON:-$PROJECT_DIR/.agents/command-verification.json}"
+[[ "$OUTPUT_JSON" == /* ]] || OUTPUT_JSON="$PWD/$OUTPUT_JSON"
+
+# Check if AGENTS.md exists and read it once. A read error is a diagnostic, not
+# an empty file: an empty inventory would otherwise pass as success.
 if [ ! -f "$AGENTS_FILE" ]; then
     error "AGENTS.md not found at $AGENTS_FILE"
+    exit 1
+fi
+if [ ! -r "$AGENTS_FILE" ] || ! AGENTS_CONTENT="$(cat -- "$AGENTS_FILE")"; then
+    error "cannot read $AGENTS_FILE"
     exit 1
 fi
 
@@ -312,28 +345,135 @@ write_json_results() {
     log "Results written to $OUTPUT_JSON"
 }
 
-# Extract commands from markdown code blocks and table cells
-# Look for patterns like: `command arg` or | command | or | `command` |
+# The text of AGENTS.md outside fenced code blocks.
+outside_fences() {
+    awk '
+        /^[ \t]*(```|~~~)/ { in_fence = !in_fence; next }
+        !in_fence { print }
+    ' <<<"$AGENTS_CONTENT"
+}
+
+# The lines of fenced bash/sh/shell/console/zsh blocks, one command each:
+# backslash continuations joined, a "$ " prompt and trailing "# comments"
+# removed, blank and comment lines dropped.
+fenced_shell_lines() {
+    awk '
+        !in_fence && /^[ \t]*(```|~~~)[ \t]*(bash|sh|shell|console|zsh|shell-session)[ \t]*$/ { in_fence = 1; shell = 1; next }
+        !in_fence && /^[ \t]*(```|~~~)/ { in_fence = 1; shell = 0; next }
+        in_fence && /^[ \t]*(```|~~~)[ \t]*$/ { in_fence = 0; shell = 0; acc = ""; next }
+        in_fence && shell {
+            line = $0
+            if (line ~ /\\$/) { acc = acc substr(line, 1, length(line) - 1) " "; next }
+            line = acc line; acc = ""
+            sub(/^[ \t]+/, "", line)
+            sub(/^\$[ \t]+/, "", line)
+            if (line ~ /^#/) next
+            sub(/[ \t]+#.*$/, "", line)
+            sub(/[ \t]+$/, "", line)
+            gsub(/[ \t]+/, " ", line)
+            if (line != "") print line
+        }
+    ' <<<"$AGENTS_CONTENT"
+}
+
+# Is <word> a relative path to a script of this project? It must stay inside
+# the project; it need not exist, so that a script the instructions name but
+# the repository lost is reported instead of dropped.
+is_repo_local_path() {
+    local word="$1"
+    [[ "$word" == */* && "$word" != /* && "$word" != vendor/bin/* ]] || return 1
+    [[ "$word" =~ ^(\./)?[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+$ ]] || return 1
+    [[ "$word" != *..* ]] || return 1
+    if [ -f "$word" ] && [ -x "$word" ]; then
+        return 0
+    fi
+    [[ "$word" =~ \.(sh|bash|py|php|pl|rb|js|mjs|ts)$ ]]
+}
+
+# The command word of <cmd>: leading VAR=value assignments skipped.
+command_word() {
+    local rest="$1"
+    while [[ "$rest" =~ ^[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+(.*)$ ]]; do
+        rest="${BASH_REMATCH[1]}"
+    done
+    printf '%s\n' "${rest%% *}"
+}
+
+# Is a single backticked word a path rather than a command (a file map, a
+# directory table, a file named in prose)? A directory, an existing file that
+# is not executable, and a missing file that is not a script are paths. A
+# missing script stays a command, so that a lost script is reported.
+is_path_cell() {
+    local cell="$1"
+    [[ "$cell" == *[[:space:]]* ]] && return 1
+    [[ "$cell" == */ ]] && return 0
+    [ -d "$cell" ] && return 0
+    [ -f "$cell" ] && [ ! -x "$cell" ] && return 0
+    if [ ! -e "$cell" ] && [[ "$cell" == */* ]] && [[ ! "$cell" =~ \.(sh|bash|py|php|pl|rb|js|mjs|ts)$ ]]; then
+        return 0
+    fi
+    return 1
+}
+
+# Print "<source><TAB><command>" for every command documented in AGENTS.md.
+# <source> is "inline" (a table cell or inline code) or "fenced" (a line of a
+# fenced shell block). A command found both ways is reported once, as inline.
 extract_commands() {
-    # Extract from tables with backticks (| `command` | format)
-    # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
-    grep -oE '\| `[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/| `//;s/`$//' | grep -v '^\s*$' || true
+    local text cell span word bt=$'\x60'
+    text="$(outside_fences)"
+    {
+        # Tables with backticks (| `command` | format); paths are not commands.
+        # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
+        while IFS= read -r cell; do
+            [[ "$cell" =~ ^[[:space:]]*$ ]] && continue
+            is_path_cell "$cell" && continue
+            printf 'inline\t%s\n' "$cell"
+        done < <(grep -oE '\| `[^`]+`' <<<"$text" | sed 's/| `//;s/`$//' || true)
 
-    # Extract from tables without backticks in Commands section
-    # Look for lines like "| Lint | vendor/bin/php-cs-fixer fix --dry-run |"
-    # Skip header row and separator row, get 3rd column (command), filter empty and time estimates
-    sed -n '/^## Commands/,/^##/p' "$AGENTS_FILE" 2>/dev/null | \
-        grep -E '^\|' | \
-        tail -n +3 | \
-        cut -d'|' -f3 | \
-        sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
-        grep -v '^$' | \
-        grep -v '^~' || true
+        # Tables without backticks in the Commands section, e.g.
+        # "| Lint | vendor/bin/php-cs-fixer fix --dry-run |": 3rd column,
+        # header and separator rows skipped, time estimates dropped.
+        sed -n '/^## Commands/,/^##/p' <<<"$text" | \
+            grep -E '^\|' | \
+            tail -n +3 | \
+            cut -d'|' -f3 | \
+            sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
+            grep -v '^$' | \
+            grep -v '^~' | \
+            grep -v '^`' | \
+            sed 's/^/inline\t/' || true
 
-    # Extract from inline code that looks like commands
-    # Includes: npm, yarn, pnpm, bun, make, go, composer, cargo, python, pip, poetry, uv, deno, gradle, php, vendor/bin
-    # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
-    grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |python |pip |poetry |uv |deno |gradle |php |vendor/bin/)[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/`//g' || true
+        # Inline code naming a known tool or a repo-local script, also after
+        # VAR=value assignments.
+        # shellcheck disable=SC2016  # grep pattern: backticks are literal.
+        while IFS= read -r span; do
+            span="${span#"$bt"}"
+            span="${span%"$bt"}"
+            word="$(command_word "$span")"
+            case "$word" in
+                npm|yarn|pnpm|bun|make|go|composer|cargo|pytest|python|python3|pip|poetry|uv|deno|gradle|php)
+                    [[ "$span" == *" "* ]] && printf 'inline\t%s\n' "$span"
+                    ;;
+                vendor/bin/*)
+                    printf 'inline\t%s\n' "$span"
+                    ;;
+                *)
+                    is_repo_local_path "$word" || continue
+                    is_path_cell "$span" && continue
+                    printf 'inline\t%s\n' "$span"
+                    ;;
+            esac
+        done < <(grep -oE '`[^`]+`' <<<"$text" || true)
+
+        fenced_shell_lines | sed 's/^/fenced\t/'
+    } | awk '
+        {
+            t = index($0, "\t"); kind = substr($0, 1, t - 1); c = substr($0, t + 1)
+            if (!(c in src)) { order[++n] = c; src[c] = kind; next }
+            if (kind == "inline") src[c] = "inline"
+        }
+        END { for (i = 1; i <= n; i++) printf "%s\t%s\n", src[order[i]], order[i] }
+    '
 }
 
 # Print the makefile make would read in the current directory and every file
@@ -426,8 +566,8 @@ verify_command() {
     local cmd="$1"
     local base_cmd
 
-    # Extract the base command (first word)
-    base_cmd=$(echo "$cmd" | awk '{print $1}')
+    # The base command: the first word after any VAR=value assignments
+    base_cmd="$(command_word "$cmd")"
 
     # Skip placeholders
     if [[ "$cmd" == *"<"* ]] || [[ "$cmd" == *"{{{"* ]]; then
@@ -529,14 +669,26 @@ verify_command() {
             ;;
 
         composer)
-            # Check if composer script exists
-            local script="${cmd#composer }"
-            script="${script%% *}"
-            if [ -f "composer.json" ]; then
+            # Check if composer script exists, in the directory a
+            # --working-dir / -d option names
+            local script="" composer_dir="." word expect_dir=false
+            local -a cwords=()
+            read -ra cwords <<<"${cmd#*composer }"
+            for word in "${cwords[@]}"; do
+                if [ "$expect_dir" = true ]; then composer_dir="$word"; expect_dir=false; continue; fi
+                case "$word" in
+                    --working-dir=*) composer_dir="${word#--working-dir=}" ;;
+                    --working-dir|-d) expect_dir=true ;;
+                    -d*) composer_dir="${word#-d}" ;;
+                    -*) ;;
+                    *) script="$word"; break ;;
+                esac
+            done
+            if [ -f "$composer_dir/composer.json" ]; then
                 local script_exists=false
                 if [[ "$script" =~ ^(install|update|require|remove|dump-autoload)$ ]]; then
                     script_exists=true
-                elif jq -e ".scripts[\"$script\"]" composer.json > /dev/null 2>&1; then
+                elif jq -e --arg s "$script" '.scripts[$s]' "$composer_dir/composer.json" > /dev/null 2>&1; then
                     script_exists=true
                 fi
 
@@ -739,7 +891,50 @@ verify_command() {
             fi
             ;;
 
+        sh|bash)
+            # A repo-local script run through the shell: "sh Build/x.sh"
+            local script_path
+            script_path="$(awk '{for (i = 2; i <= NF; i++) if ($i !~ /^-/) { print $i; exit }}' <<<"${cmd#*"$base_cmd"}")"
+            if [ -n "$script_path" ] && is_repo_local_path "$script_path"; then
+                if [ -f "$script_path" ]; then
+                    success "repo-local command exists: $script_path"
+                    COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                    ((PASSED+=1))
+                else
+                    error "repo-local command not found: $script_path"
+                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                    ((FAILED+=1))
+                fi
+            elif command -v "$base_cmd" > /dev/null 2>&1; then
+                success "command exists: $base_cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                ((PASSED+=1))
+            else
+                warn "command not in PATH: $base_cmd"
+                COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                ((SKIPPED+=1))
+            fi
+            ;;
+
         *)
+            # A repo-local script: a relative path inside the project. Its
+            # existence is checked; it is never run (not on the allowlist).
+            if is_repo_local_path "$base_cmd"; then
+                if [ -f "$base_cmd" ] && [ -x "$base_cmd" ]; then
+                    success "repo-local command exists: $base_cmd"
+                    COMMAND_RESULTS["$cmd"]='{"exists": true}'
+                    ((PASSED+=1))
+                elif [ -f "$base_cmd" ]; then
+                    warn "repo-local script is not executable: $base_cmd"
+                    COMMAND_RESULTS["$cmd"]='{"exists": true, "executable": false}'
+                    ((SKIPPED+=1))
+                else
+                    error "repo-local command not found: $base_cmd"
+                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                    ((FAILED+=1))
+                fi
+                return 0
+            fi
             # Check if command exists in PATH
             if command -v "$base_cmd" > /dev/null 2>&1; then
                 if [ "$SMOKE_TEST" = true ]; then
@@ -766,24 +961,47 @@ verify_command() {
     esac
 }
 
-# Get unique commands
-mapfile -t commands < <(extract_commands | sort -u)
+# The inventory: every documented command once, with where it was found.
+mapfile -t entries < <(extract_commands | LC_ALL=C sort -t $'\t' -k2)
+INVENTORY_JSON="$(printf '%s\n' "${entries[@]}" | jq -Rsc '
+    split("\n") | map(select(length > 0) | split("\t") | {source: .[0], cmd: (.[1:] | join("\t"))})')"
 
-if [ ${#commands[@]} -eq 0 ]; then
-    warn "No commands found in AGENTS.md"
+# An empty inventory is not a verified one: nothing was checked.
+if [ ${#entries[@]} -eq 0 ]; then
+    warn "No commands found in AGENTS.md: nothing was verified"
     if [[ "$JSON" = true ]]; then
         jq -nc --argjson p "$PASSED" --argjson s "$SKIPPED" --argjson f "$FAILED" \
-            '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:[]}' >&3
+            '{script:"verify-commands",schema:1,status:"empty",found:0,summary:{passed:$p,skipped:$s,failed:$f},inventory:[],commands:[]}' >&3
     fi
-    exit 0
+    [ "$ALLOW_EMPTY" = true ] && exit 0
+    exit 3
 fi
 
-echo "Found ${#commands[@]} unique commands to verify"
+echo "Found ${#entries[@]} unique commands to verify"
 echo ""
 
-for cmd in "${commands[@]}"; do
-    [ -n "$cmd" ] && verify_command "$cmd"
+# A command taken only from a fenced block is an example: check that it
+# exists, never run it.
+for entry in "${entries[@]}"; do
+    cmd="${entry#*$'\t'}"
+    [ -n "$cmd" ] || continue
+    if [ "${entry%%$'\t'*}" = fenced ]; then
+        SMOKE_TEST_SAVED="$SMOKE_TEST"
+        SMOKE_TEST=false
+        verify_command "$cmd"
+        SMOKE_TEST="$SMOKE_TEST_SAVED"
+    else
+        verify_command "$cmd"
+    fi
 done
+
+if [ "$FAILED" -gt 0 ]; then
+    STATUS=failed
+elif [ "$PASSED" -gt 0 ]; then
+    STATUS=verified
+else
+    STATUS=unverified
+fi
 
 # Emit JSON document (machine-readable) and exit before the human summary.
 # Summary counts come from the authoritative PASSED/SKIPPED/FAILED counters; the
@@ -813,10 +1031,12 @@ if [[ "$JSON" = true ]]; then
 
     jq -nc \
         --argjson items "$arr_json" \
+        --argjson inv "$INVENTORY_JSON" \
+        --arg status "$STATUS" \
         --argjson p "$PASSED" \
         --argjson s "$SKIPPED" \
         --argjson f "$FAILED" \
-        '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:$items}' >&3
+        '{script:"verify-commands",schema:1,status:$status,found:($inv | length),summary:{passed:$p,skipped:$s,failed:$f},inventory:$inv,commands:$items}' >&3
 
     if [[ "$FAILED" -gt 0 ]]; then exit 1; fi
     exit 0

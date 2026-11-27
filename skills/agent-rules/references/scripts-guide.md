@@ -167,10 +167,14 @@ bash ${CLAUDE_SKILL_DIR}/scripts/verify-commands.sh /path/to/project
 ```
 
 This script:
-- Extracts commands from AGENTS.md tables and code blocks
+- Extracts commands from AGENTS.md table cells, inline code naming a known tool or a repo-local script (also after `VAR=value` assignments), and the lines of fenced `bash`/`sh`/`shell`/`console` blocks; paths in file and directory tables are not commands
+- Accepts a relative, absolute or `.` project path and finds the same commands for each
 - Verifies npm/yarn scripts exist in package.json
 - Verifies make targets exist in Makefile
-- Verifies composer scripts exist in composer.json
+- Verifies composer scripts exist in composer.json, also under `--working-dir`/`-d`
+- Verifies repo-local scripts exist; a missing one fails the run
+- Never runs a command taken from a fenced block, also not with `SMOKE_TEST=true`: fenced lines are examples
+- Exits 1 when a documented command is missing or AGENTS.md cannot be read, and 3 when AGENTS.md documents no command (`--allow-empty` accepts that); `--json` reports `status` (`verified`, `unverified`, `failed`, `empty`), `found` and the `inventory` with each command's source
 - With `--update-verified`, records the date in the "Last verified" marker of AGENTS.md on success; without it, AGENTS.md is not changed
 
 Options:
