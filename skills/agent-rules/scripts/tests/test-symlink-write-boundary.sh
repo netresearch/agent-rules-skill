@@ -191,5 +191,71 @@ for p in lib/CLAUDE.md Documentation/CLAUDE.md; do
 done
 pass "generated CLAUDE.md files beside existing AGENTS.md files are removed, and planned under --dry-run"
 
+# --- Test 11: a CLAUDE.md symlink is judged by the file it resolves to; empty,
+# import-only and unreadable files under --force
+for kind in dot abs; do
+    FX="$WORK/link-$kind"
+    make_fixture "$FX"
+    bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+    case "$kind" in
+        dot) ln -s ./AGENTS.md "$FX/CLAUDE.md" ;;
+        abs) ln -s "$FX/AGENTS.md" "$FX/CLAUDE.md" ;;
+    esac
+    bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+    [[ -L "$FX/CLAUDE.md" ]] && fail "a CLAUDE.md symlink to the AGENTS.md of its directory ($kind) was kept"
+done
+FX="$WORK/link-parent"
+make_fixture "$FX"
+mkdir -p "$FX/pkg"
+printf '# pkg\n' > "$FX/pkg/AGENTS.md"
+ln -s ../AGENTS.md "$FX/pkg/CLAUDE.md"
+OUT="$(bash "$GENERATE" "$FX" --no-symlinks --force 2>&1)" || fail "generate-agents.sh errored"
+[[ "$(readlink "$FX/pkg/CLAUDE.md")" = "../AGENTS.md" ]] || fail "--force removed a CLAUDE.md symlink to another AGENTS.md"
+grep -q "Kept: pkg/CLAUDE.md despite --force — it is a symlink to ../AGENTS.md, another AGENTS.md" <<<"$OUT" \
+    || fail "a symlink to another AGENTS.md is not reported as such (output was: $OUT)"
+grep -q "Kept: pkg/CLAUDE.md.*move the rules it points to" <<<"$OUT" \
+    && fail "a symlink to another AGENTS.md is told to move rules that are already in an AGENTS.md (output was: $OUT)"
+FX="$WORK/link-foreign-live"
+make_fixture "$FX"
+mkdir -p "$WORK/shared-empty"
+: > "$WORK/shared-empty/rules.md"
+ln -s ../shared-empty/rules.md "$FX/CLAUDE.md"
+OUT="$(bash "$GENERATE" "$FX" --no-symlinks --force 2>&1)" || fail "generate-agents.sh errored"
+[[ "$(readlink "$FX/CLAUDE.md")" = "../shared-empty/rules.md" ]] || fail "--force removed a CLAUDE.md symlink to an existing foreign file"
+grep -q "Kept: CLAUDE.md despite --force — it is a symlink to ../shared-empty/rules.md, not to the AGENTS.md of its directory" <<<"$OUT" \
+    || fail "a symlink to a foreign file is not reported with its target (output was: $OUT)"
+FX="$WORK/link-dangling-msg"
+make_fixture "$FX"
+ln -s ../nowhere/CLAUDE.md "$FX/CLAUDE.md"
+OUT="$(bash "$GENERATE" "$FX" --no-symlinks --force 2>&1)" || fail "generate-agents.sh errored"
+grep -q "Kept: CLAUDE.md despite --force — it is a symlink to ../nowhere/CLAUDE.md, which points to nothing" <<<"$OUT" \
+    || fail "a dangling CLAUDE.md symlink is not reported as pointing to nothing (output was: $OUT)"
+FX="$WORK/empty-claude"
+make_fixture "$FX"
+: > "$FX/CLAUDE.md"
+bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[[ -e "$FX/CLAUDE.md" ]] || fail "an empty CLAUDE.md was removed without --force"
+bash "$GENERATE" "$FX" --no-symlinks --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[[ -e "$FX/CLAUDE.md" ]] && fail "--force did not remove an empty CLAUDE.md"
+FX="$WORK/import-lines"
+make_fixture "$FX"
+printf '@AGENTS.md\n  @import AGENTS.md  \n' > "$FX/CLAUDE.md"
+bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[[ -e "$FX/CLAUDE.md" ]] || fail "a CLAUDE.md with two import lines was removed without --force"
+bash "$GENERATE" "$FX" --no-symlinks --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[[ -e "$FX/CLAUDE.md" ]] && fail "--force did not remove a CLAUDE.md that holds only import lines"
+if [[ "$(id -u)" -ne 0 ]]; then
+    FX="$WORK/unreadable-claude"
+    make_fixture "$FX"
+    printf '# my rules\n' > "$FX/CLAUDE.md"
+    chmod 000 "$FX/CLAUDE.md"
+    bash "$GENERATE" "$FX" --no-symlinks --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
+    [[ -e "$FX/CLAUDE.md" ]] || fail "--force removed an unreadable CLAUDE.md"
+    chmod 644 "$FX/CLAUDE.md"
+    pass "symlinks are judged by their resolved target; --force removes empty and import-only files and keeps unreadable ones"
+else
+    pass "symlinks are judged by their resolved target; --force removes empty and import-only files (unreadable not testable as root)"
+fi
+
 echo ""
 echo "All symlink write-boundary tests passed."

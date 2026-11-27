@@ -69,12 +69,16 @@ prints a line such as `no CLAUDE.md found; AGENTS.md loaded: …`.
 
 ### What the scripts do
 
-- `generate-agents.sh` creates no `CLAUDE.md`. It removes a `CLAUDE.md` it made earlier (a symlink
-  to AGENTS.md, an `@AGENTS.md` import file, the old `--claude-shim` file); a `CLAUDE.md` of the
-  user's own is kept and reported with the step to take: move its rules into AGENTS.md (or
-  `~/.claude/CLAUDE.md` for personal ones), then remove it. `--force` also removes an empty file, but never a `CLAUDE.md` that holds rules beyond the
-  `@AGENTS.md` import line, and never a symlink to anything but the `AGENTS.md` of its directory
-  (such a symlink is kept and reported with its target). `--claude-shim` is ignored.
+- `generate-agents.sh` creates no `CLAUDE.md`. It removes a `CLAUDE.md` it made earlier: a symlink
+  that resolves to the AGENTS.md of its own directory (`AGENTS.md`, `./AGENTS.md` or an absolute
+  path), an `@AGENTS.md` import file or the old `--claude-shim` file. A `CLAUDE.md` of the user's
+  own is kept and reported with the step to take: move its rules into AGENTS.md (or
+  `~/.claude/CLAUDE.md` for personal ones), then remove it. `--force` also removes a file that
+  holds nothing beyond comments, blank lines and `@AGENTS.md` import lines (an empty one too).
+  It never removes a file with rules, an unreadable file, or a symlink to anything else: a
+  symlink to another AGENTS.md is reported as removable by hand (its rules are already there),
+  a symlink that points to nothing as removable, any other symlink with its target and the
+  step to move its rules. `--claude-shim` is ignored.
 - `validate-structure.sh` warns about every `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` beside an AGENTS.md.
 
 ## Google Gemini CLI

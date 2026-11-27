@@ -1380,24 +1380,44 @@ fi
 # reads AGENTS.md itself, and by default only when no CLAUDE.md,
 # .claude/CLAUDE.md or CLAUDE.local.md exists in the directory or above it
 # (https://code.claude.com/docs/en/memory#agents-md), so the generator creates
-# no CLAUDE.md and removes the ones it made earlier: a symlink to AGENTS.md, an
-# @AGENTS.md import file or the old --claude-shim file. A CLAUDE.md of the
+# no CLAUDE.md and removes the ones it made earlier: a symlink that resolves to
+# the AGENTS.md of its own directory, an @AGENTS.md import file or the old
+# --claude-shim file. A CLAUDE.md of the
 # user's own is kept and reported with the step to take: move its rules into
 # AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it.
-# --force also removes an empty file, but never a regular file that holds
-# rules, and never a symlink to anything but the AGENTS.md of its directory:
-# deleting either would drop rules from every agent's context. A symlink is
-# removed as a link, its target is never touched.
+# --force also removes a regular file that holds nothing beyond comments,
+# blank lines and @AGENTS.md import lines, but never one with rules or one it
+# cannot read, and never a symlink to anything but the AGENTS.md of its
+# directory: deleting either would drop rules from every agent's context. A
+# symlink is removed as a link, its target is never touched.
 #
 # A regular file counts as generated only when, without HTML comments and
 # blank lines, it holds nothing but "@AGENTS.md" (the import file) or
 # "@import AGENTS.md" (the old shim). A file with rules of its own beside an
 # @AGENTS.md line is the user's: the validator used to suggest adding that
 # line to a user's CLAUDE.md.
+# The canonical path a CLAUDE.md symlink points to; the directory part is
+# resolved with cd/pwd -P (macOS realpath has no -e), the file need not exist.
+# Empty when the directory of the target does not exist.
+claude_link_target() {
+    local file="$1" t d
+    t="$(readlink "$file")" || return 0
+    [[ "$t" = /* ]] || t="$(dirname "$file")/$t"
+    d="$(cd "$(dirname "$t")" 2>/dev/null && pwd -P)" || return 0
+    printf '%s/%s\n' "$d" "$(basename "$t")"
+}
+
+# The AGENTS.md beside <file>, as a canonical path.
+claude_own_agents_md() {
+    printf '%s/AGENTS.md\n' "$(cd "$(dirname "$1")" && pwd -P)"
+}
+
 claude_md_is_generated() {
     local file="$1" body
     if [[ -L "$file" ]]; then
-        [[ "$(readlink "$file")" = "AGENTS.md" ]]
+        # Ours when it resolves to the AGENTS.md of its own directory, however
+        # it is written (AGENTS.md, ./AGENTS.md, an absolute path).
+        [[ "$(claude_link_target "$file")" = "$(claude_own_agents_md "$file")" ]]
         return
     fi
     body="$(sed -e 's/<!--.*-->//g' -e '/^[[:space:]]*$/d' "$file" 2>/dev/null)" || return 1
@@ -1419,11 +1439,13 @@ remove_own_claude_md() {
     [[ -n "${CLAUDE_MD_HANDLED[$file]:-}" ]] && return 0
     CLAUDE_MD_HANDLED[$file]=1
     [[ -e "$file" ]] || [[ -L "$file" ]] || return 0
-    local forced=false
-    if [[ "$FORCE" = true ]] && [[ ! -L "$file" ]] && ! claude_md_has_rules "$file"; then
-        forced=true
+    local remove=false
+    if claude_md_is_generated "$file"; then
+        remove=true
+    elif [[ "$FORCE" = true ]] && [[ ! -L "$file" ]] && ! claude_md_has_rules "$file"; then
+        remove=true
     fi
-    if [[ "$forced" = true ]] || claude_md_is_generated "$file"; then
+    if [[ "$remove" = true ]]; then
         if [[ "$DRY_RUN" = true ]]; then
             emit_op remove compat-file "$file"
             echo "[DRY-RUN] Would remove: $file (AGENTS.md is the only instruction file)"
@@ -1432,16 +1454,35 @@ remove_own_claude_md() {
             emit_op remove compat-file "$file"
             echo "🗑️  Removed: $label (AGENTS.md is the only instruction file)"
         fi
-    elif [[ "$FORCE" = true ]] && [[ -L "$file" ]]; then
-        emit_op keep compat-file "$file" reason "symlink to $(readlink "$file") (--force does not delete it)"
-        echo "⚠️  Kept: $label despite --force — it is a symlink to $(readlink "$file"), not to the AGENTS.md of its directory: move the rules it points to into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it. While it exists, Claude Code reads it instead of AGENTS.md"
-    elif [[ "$FORCE" = true ]]; then
-        emit_op keep compat-file "$file" reason "user rules (--force does not delete them)"
-        echo "⚠️  Kept: $label despite --force — it holds rules beyond the @AGENTS.md import line: move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it. While it exists, Claude Code reads it instead of AGENTS.md"
-    else
-        emit_op keep compat-file "$file" reason "user file"
-        echo "⚠️  Kept: $label — move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it. While it exists, Claude Code reads it instead of AGENTS.md"
+        return 0
     fi
+    # Kept: say what the file is and what to do with it. --force never deletes
+    # a file with rules, nor a symlink to anything but the AGENTS.md of its
+    # directory.
+    local kept="Kept: $label" reason why target link
+    [[ "$FORCE" = true ]] && kept="$kept despite --force"
+    if [[ -L "$file" ]]; then
+        link="$(readlink "$file")"
+        target="$(claude_link_target "$file")"
+        if [[ -z "$target" ]] || { [[ ! -e "$target" ]] && [[ ! -L "$target" ]]; }; then
+            reason="symlink to $link, which points to nothing"
+            why="it is a symlink to $link, which points to nothing: it can be removed"
+        elif [[ "$(basename "$target")" = AGENTS.md ]]; then
+            reason="symlink to $link, another AGENTS.md"
+            why="it is a symlink to $link, another AGENTS.md whose rules are already there: it can be removed by hand"
+        else
+            reason="symlink to $link"
+            why="it is a symlink to $link, not to the AGENTS.md of its directory: move the rules it points to into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it"
+        fi
+    elif [[ "$FORCE" = true ]]; then
+        reason="user rules (--force does not delete them)"
+        why="it holds rules beyond the @AGENTS.md import line: move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it"
+    else
+        reason="user file"
+        why="move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it"
+    fi
+    emit_op keep compat-file "$file" reason "$reason"
+    echo "⚠️  $kept — $why. While it exists, Claude Code reads it instead of AGENTS.md"
 }
 
 if [ "$CLAUDE_SHIM" = true ]; then
