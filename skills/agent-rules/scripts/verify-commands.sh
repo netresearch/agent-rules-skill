@@ -52,7 +52,9 @@ repo-local script, and the lines of fenced bash/sh/shell/console blocks.
 Commands from fenced blocks are examples: they are checked for existence but
 never run, also not with SMOKE_TEST=true. A plain "cd <dir>" into the project
 inside a fenced block is followed: the lines after it are checked in that
-directory. A plain "cd <dir>" whose directory does not exist fails the run.
+directory. A plain "cd <dir>" whose directory does not exist fails the run,
+unless an earlier line of the block names <dir> (git clone, mkdir, ...): then
+it is not checked. A <dir> that exists but is no directory fails as well.
 After a cd that cannot be followed (.., an absolute path, a variable, cd -,
 cd x && ..., a directory outside the project or missing) the rest of the
 block is reported as not checked.
@@ -407,7 +409,8 @@ outside_fences() {
 # "# comments" removed, blank and comment lines and heredoc bodies dropped.
 # Each line is printed as "fenced<TAB>line", or "fenced:<dir><TAB>line" after
 # a "cd <dir>" earlier in the same block ("fenced:?" after a cd this check
-# cannot follow), so that it can be checked where it runs.
+# cannot follow), so that it can be checked where it runs. A "cd <dir>" line
+# whose <dir> an earlier line of the block names gets "+made" appended.
 fenced_shell_lines() {
     awk "$FENCE_AWK_LIB"'
         # The directory after <line> when it is a cd, relative to the project
@@ -424,11 +427,30 @@ fenced_shell_lines() {
             if (d == "" || d == ".") return dir
             return (dir == "") ? d : dir "/" d
         }
-        in_fence && closes(trimmed($0)) { in_fence = 0; shell = 0; acc = ""; here = ""; dir = ""; next }
+        # Remember the words of a line of the block, so that a later "cd <dir>"
+        # can tell that an earlier line creates <dir> (mkdir, tar -C, cp, ...).
+        # "git clone <url>" without a target also creates the basename of the
+        # url without .git.
+        function remember(line,   n, w, i, j, name) {
+            n = split(line, w, " ")
+            for (i = 1; i <= n; i++) {
+                name = w[i]; while (sub(/^\.\//, "", name)) {}; sub(/\/+$/, "", name)
+                if (name != "") made[name] = 1
+                if (w[i] == "clone" && i > 1 && w[i - 1] == "git") {
+                    for (j = i + 1; j <= n; j++) {
+                        if (w[j] ~ /^-/ || w[j] !~ /[\/:]/) continue
+                        name = w[j]; sub(/\/+$/, "", name); sub(/.*[\/:]/, "", name); sub(/\.git$/, "", name)
+                        if (name != "") made[name] = 1
+                        break
+                    }
+                }
+            }
+        }
+        in_fence && closes(trimmed($0)) { in_fence = 0; shell = 0; acc = ""; here = ""; dir = ""; split("", made); next }
         in_fence && !shell { next }
         !in_fence {
             if (opens($0)) {
-                in_fence = 1; acc = ""; here = ""; dir = ""
+                in_fence = 1; acc = ""; here = ""; dir = ""; split("", made)
                 shell = (lang ~ /^(bash|sh|shell|zsh)$/) ? 1 : ((lang ~ /^(console|shell-session)$/) ? 2 : 0)
             }
             next
@@ -451,8 +473,15 @@ fenced_shell_lines() {
             sub(/[ \t]+$/, "", line)
             gsub(/[ \t]+/, " ", line)
             if (line == "") next
-            print (dir == "" ? "fenced" : "fenced:" dir) "\t" line
+            # "+made": a cd into a directory an earlier line of the block names.
+            mark = ""
+            if (line ~ /^cd [^ ]+$/) {
+                target = substr(line, 4); while (sub(/^\.\//, "", target)) {}; sub(/\/+$/, "", target)
+                if (target in made) mark = "+made"
+            }
+            print (dir == "" ? "fenced" : "fenced:" dir) mark "\t" line
             if (line ~ /^(cd|pushd|popd)( |$)/) dir = cd_target(line, dir)
+            remember(line)
         }
     ' <<<"$AGENTS_CONTENT"
 }
@@ -1105,7 +1134,7 @@ verify_command() {
 # The inventory: every documented command once, with where it was found.
 mapfile -t entries < <(extract_commands | LC_ALL=C sort -t $'\t' -k2)
 INVENTORY_JSON="$(printf '%s\n' "${entries[@]}" | jq -Rsc '
-    split("\n") | map(select(length > 0) | split("\t") | {source: .[0], cmd: (.[1:] | join("\t"))}
+    split("\n") | map(select(length > 0) | split("\t") | {source: (.[0] | sub("[+]made$"; "")), cmd: (.[1:] | join("\t"))}
         | if (.source | startswith("fenced:")) then
               .dir = (.source[7:] | if . == "?" then null else . end) | .source = "fenced"
           else . end)')"
@@ -1129,13 +1158,20 @@ echo ""
 # A line after a cd in its block is checked in that directory, which must be
 # inside the project; after a cd this check cannot follow it is not checked,
 # and its inventory entry gets "dir": null. A plain "cd <dir>" line whose
-# directory does not exist is a failure: the instructions name a directory the
-# project no longer has.
+# directory does not exist is a failure (the instructions name a directory the
+# project no longer has), unless an earlier line of its block names <dir>
+# (git clone, mkdir, tar -C, ...): then it is not checked. A <dir> that exists
+# but is no directory fails as "not a directory".
 UNFOLLOWED=()
 CD_PLAIN_RE='^cd ([A-Za-z0-9_./-]+)$'
 for entry in "${entries[@]}"; do
     cmd="${entry#*$'\t'}"
     kind="${entry%%$'\t'*}"
+    made=false
+    if [[ "$kind" = *+made ]]; then
+        made=true
+        kind="${kind%+made}"
+    fi
     [[ -n "$cmd" ]] || continue
     if [[ "$kind" = fenced* ]]; then
         if [[ "$kind" = fenced:* ]]; then
@@ -1155,9 +1191,19 @@ for entry in "${entries[@]}"; do
         if [[ "$cmd" =~ $CD_PLAIN_RE ]]; then
             cd_to="${BASH_REMATCH[1]}"
             if [[ "$cd_to" != [/-]* && ! "$cd_to" =~ (^|/)\.\.(/|$) && ! -d "$cd_to" ]]; then
-                error "directory not found: $cd_to (in $cmd)"
-                COMMAND_RESULTS["$cmd"]='{"exists": false}'
-                ((FAILED+=1))
+                if [[ -e "$cd_to" ]]; then
+                    error "not a directory: $cd_to (in $cmd)"
+                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                    ((FAILED+=1))
+                elif [[ "$made" = true ]]; then
+                    warn "Not checked (an earlier line of its block creates $cd_to): $cmd"
+                    COMMAND_RESULTS["$cmd"]='{"exists": null, "reason": "created in its block"}'
+                    ((SKIPPED+=1))
+                else
+                    error "directory not found: $cd_to (in $cmd)"
+                    COMMAND_RESULTS["$cmd"]='{"exists": false}'
+                    ((FAILED+=1))
+                fi
                 cd "$PROJECT_DIR"
                 continue
             fi

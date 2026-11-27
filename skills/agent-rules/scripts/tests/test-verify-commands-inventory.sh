@@ -458,5 +458,60 @@ OUT="$(DRY_RUN=true bash "$VERIFY" "$BK" 2>&1)"; rc=$?
 [[ "$rc" -eq 0 ]] || fail "a root line after a cd-directory line was not checked at the root: exit $rc (output was: $OUT)"
 pass "the check returns to the project root after a line in a cd directory"
 
+# 20. A cd into a directory an earlier line of its block creates (git clone,
+# mkdir) is not checked, never failed; without such a line it fails (Test 13).
+CR="$WORK/created-dir"
+mkdir -p "$CR"
+cat > "$CR/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+git clone https://example.com/acme/repo.git
+cd repo
+npm install
+```
+
+```bash
+mkdir -p build
+cd build
+cmake ..
+make
+```
+
+```bash
+git clone git@example.com:acme/tool.git tool-src
+cd tool-src
+./configure
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$CR" 2>&1)"; rc=$?
+[[ "$rc" -eq 0 ]] || fail "a cd into a directory its block creates exits $rc (output was: $OUT)"
+grep -q "directory not found" <<<"$OUT" && fail "a directory its block creates was reported as not found (output was: $OUT)"
+for c in 'cd repo' 'cd build' 'cd tool-src'; do
+    grep -qF "Not checked (an earlier line of its block creates" <<<"$(grep -F -- "$c" <<<"$OUT")" \
+        || fail "'$c' is not reported as not checked (output was: $OUT)"
+done
+OUT="$(DRY_RUN=true bash "$VERIFY" "$CR" --json 2>/dev/null)"
+[[ "$(jq -r '.inventory[] | select(.cmd == "cd repo") | .source' <<<"$OUT")" = fenced ]] \
+    || fail "the source of a cd into a created directory is not fenced (output was: $OUT)"
+pass "a cd into a directory its block creates is not checked"
+
+# 21. A cd into a path that is a file fails as not a directory.
+ND="$WORK/not-a-dir"
+mkdir -p "$ND"
+touch "$ND/docs"
+cat > "$ND/AGENTS.md" <<'AGENTS'
+# x
+
+```bash
+cd docs
+ls
+```
+AGENTS
+OUT="$(DRY_RUN=true bash "$VERIFY" "$ND" 2>&1)"; rc=$?
+[[ "$rc" -eq 1 ]] || fail "a cd into a file exits $rc, expected 1 (output was: $OUT)"
+grep -q "not a directory: docs" <<<"$OUT" || fail "a cd into a file is not reported as not a directory (output was: $OUT)"
+pass "a cd into a file fails as not a directory"
+
 echo ""
 echo "All inventory tests passed."
