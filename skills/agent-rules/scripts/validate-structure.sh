@@ -257,7 +257,7 @@ check_no_claude_md() {
     local rel_dir="${dir#"$PROJECT_DIR"}"
     [ -z "$rel_dir" ] && rel_dir="(root)"
     local f found=()
-    for f in CLAUDE.md .claude/CLAUDE.md; do
+    for f in CLAUDE.md .claude/CLAUDE.md CLAUDE.local.md; do
         if [[ -e "$dir/$f" ]] || [[ -L "$dir/$f" ]]; then
             found+=("$f")
         fi

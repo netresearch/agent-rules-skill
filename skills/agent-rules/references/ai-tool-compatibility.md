@@ -72,7 +72,7 @@ prints a line such as `no CLAUDE.md found; AGENTS.md loaded: …`.
 - `generate-agents.sh` creates no `CLAUDE.md`. It removes a `CLAUDE.md` it made earlier (a symlink
   to AGENTS.md, an `@AGENTS.md` import file, the old `--claude-shim` file); a `CLAUDE.md` of the
   user's own is kept and reported, and `--force` removes it too. `--claude-shim` is ignored.
-- `validate-structure.sh` warns about every `CLAUDE.md` or `.claude/CLAUDE.md` beside an AGENTS.md.
+- `validate-structure.sh` warns about every `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` beside an AGENTS.md.
 
 ## Google Gemini CLI
 

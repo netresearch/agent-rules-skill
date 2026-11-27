@@ -137,5 +137,36 @@ OUT="$(bash "$GENERATE" "$FX" --claude-shim 2>&1)" || fail "generate-agents.sh e
 grep -q -- "--claude-shim is ignored" <<<"$OUT" || fail "--claude-shim gave no notice (output was: $OUT)"
 pass "a user CLAUDE.md is kept and reported, --force removes it without writing through, --claude-shim creates none"
 
+# --- Test 9: a user's CLAUDE.md that also imports AGENTS.md is still theirs
+FX="$WORK/user-claude-import"
+make_fixture "$FX"
+printf '# My team rules\n\nNever push to main.\n\n@AGENTS.md\n' > "$FX/CLAUDE.md"
+OUT="$(bash "$GENERATE" "$FX" 2>&1)" || fail "generate-agents.sh errored"
+grep -qx 'Never push to main.' "$FX/CLAUDE.md" || fail "a user CLAUDE.md with an @AGENTS.md line was removed without --force"
+grep -q "Kept: CLAUDE.md" <<<"$OUT" || fail "the kept user CLAUDE.md was not reported (output was: $OUT)"
+pass "a user CLAUDE.md with its own rules and an @AGENTS.md line is kept"
+
+# --- Test 10: CLAUDE.md files the old generator left beside existing scoped
+# AGENTS.md files are removed on a default run, and --dry-run --json plans it
+FX="$WORK/migrate"
+make_fixture "$FX"
+bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+mkdir -p "$FX/lib" "$FX/Documentation"
+printf '# lib\n' > "$FX/lib/AGENTS.md"
+ln -s AGENTS.md "$FX/lib/CLAUDE.md"
+printf '# docs\n' > "$FX/Documentation/AGENTS.md"
+printf '<!-- Regular file, not a symlink -->\n\n@AGENTS.md\n' > "$FX/Documentation/CLAUDE.md"
+OUT="$(bash "$GENERATE" "$FX" --dry-run --json 2>/dev/null)" || fail "generate-agents.sh errored"
+for p in lib/CLAUDE.md Documentation/CLAUDE.md; do
+    [[ "$(jq -r --arg p "$p" '[.operations[] | select(.op == "remove" and .path == $p)] | length' <<<"$OUT")" = 1 ]] \
+        || fail "--dry-run --json does not plan the removal of $p (output was: $OUT)"
+    { [[ -e "$FX/$p" ]] || [[ -L "$FX/$p" ]]; } || fail "--dry-run removed $p"
+done
+bash "$GENERATE" "$FX" >/dev/null 2>&1 || fail "generate-agents.sh errored"
+for p in lib/CLAUDE.md Documentation/CLAUDE.md; do
+    { [[ -e "$FX/$p" ]] || [[ -L "$FX/$p" ]]; } && fail "a default run left the generated $p"
+done
+pass "generated CLAUDE.md files beside existing AGENTS.md files are removed, and planned under --dry-run"
+
 echo ""
 echo "All symlink write-boundary tests passed."

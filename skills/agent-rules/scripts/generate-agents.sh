@@ -1384,10 +1384,29 @@ fi
 # @AGENTS.md import file or the old --claude-shim file. A CLAUDE.md of the
 # user's own is kept and reported; --force removes it too. A symlink is
 # removed as a link, its target is never touched.
+#
+# A regular file counts as generated only when, without HTML comments and
+# blank lines, it holds nothing but "@AGENTS.md" (the import file) or
+# "@import AGENTS.md" (the old shim). A file with rules of its own beside an
+# @AGENTS.md line is the user's: the validator used to suggest adding that
+# line to a user's CLAUDE.md.
+claude_md_is_generated() {
+    local file="$1" body
+    if [[ -L "$file" ]]; then
+        [[ "$(readlink "$file")" = "AGENTS.md" ]]
+        return
+    fi
+    body="$(sed -e 's/<!--.*-->//g' -e '/^[[:space:]]*$/d' "$file" 2>/dev/null)" || return 1
+    [[ "$body" = "@AGENTS.md" || "$body" = "@import AGENTS.md" ]]
+}
+
+declare -A CLAUDE_MD_HANDLED=()
 remove_own_claude_md() {
     local file="$1" label="$2"
+    [[ -n "${CLAUDE_MD_HANDLED[$file]:-}" ]] && return 0
+    CLAUDE_MD_HANDLED[$file]=1
     [[ -e "$file" ]] || [[ -L "$file" ]] || return 0
-    if [[ "$FORCE" = true ]] || compat_file_is_ours "$file" || { [[ ! -L "$file" ]] && head -n 1 "$file" 2>/dev/null | grep -qF 'Auto-generated shim for Claude Code compatibility'; }; then
+    if [[ "$FORCE" = true ]] || claude_md_is_generated "$file"; then
         if [[ "$DRY_RUN" = true ]]; then
             emit_op remove compat-file "$file"
             echo "[DRY-RUN] Would remove: $file (AGENTS.md is the only instruction file)"
@@ -1406,6 +1425,14 @@ if [ "$CLAUDE_SHIM" = true ]; then
     echo "⚠️  --claude-shim is ignored: AGENTS.md is the only instruction file, no CLAUDE.md is created" >&2
 fi
 remove_own_claude_md "$PROJECT_DIR/CLAUDE.md" CLAUDE.md
+# Every other directory that already holds an AGENTS.md, scope or not: a
+# CLAUDE.md beside it stops Claude Code from loading that AGENTS.md.
+while IFS= read -r agents_dir; do
+    [[ -n "$agents_dir" && "$agents_dir" != "$PROJECT_DIR" ]] || continue
+    remove_own_claude_md "$agents_dir/CLAUDE.md" "${agents_dir#"$PROJECT_DIR"/}/CLAUDE.md"
+done < <(find "$PROJECT_DIR" -name AGENTS.md \
+    -not -path "*/examples/*" -not -path "*/.git/*" -not -path "*/vendor/*" \
+    -not -path "*/node_modules/*" -not -path "*/.Build/*" -exec dirname {} \; 2>/dev/null | LC_ALL=C sort -u)
 
 # Create the GEMINI.md compatibility symlink if requested (root level)
 # Subdirectory symlinks are created after scoped files are generated (see below).
@@ -1450,7 +1477,7 @@ else
         SCOPE_PATH=$(echo "$scope" | jq -r '.path')
         SCOPE_TYPE=$(echo "$scope" | jq -r '.type')
         SCOPE_FILE="$PROJECT_DIR/$SCOPE_PATH/AGENTS.md"
-
+        remove_own_claude_md "$PROJECT_DIR/$SCOPE_PATH/CLAUDE.md" "$SCOPE_PATH/CLAUDE.md"
 
         if { [ -e "$SCOPE_FILE" ] || [ -L "$SCOPE_FILE" ]; } && [ "$FORCE" = false ] && [ "$UPDATE_ONLY" = false ]; then
             emit_op keep agents-file "$SCOPE_FILE" reason "already exists"
@@ -2434,8 +2461,6 @@ else
             emit_op write agents-file "$SCOPE_FILE"
             echo "✅ Created: $SCOPE_FILE"
         fi
-
-        remove_own_claude_md "$PROJECT_DIR/$SCOPE_PATH/CLAUDE.md" "$SCOPE_PATH/CLAUDE.md"
 
         # Create the GEMINI.md subdirectory symlink for Gemini CLI.
         # Documentation/ is symlink-hostile: the TYPO3 docs renderer lists it

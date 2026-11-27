@@ -72,6 +72,12 @@ for kind in import symlink; do
     grep -q "Remove CLAUDE.md.*Documentation" <<<"$out" \
         || fail "validate-structure.sh does not report a CLAUDE.md ($kind) for removal (output was: $out)"
 done
-pass "a CLAUDE.md beside an AGENTS.md, import or symlink, is reported for removal"
+rm -f "$FX/Documentation/CLAUDE.md"
+printf '# my notes\n' > "$FX/CLAUDE.local.md"
+out=$(bash "$VALIDATE" "$FX" 2>&1)
+grep -q "Remove CLAUDE.local.md" <<<"$out" \
+    || fail "validate-structure.sh does not report a CLAUDE.local.md (output was: $out)"
+rm -f "$FX/CLAUDE.local.md"
+pass "a CLAUDE.md beside an AGENTS.md, import or symlink, and a CLAUDE.local.md are reported for removal"
 
 echo "All import-file and no-CLAUDE.md regression tests passed."
