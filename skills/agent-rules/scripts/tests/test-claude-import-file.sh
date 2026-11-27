@@ -77,6 +77,8 @@ printf '# my notes\n' > "$FX/CLAUDE.local.md"
 out=$(bash "$VALIDATE" "$FX" 2>&1)
 grep -q "Remove CLAUDE.local.md" <<<"$out" \
     || fail "validate-structure.sh does not report a CLAUDE.local.md (output was: $out)"
+grep -q "after moving any rules in it into AGENTS.md" <<<"$out" \
+    || fail "validate-structure.sh says to remove a CLAUDE.local.md without moving its rules first (output was: $out)"
 rm -f "$FX/CLAUDE.local.md"
 pass "a CLAUDE.md beside an AGENTS.md, import or symlink, and a CLAUDE.local.md are reported for removal"
 

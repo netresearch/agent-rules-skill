@@ -71,7 +71,10 @@ prints a line such as `no CLAUDE.md found; AGENTS.md loaded: …`.
 
 - `generate-agents.sh` creates no `CLAUDE.md`. It removes a `CLAUDE.md` it made earlier (a symlink
   to AGENTS.md, an `@AGENTS.md` import file, the old `--claude-shim` file); a `CLAUDE.md` of the
-  user's own is kept and reported, and `--force` removes it too. `--claude-shim` is ignored.
+  user's own is kept and reported with the step to take: move its rules into AGENTS.md (or
+  `~/.claude/CLAUDE.md` for personal ones), then remove it. `--force` removes a foreign symlink
+  (never its target) and an empty file, but never a `CLAUDE.md` that holds rules beyond the
+  `@AGENTS.md` import line. `--claude-shim` is ignored.
 - `validate-structure.sh` warns about every `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` beside an AGENTS.md.
 
 ## Google Gemini CLI

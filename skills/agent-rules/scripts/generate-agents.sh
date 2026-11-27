@@ -1382,8 +1382,11 @@ fi
 # (https://code.claude.com/docs/en/memory#agents-md), so the generator creates
 # no CLAUDE.md and removes the ones it made earlier: a symlink to AGENTS.md, an
 # @AGENTS.md import file or the old --claude-shim file. A CLAUDE.md of the
-# user's own is kept and reported; --force removes it too. A symlink is
-# removed as a link, its target is never touched.
+# user's own is kept and reported with the step to take: move its rules into
+# AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it.
+# --force removes a foreign symlink (as a link, its target is never touched)
+# and an empty file, but never a regular file that holds rules: deleting it
+# would drop those rules from every agent's context.
 #
 # A regular file counts as generated only when, without HTML comments and
 # blank lines, it holds nothing but "@AGENTS.md" (the import file) or
@@ -1400,13 +1403,26 @@ claude_md_is_generated() {
     [[ "$body" = "@AGENTS.md" || "$body" = "@import AGENTS.md" ]]
 }
 
+# Does a regular CLAUDE.md hold anything beyond HTML comments, blank lines and
+# an @AGENTS.md / @import AGENTS.md line? Unreadable counts as yes: keep it.
+claude_md_has_rules() {
+    local file="$1" body
+    body="$(sed -e 's/<!--.*-->//g' -e '/^[[:space:]]*$/d' "$file" 2>/dev/null)" || return 0
+    body="$(grep -vxE '[[:space:]]*@(import )?AGENTS\.md[[:space:]]*' <<<"$body" || true)"
+    [[ -n "$body" ]]
+}
+
 declare -A CLAUDE_MD_HANDLED=()
 remove_own_claude_md() {
     local file="$1" label="$2"
     [[ -n "${CLAUDE_MD_HANDLED[$file]:-}" ]] && return 0
     CLAUDE_MD_HANDLED[$file]=1
     [[ -e "$file" ]] || [[ -L "$file" ]] || return 0
-    if [[ "$FORCE" = true ]] || claude_md_is_generated "$file"; then
+    local forced=false
+    if [[ "$FORCE" = true ]] && { [[ -L "$file" ]] || ! claude_md_has_rules "$file"; }; then
+        forced=true
+    fi
+    if [[ "$forced" = true ]] || claude_md_is_generated "$file"; then
         if [[ "$DRY_RUN" = true ]]; then
             emit_op remove compat-file "$file"
             echo "[DRY-RUN] Would remove: $file (AGENTS.md is the only instruction file)"
@@ -1415,9 +1431,12 @@ remove_own_claude_md() {
             emit_op remove compat-file "$file"
             echo "🗑️  Removed: $label (AGENTS.md is the only instruction file)"
         fi
+    elif [[ "$FORCE" = true ]]; then
+        emit_op keep compat-file "$file" reason "user rules (--force does not delete them)"
+        echo "⚠️  Kept: $label despite --force — it holds rules beyond the @AGENTS.md import line: move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it. While it exists, Claude Code reads it instead of AGENTS.md"
     else
         emit_op keep compat-file "$file" reason "user file"
-        echo "⚠️  Kept: $label — remove it by hand: while it exists, Claude Code reads it instead of AGENTS.md"
+        echo "⚠️  Kept: $label — move its rules into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones), then remove it. While it exists, Claude Code reads it instead of AGENTS.md"
     fi
 }
 

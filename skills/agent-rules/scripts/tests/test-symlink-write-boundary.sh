@@ -113,16 +113,18 @@ for kind in symlink import shim; do
 done
 pass "a CLAUDE.md the generator made (symlink, import, shim) is removed; --dry-run keeps it"
 
-# --- Test 8: a CLAUDE.md of the user's own is kept and reported; --force
-# removes it, and a symlink is removed as a link, never written through.
+# --- Test 8: a CLAUDE.md of the user's own is kept and reported, also with
+# --force while it holds rules; --force removes a foreign symlink as a link,
+# never written through.
 FX="$WORK/user-claude"
 make_fixture "$FX"
 printf '# my own rules\n' > "$FX/CLAUDE.md"
 OUT="$(bash "$GENERATE" "$FX" 2>&1)" || fail "generate-agents.sh errored"
 grep -qx '# my own rules' "$FX/CLAUDE.md" || fail "a user CLAUDE.md was changed without --force"
 grep -q "Kept: CLAUDE.md" <<<"$OUT" || fail "a kept user CLAUDE.md was not reported (output was: $OUT)"
-bash "$GENERATE" "$FX" --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
-[[ -e "$FX/CLAUDE.md" ]] && fail "--force did not remove a user CLAUDE.md"
+grep -q "move its rules into AGENTS.md" <<<"$OUT" || fail "the kept CLAUDE.md report does not say to move its rules first (output was: $OUT)"
+OUT="$(bash "$GENERATE" "$FX" --force 2>&1)" || fail "generate-agents.sh errored"
+grep -qx '# my own rules' "$FX/CLAUDE.md" || fail "--force deleted a user CLAUDE.md that holds rules"
 FX="$WORK/dangling-claude"
 make_fixture "$FX"
 mkdir -p "$WORK/claude-target"
@@ -135,7 +137,7 @@ bash "$GENERATE" "$FX" --force >/dev/null 2>&1 || fail "generate-agents.sh error
 OUT="$(bash "$GENERATE" "$FX" --claude-shim 2>&1)" || fail "generate-agents.sh errored with --claude-shim"
 { [[ -e "$FX/CLAUDE.md" ]] || [[ -L "$FX/CLAUDE.md" ]]; } && fail "--claude-shim created a CLAUDE.md"
 grep -q -- "--claude-shim is ignored" <<<"$OUT" || fail "--claude-shim gave no notice (output was: $OUT)"
-pass "a user CLAUDE.md is kept and reported, --force removes it without writing through, --claude-shim creates none"
+pass "a user CLAUDE.md is kept and reported (also with --force), --force removes a foreign symlink without writing through, --claude-shim creates none"
 
 # --- Test 9: a user's CLAUDE.md that also imports AGENTS.md is still theirs
 FX="$WORK/user-claude-import"
@@ -144,7 +146,18 @@ printf '# My team rules\n\nNever push to main.\n\n@AGENTS.md\n' > "$FX/CLAUDE.md
 OUT="$(bash "$GENERATE" "$FX" 2>&1)" || fail "generate-agents.sh errored"
 grep -qx 'Never push to main.' "$FX/CLAUDE.md" || fail "a user CLAUDE.md with an @AGENTS.md line was removed without --force"
 grep -q "Kept: CLAUDE.md" <<<"$OUT" || fail "the kept user CLAUDE.md was not reported (output was: $OUT)"
-pass "a user CLAUDE.md with its own rules and an @AGENTS.md line is kept"
+# --force does not delete a CLAUDE.md whose body is more than the import line,
+# and says why; --dry-run --force plans to keep it.
+OUT="$(bash "$GENERATE" "$FX" --dry-run --force --json 2>/dev/null)" || fail "generate-agents.sh errored"
+[[ "$(jq -r '[.operations[] | select(.op == "remove" and .path == "CLAUDE.md")] | length' <<<"$OUT")" = 0 ]] \
+    || fail "--dry-run --force plans to remove a user CLAUDE.md with rules (output was: $OUT)"
+[[ "$(jq -r '[.operations[] | select(.op == "keep" and .path == "CLAUDE.md")] | length' <<<"$OUT")" = 1 ]] \
+    || fail "--dry-run --force does not plan to keep a user CLAUDE.md with rules (output was: $OUT)"
+OUT="$(bash "$GENERATE" "$FX" --force 2>&1)" || fail "generate-agents.sh errored"
+grep -qx 'Never push to main.' "$FX/CLAUDE.md" || fail "--force deleted a user CLAUDE.md with rules beside its @AGENTS.md line"
+grep -q "Kept: CLAUDE.md despite --force" <<<"$OUT" || fail "--force did not report why it kept CLAUDE.md (output was: $OUT)"
+grep -q "move its rules into AGENTS.md" <<<"$OUT" || fail "--force did not say to move the rules first (output was: $OUT)"
+pass "a user CLAUDE.md with its own rules and an @AGENTS.md line is kept, also with --force"
 
 # --- Test 10: CLAUDE.md files the old generator left beside existing scoped
 # AGENTS.md files are removed on a default run, and --dry-run --json plans it

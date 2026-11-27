@@ -266,7 +266,7 @@ check_no_claude_md() {
         success "No CLAUDE.md beside AGENTS.md: $rel_dir"
         return 0
     fi
-    warning "Remove ${found[*]}: AGENTS.md is the only instruction file, and Claude Code reads AGENTS.md itself (v2.1.277+) only when no CLAUDE.md exists: $rel_dir"
+    warning "Remove ${found[*]} after moving any rules in it into AGENTS.md (or ~/.claude/CLAUDE.md for personal ones): AGENTS.md is the only instruction file, and Claude Code reads AGENTS.md itself (v2.1.277+) only when no CLAUDE.md exists: $rel_dir"
     return 1
 }
 
