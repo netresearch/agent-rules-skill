@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: Netresearch DTT GmbH
-# Regression test for CLAUDE.md import-file handling (issue #82).
+# Regression test for import-file handling in Documentation/ (issue #82) and
+# for the rule that AGENTS.md is the only instruction file.
 #
 # The TYPO3 docs renderer lists Documentation/ via Flysystem, which aborts on
-# any symbolic link, so a CLAUDE.md -> AGENTS.md symlink there breaks docs CI.
+# any symbolic link, so a GEMINI.md -> AGENTS.md symlink there breaks docs CI.
 # generate-agents.sh must emit a regular "@AGENTS.md" import file for
-# Documentation/ scopes, and validate-structure.sh must accept that file as
-# fully valid, while still warning on other regular CLAUDE.md files.
+# Documentation/ scopes, create no CLAUDE.md anywhere, and validate-structure.sh
+# must report a CLAUDE.md beside an AGENTS.md for removal.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,32 +40,37 @@ git -C "$FX" -c user.email=t@t.t -c user.name=t commit -qm init
 bash "$GENERATE" "$FX" --style=thin >/dev/null 2>&1 || fail "generate-agents.sh errored"
 [ -f "$FX/Documentation/AGENTS.md" ] \
     || fail "fixture did not produce a scoped Documentation/AGENTS.md (scope not detected; fix the fixture)"
-[ -e "$FX/Documentation/CLAUDE.md" ] || fail "no Documentation/CLAUDE.md generated"
-if [ -L "$FX/Documentation/CLAUDE.md" ]; then
-    fail "Documentation/CLAUDE.md is a symlink -- breaks TYPO3 docs rendering (#82)"
+[ -e "$FX/Documentation/GEMINI.md" ] || fail "no Documentation/GEMINI.md generated"
+if [ -L "$FX/Documentation/GEMINI.md" ]; then
+    fail "Documentation/GEMINI.md is a symlink -- breaks TYPO3 docs rendering (#82)"
 fi
-grep -qE '^@AGENTS\.md[[:space:]]*$' "$FX/Documentation/CLAUDE.md" \
-    || fail "Documentation/CLAUDE.md lacks the @AGENTS.md import line"
+grep -qE '^@AGENTS\.md[[:space:]]*$' "$FX/Documentation/GEMINI.md" \
+    || fail "Documentation/GEMINI.md lacks the @AGENTS.md import line"
 pass "generator emits @AGENTS.md import file in Documentation/"
 
-# Non-hostile scope dirs must still get symlinks.
-[ -e "$FX/src/CLAUDE.md" ] || fail "no src/CLAUDE.md generated (src scope not detected; fixture needs >=5 source files)"
-[ -L "$FX/src/CLAUDE.md" ] || fail "src/CLAUDE.md should still be a symlink"
-pass "non-hostile scope dirs still get symlinks"
+# Non-hostile scope dirs still get a GEMINI.md symlink; no CLAUDE.md anywhere.
+[ -L "$FX/src/GEMINI.md" ] || fail "src/GEMINI.md should be a symlink (src scope needs >=5 source files)"
+for d in . src Documentation; do
+    { [ -e "$FX/$d/CLAUDE.md" ] || [ -L "$FX/$d/CLAUDE.md" ]; } && fail "a CLAUDE.md was created in $d"
+done
+pass "non-hostile scope dirs get GEMINI.md symlinks, and no CLAUDE.md is created"
 
-# --- Test 2: validator accepts the import file without a warning -------------
+# --- Test 2: the validator is quiet without a CLAUDE.md --------------------
 out=$(bash "$VALIDATE" "$FX" 2>&1)
-if echo "$out" | grep -q "CLAUDE.md is a regular file"; then
-    fail "validate-structure.sh still warns about the @AGENTS.md import file"
-fi
-pass "validator accepts the @AGENTS.md import file"
+grep -q "Remove CLAUDE.md" <<<"$out" && fail "validate-structure.sh warns although no CLAUDE.md exists"
+pass "validator accepts AGENTS.md without a CLAUDE.md"
 
-# --- Test 3: a regular CLAUDE.md without the import still warns --------------
-printf 'unrelated content\n' > "$FX/Documentation/CLAUDE.md"
-out=$(bash "$VALIDATE" "$FX" 2>&1)
-if ! echo "$out" | grep -q "CLAUDE.md is a regular file"; then
-    fail "validate-structure.sh no longer warns about a non-import regular CLAUDE.md"
-fi
-pass "non-import regular CLAUDE.md still warns"
+# --- Test 3: a CLAUDE.md beside an AGENTS.md is reported for removal -------
+for kind in import symlink; do
+    rm -f "$FX/Documentation/CLAUDE.md"
+    case "$kind" in
+        import) printf '@AGENTS.md\n' > "$FX/Documentation/CLAUDE.md" ;;
+        symlink) ln -s AGENTS.md "$FX/Documentation/CLAUDE.md" ;;
+    esac
+    out=$(bash "$VALIDATE" "$FX" 2>&1)
+    grep -q "Remove CLAUDE.md.*Documentation" <<<"$out" \
+        || fail "validate-structure.sh does not report a CLAUDE.md ($kind) for removal (output was: $out)"
+done
+pass "a CLAUDE.md beside an AGENTS.md, import or symlink, is reported for removal"
 
-echo "All CLAUDE.md import-file regression tests passed."
+echo "All import-file and no-CLAUDE.md regression tests passed."

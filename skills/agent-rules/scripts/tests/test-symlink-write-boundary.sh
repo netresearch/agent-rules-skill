@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: Netresearch DTT GmbH
-# Regression test for the CLAUDE.md/GEMINI.md write boundary (issues #102, #103).
+# Regression test for the GEMINI.md write boundary (issues #102, #103) and
+# the removal of CLAUDE.md (AGENTS.md is the only instruction file).
 #
 # Two defects, both in generate-agents.sh:
 #   #102  --no-symlinks was documented in --help but dropped by the parser, so
@@ -43,25 +44,26 @@ bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh
 [ -e "$FX/GEMINI.md" ] && fail "--no-symlinks still created GEMINI.md"
 pass "--no-symlinks creates AGENTS.md and no compatibility files"
 
-# --- Test 2: the default still creates them (companion to test 1)
+# --- Test 2: the default creates GEMINI.md and no CLAUDE.md
 FX="$WORK/default"
 make_fixture "$FX"
 bash "$GENERATE" "$FX" >/dev/null 2>&1 || fail "generate-agents.sh errored"
-[ -L "$FX/CLAUDE.md" ] || fail "default run did not symlink CLAUDE.md"
-[ "$(readlink "$FX/CLAUDE.md")" = "AGENTS.md" ] || fail "CLAUDE.md points elsewhere"
-pass "default run symlinks CLAUDE.md → AGENTS.md"
+[ -L "$FX/GEMINI.md" ] || fail "default run did not symlink GEMINI.md"
+[ "$(readlink "$FX/GEMINI.md")" = "AGENTS.md" ] || fail "GEMINI.md points elsewhere"
+[ -e "$FX/CLAUDE.md" ] || [ -L "$FX/CLAUDE.md" ] && fail "default run created a CLAUDE.md"
+pass "default run symlinks GEMINI.md → AGENTS.md and creates no CLAUDE.md"
 
 # --- Test 3 (#103): a foreign symlink is kept, and the user is told
 FX="$WORK/foreign-link"
 make_fixture "$FX"
 mkdir -p "$WORK/shared"
-printf '# curated rules\n' > "$WORK/shared/CLAUDE.md"
-ln -s ../shared/CLAUDE.md "$FX/CLAUDE.md"
+printf '# curated rules\n' > "$WORK/shared/GEMINI.md"
+ln -s ../shared/GEMINI.md "$FX/GEMINI.md"
 OUT="$(bash "$GENERATE" "$FX" 2>&1)" || fail "generate-agents.sh errored"
-[ "$(readlink "$FX/CLAUDE.md")" = "../shared/CLAUDE.md" ] \
-    || fail "foreign CLAUDE.md symlink was repointed without --force"
+[ "$(readlink "$FX/GEMINI.md")" = "../shared/GEMINI.md" ] \
+    || fail "foreign GEMINI.md symlink was repointed without --force"
 grep -q "Kept: " <<<"$OUT" || fail "no notice printed for the kept file (output was: $OUT)"
-pass "foreign CLAUDE.md symlink kept, notice printed"
+pass "foreign GEMINI.md symlink kept, notice printed"
 
 # --- Test 4: a regular foreign file is kept too, and reported
 FX="$WORK/foreign-file"
@@ -75,12 +77,12 @@ pass "regular GEMINI.md kept, notice printed"
 # --- Test 5: --force replaces a foreign symlink, --dry-run --force does not
 FX="$WORK/force"
 make_fixture "$FX"
-ln -s ../shared/CLAUDE.md "$FX/CLAUDE.md"
+ln -s ../shared/GEMINI.md "$FX/GEMINI.md"
 bash "$GENERATE" "$FX" --force --dry-run >/dev/null 2>&1 || fail "generate-agents.sh errored"
-[ "$(readlink "$FX/CLAUDE.md")" = "../shared/CLAUDE.md" ] \
+[ "$(readlink "$FX/GEMINI.md")" = "../shared/GEMINI.md" ] \
     || fail "--dry-run --force modified the tree"
 bash "$GENERATE" "$FX" --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
-[ "$(readlink "$FX/CLAUDE.md")" = "AGENTS.md" ] || fail "--force did not replace the foreign symlink"
+[ "$(readlink "$FX/GEMINI.md")" = "AGENTS.md" ] || fail "--force did not replace the foreign symlink"
 pass "--force replaces, --dry-run --force does not"
 
 # --- Test 6: a second run over our own symlink is a no-op, not a "Kept" notice
@@ -88,38 +90,51 @@ FX="$WORK/idempotent"
 make_fixture "$FX"
 bash "$GENERATE" "$FX" >/dev/null 2>&1 || fail "generate-agents.sh errored"
 OUT="$(bash "$GENERATE" "$FX" 2>&1)" || fail "generate-agents.sh errored on second run"
-grep -q "Kept: CLAUDE.md" <<<"$OUT" && fail "our own symlink was reported as a foreign file"
-[ "$(readlink "$FX/CLAUDE.md")" = "AGENTS.md" ] || fail "second run broke CLAUDE.md"
+grep -q "Kept: GEMINI.md" <<<"$OUT" && fail "our own symlink was reported as a foreign file"
+[ "$(readlink "$FX/GEMINI.md")" = "AGENTS.md" ] || fail "second run broke GEMINI.md"
 pass "re-running keeps our own symlink without a notice"
 
-# --- Test 7: --claude-shim treats a dangling foreign symlink as existing.
-# [ -f ] follows the link, so it read as absent and the shim was written
-# at the link's target, outside the project.
-FX="$WORK/shim-dangling"
-make_fixture "$FX"
-mkdir -p "$WORK/shim-target"
-ln -s ../shim-target/CLAUDE.md "$FX/CLAUDE.md"
-bash "$GENERATE" "$FX" --claude-shim --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
-[ -e "$WORK/shim-target/CLAUDE.md" ] && fail "--claude-shim wrote through a dangling symlink"
-[ "$(readlink "$FX/CLAUDE.md")" = "../shim-target/CLAUDE.md" ] || fail "--claude-shim changed the symlink without --force"
-bash "$GENERATE" "$FX" --claude-shim --no-symlinks --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
-[ -e "$WORK/shim-target/CLAUDE.md" ] && fail "--claude-shim --force wrote through the symlink"
-{ [ -f "$FX/CLAUDE.md" ] && [ ! -L "$FX/CLAUDE.md" ]; } || fail "--claude-shim --force did not replace the symlink with the shim"
-pass "--claude-shim keeps a dangling symlink, and --force replaces it instead of writing through it"
+# --- Test 7: AGENTS.md is the only instruction file. A CLAUDE.md the
+# generator made earlier (symlink, @AGENTS.md import, old shim) is removed,
+# also with --no-symlinks, and --dry-run only reports it.
+for kind in symlink import shim; do
+    FX="$WORK/own-claude-$kind"
+    make_fixture "$FX"
+    case "$kind" in
+        symlink) ln -s AGENTS.md "$FX/CLAUDE.md" ;;
+        import) printf '@AGENTS.md\n' > "$FX/CLAUDE.md" ;;
+        shim) printf '<!-- Auto-generated shim for Claude Code compatibility -->\n\n@import AGENTS.md\n' > "$FX/CLAUDE.md" ;;
+    esac
+    bash "$GENERATE" "$FX" --no-symlinks --dry-run >/dev/null 2>&1 || fail "generate-agents.sh errored"
+    { [ -e "$FX/CLAUDE.md" ] || [ -L "$FX/CLAUDE.md" ]; } || fail "--dry-run removed our own CLAUDE.md ($kind)"
+    bash "$GENERATE" "$FX" --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
+    { [ -e "$FX/CLAUDE.md" ] || [ -L "$FX/CLAUDE.md" ]; } && fail "our own CLAUDE.md ($kind) was not removed"
+done
+pass "a CLAUDE.md the generator made (symlink, import, shim) is removed; --dry-run keeps it"
 
-# --- Test 8: --claude-shim reports a kept foreign CLAUDE.md, not its own shim
-FX="$WORK/shim-foreign-file"
+# --- Test 8: a CLAUDE.md of the user's own is kept and reported; --force
+# removes it, and a symlink is removed as a link, never written through.
+FX="$WORK/user-claude"
 make_fixture "$FX"
 printf '# my own rules\n' > "$FX/CLAUDE.md"
-OUT="$(bash "$GENERATE" "$FX" --claude-shim --no-symlinks 2>&1)" || fail "generate-agents.sh errored"
-grep -q '^# my own rules$' "$FX/CLAUDE.md" || fail "--claude-shim replaced a foreign CLAUDE.md without --force"
-grep -q "Kept: CLAUDE.md" <<<"$OUT" || fail "--claude-shim kept a foreign CLAUDE.md without saying so (output was: $OUT)"
-FX="$WORK/shim-own"
+OUT="$(bash "$GENERATE" "$FX" 2>&1)" || fail "generate-agents.sh errored"
+grep -qx '# my own rules' "$FX/CLAUDE.md" || fail "a user CLAUDE.md was changed without --force"
+grep -q "Kept: CLAUDE.md" <<<"$OUT" || fail "a kept user CLAUDE.md was not reported (output was: $OUT)"
+bash "$GENERATE" "$FX" --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[ -e "$FX/CLAUDE.md" ] && fail "--force did not remove a user CLAUDE.md"
+FX="$WORK/dangling-claude"
 make_fixture "$FX"
-bash "$GENERATE" "$FX" --claude-shim --no-symlinks >/dev/null 2>&1 || fail "generate-agents.sh errored"
-OUT="$(bash "$GENERATE" "$FX" --claude-shim --no-symlinks 2>&1)" || fail "generate-agents.sh errored on second run"
-grep -q "Kept: CLAUDE.md" <<<"$OUT" && fail "re-running --claude-shim reported its own shim as kept"
-pass "--claude-shim reports a kept foreign CLAUDE.md and stays quiet about its own shim"
+mkdir -p "$WORK/claude-target"
+ln -s ../claude-target/CLAUDE.md "$FX/CLAUDE.md"
+bash "$GENERATE" "$FX" >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[ "$(readlink "$FX/CLAUDE.md")" = "../claude-target/CLAUDE.md" ] || fail "a foreign CLAUDE.md symlink was removed without --force"
+bash "$GENERATE" "$FX" --force >/dev/null 2>&1 || fail "generate-agents.sh errored"
+[ -L "$FX/CLAUDE.md" ] && fail "--force did not remove the foreign CLAUDE.md symlink"
+[ -e "$WORK/claude-target/CLAUDE.md" ] && fail "a file was written through the CLAUDE.md symlink"
+OUT="$(bash "$GENERATE" "$FX" --claude-shim 2>&1)" || fail "generate-agents.sh errored with --claude-shim"
+{ [ -e "$FX/CLAUDE.md" ] || [ -L "$FX/CLAUDE.md" ]; } && fail "--claude-shim created a CLAUDE.md"
+grep -q -- "--claude-shim is ignored" <<<"$OUT" || fail "--claude-shim gave no notice (output was: $OUT)"
+pass "a user CLAUDE.md is kept and reported, --force removes it without writing through, --claude-shim creates none"
 
 echo ""
 echo "All symlink write-boundary tests passed."

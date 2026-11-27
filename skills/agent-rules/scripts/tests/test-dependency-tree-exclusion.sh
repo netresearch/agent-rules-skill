@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: Netresearch DTT GmbH
 # Regression test for dependency-tree exclusion in validate-structure.sh (issue #84).
 #
-# The CLAUDE.md-symlink scan excludes vendor/ and node_modules/, but the scoped
+# The CLAUDE.md scan excludes vendor/ and node_modules/, but the scoped
 # AGENTS.md scan did not — so third-party AGENTS.md files shipped inside an
 # installed composer vendor/ tree were validated as if they were the project's
 # own, reporting their missing sections as project errors. TYPO3 extensions
@@ -36,7 +36,6 @@ cat > "$FX/AGENTS.md" <<'MD'
 
 - nothing scoped yet
 MD
-ln -s AGENTS.md "$FX/CLAUDE.md"
 
 for d in vendor/acme/lib node_modules/pkg .Build/vendor/acme/ext; do
     printf '# Third-party AGENTS.md\n\nNo managed header, no required sections.\n' > "$FX/$d/AGENTS.md"

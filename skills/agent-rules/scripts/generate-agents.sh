@@ -84,8 +84,8 @@ Options:
   --json                  Emit the write manifest as JSON (human output suppressed)
   --update                Update existing files only
   --force                 Force regeneration of existing files
-  --claude-shim           Generate CLAUDE.md that imports AGENTS.md (root only, legacy)
-  --no-symlinks           Skip creating CLAUDE.md/GEMINI.md symlinks (default: create them)
+  --claude-shim           Ignored: no CLAUDE.md is created (AGENTS.md is the only instruction file)
+  --no-symlinks           Skip creating GEMINI.md symlinks (default: create them)
   --verbose, -v           Verbose output
   --help, -h              Show this help message
 
@@ -95,8 +95,7 @@ Examples:
   generate-agents.sh . --dry-run --json   # Machine-readable plan, nothing written
   generate-agents.sh . --style=verbose    # Use verbose root template
   generate-agents.sh . --update           # Update existing files
-  generate-agents.sh . --no-symlinks      # Skip CLAUDE.md/GEMINI.md symlinks
-  generate-agents.sh . --claude-shim      # Generate CLAUDE.md @import shim instead of symlink
+  generate-agents.sh . --no-symlinks      # Skip GEMINI.md symlinks
 EOF
             exit 0
             ;;
@@ -130,7 +129,7 @@ fi
 # receipt of what was written -- the dry_run field in the output says which.
 MANIFEST=()
 # emit_op OP KIND PATH [KEY VALUE]
-#   op:   write | symlink | keep
+#   op:   write | symlink | keep | remove
 #   kind: agents-file | compat-file | shim
 # Paths are recorded relative to the project root, so a manifest can be
 # reviewed and compared without carrying one machine's directory layout.
@@ -153,7 +152,7 @@ log() {
     fi
 }
 
-# A CLAUDE.md/GEMINI.md compatibility file we are allowed to write:
+# A CLAUDE.md/GEMINI.md compatibility file we are allowed to write or remove:
 # absent, a symlink we created (pointing at AGENTS.md), or our own generated
 # "@AGENTS.md" import file. Anything else — a regular file, or a symlink
 # pointing at rules the user maintains elsewhere — belongs to the user and is
@@ -1377,44 +1376,42 @@ print(f\"Processing {item}\")  # Use logging module
     fi
 fi
 
-# Generate CLAUDE.md shim if requested
-if [ "$CLAUDE_SHIM" = true ]; then
-    CLAUDE_FILE="$PROJECT_DIR/CLAUDE.md"
-    # -e alone follows a symlink, so a dangling one would count as absent and
-    # the write below would land at its target, outside the project.
-    if { [ -e "$CLAUDE_FILE" ] || [ -L "$CLAUDE_FILE" ]; } && [ "$FORCE" = false ]; then
-        if [ ! -L "$CLAUDE_FILE" ] && head -n 1 "$CLAUDE_FILE" 2>/dev/null | grep -qF 'Auto-generated shim for Claude Code compatibility'; then
-            emit_op keep shim "$CLAUDE_FILE" reason "already exists"
-            log "CLAUDE.md already exists, skipping (use --force to regenerate)"
+# AGENTS.md is the only instruction file. Claude Code (v2.1.277 and later)
+# reads AGENTS.md itself, and by default only when no CLAUDE.md,
+# .claude/CLAUDE.md or CLAUDE.local.md exists in the directory or above it
+# (https://code.claude.com/docs/en/memory#agents-md), so the generator creates
+# no CLAUDE.md and removes the ones it made earlier: a symlink to AGENTS.md, an
+# @AGENTS.md import file or the old --claude-shim file. A CLAUDE.md of the
+# user's own is kept and reported; --force removes it too. A symlink is
+# removed as a link, its target is never touched.
+remove_own_claude_md() {
+    local file="$1" label="$2"
+    [ -e "$file" ] || [ -L "$file" ] || return 0
+    if [ "$FORCE" = true ] || compat_file_is_ours "$file" || { [ ! -L "$file" ] && head -n 1 "$file" 2>/dev/null | grep -qF 'Auto-generated shim for Claude Code compatibility'; }; then
+        if [ "$DRY_RUN" = true ]; then
+            emit_op remove compat-file "$file"
+            echo "[DRY-RUN] Would remove: $file (AGENTS.md is the only instruction file)"
         else
-            # Not our shim: say so, as the symlink mode does for a kept file.
-            report_kept_file "$CLAUDE_FILE" CLAUDE.md
+            rm -f "$file"
+            emit_op remove compat-file "$file"
+            echo "🗑️  Removed: $label (AGENTS.md is the only instruction file)"
         fi
-    elif [ "$DRY_RUN" = true ]; then
-        emit_op write shim "$CLAUDE_FILE"
-        echo "[DRY-RUN] Would create: $CLAUDE_FILE"
     else
-        # replace_file replaces a symlink rather than writing through it.
-        replace_file "$CLAUDE_FILE" << 'CLAUDESHIM'
-<!-- Auto-generated shim for Claude Code compatibility -->
-<!-- Source of truth: AGENTS.md -->
-<!-- Re-generate with: generate-agents.sh --claude-shim -->
-
-@import AGENTS.md
-
-<!-- Add Claude-specific overrides below if needed -->
-CLAUDESHIM
-        emit_op write shim "$CLAUDE_FILE"
-        echo "✅ Created: $CLAUDE_FILE (shim importing AGENTS.md)"
+        emit_op keep compat-file "$file" reason "user file"
+        echo "⚠️  Kept: $label — remove it by hand: while it exists, Claude Code reads it instead of AGENTS.md"
     fi
+}
+
+if [ "$CLAUDE_SHIM" = true ]; then
+    echo "⚠️  --claude-shim is ignored: AGENTS.md is the only instruction file, no CLAUDE.md is created" >&2
 fi
+remove_own_claude_md "$PROJECT_DIR/CLAUDE.md" CLAUDE.md
 
-# Auto-detect Claude Code environment and ensure CLAUDE.md symlinks exist
-
-# Create compatibility symlinks if requested (root level)
+# Create the GEMINI.md compatibility symlink if requested (root level)
 # Subdirectory symlinks are created after scoped files are generated (see below).
-if [ "$CREATE_SYMLINKS" = true ] && [ "$CLAUDE_SHIM" = false ]; then
-    for symlink_name in CLAUDE.md GEMINI.md; do
+if [ "$CREATE_SYMLINKS" = true ]; then
+    # shellcheck disable=SC2043  # one compatibility file now (CLAUDE.md is no longer created)
+    for symlink_name in GEMINI.md; do
         SYMLINK_FILE="$PROJECT_DIR/$symlink_name"
         if compat_file_is_ours "$SYMLINK_FILE"; then
             if [ "$DRY_RUN" = true ]; then
@@ -2438,13 +2435,16 @@ else
             echo "✅ Created: $SCOPE_FILE"
         fi
 
-        # Create subdirectory symlinks for cross-agent compatibility.
+        remove_own_claude_md "$PROJECT_DIR/$SCOPE_PATH/CLAUDE.md" "$SCOPE_PATH/CLAUDE.md"
+
+        # Create the GEMINI.md subdirectory symlink for Gemini CLI.
         # Documentation/ is symlink-hostile: the TYPO3 docs renderer lists it
         # via Flysystem, which aborts on ANY symbolic link (#82). Emit a
-        # regular @AGENTS.md import file there instead (both Claude Code and
-        # Gemini CLI support the @file import syntax).
+        # regular @AGENTS.md import file there instead (Gemini CLI supports
+        # the @file import syntax).
         if [ "$CREATE_SYMLINKS" = true ]; then
-            for symlink_name in CLAUDE.md GEMINI.md; do
+            # shellcheck disable=SC2043  # one compatibility file now (CLAUDE.md is no longer created)
+            for symlink_name in GEMINI.md; do
                 SYMLINK_FILE="$PROJECT_DIR/$SCOPE_PATH/$symlink_name"
                 if [ "$(basename "$SCOPE_PATH")" = "Documentation" ]; then
                     if ! compat_file_is_ours "$SYMLINK_FILE" && [ "$FORCE" = false ]; then

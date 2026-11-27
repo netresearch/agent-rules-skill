@@ -34,14 +34,14 @@ JSON
 # --- Test 1: --dry-run --json is valid JSON, carries the schema, writes nothing
 FX="$WORK/plan"
 make_fixture "$FX"
-printf '# my own rules\n' > "$FX/GEMINI.md"
+printf '# my own rules\n' > "$FX/CLAUDE.md"
 OUT="$(bash "$GENERATE" "$FX" --dry-run --json 2>/dev/null)" || fail "generate-agents.sh errored"
 jq -e . >/dev/null 2>&1 <<<"$OUT" || fail "output is not valid JSON: $OUT"
 [ "$(jq -r '.script' <<<"$OUT")" = "generate-agents" ] || fail "wrong script field"
 [ "$(jq -r '.schema' <<<"$OUT")" = "1" ] || fail "wrong schema field"
 [ "$(jq -r '.dry_run' <<<"$OUT")" = "true" ] || fail "dry_run not true under --dry-run"
 [ -e "$FX/AGENTS.md" ] && fail "--dry-run --json wrote AGENTS.md"
-[ -e "$FX/CLAUDE.md" ] && fail "--dry-run --json created a symlink"
+[ -e "$FX/GEMINI.md" ] && fail "--dry-run --json created a symlink"
 pass "--dry-run --json emits a valid manifest and writes nothing"
 
 # --- Test 2: human output is suppressed, so stdout is parseable
@@ -51,11 +51,11 @@ pass "--json suppresses the prose output"
 # --- Test 3: every operation kind appears, with the fields it needs
 [ "$(jq -r '[.operations[] | select(.op=="write" and .path=="AGENTS.md")] | length' <<<"$OUT")" = "1" ] \
     || fail "root AGENTS.md missing from the manifest"
-[ "$(jq -r '.operations[] | select(.path=="CLAUDE.md") | .target' <<<"$OUT")" = "AGENTS.md" ] \
+[ "$(jq -r '.operations[] | select(.path=="GEMINI.md") | .target' <<<"$OUT")" = "AGENTS.md" ] \
     || fail "symlink entry has no target"
-[ "$(jq -r '.operations[] | select(.path=="GEMINI.md") | .op' <<<"$OUT")" = "keep" ] \
+[ "$(jq -r '.operations[] | select(.path=="CLAUDE.md") | .op' <<<"$OUT")" = "keep" ] \
     || fail "the kept regular file is not recorded as keep"
-jq -e '.operations[] | select(.path=="GEMINI.md") | .reason' >/dev/null <<<"$OUT" \
+jq -e '.operations[] | select(.path=="CLAUDE.md") | .reason' >/dev/null <<<"$OUT" \
     || fail "keep entry carries no reason"
 pass "write, symlink and keep entries carry their fields"
 
