@@ -168,14 +168,18 @@ bash ${CLAUDE_SKILL_DIR}/scripts/verify-commands.sh /path/to/project
 
 This script:
 - Extracts commands from AGENTS.md tables and code blocks
+- Accepts a relative, absolute or `.` project path and finds the same commands for each
 - Verifies npm/yarn scripts exist in package.json
 - Verifies make targets exist in Makefile
 - Verifies composer scripts exist in composer.json
 - With `--update-verified`, records the date in the "Last verified" marker of AGENTS.md on success; without it, AGENTS.md is not changed
+- Exits 1 when a check fails or the project directory or AGENTS.md cannot be read, and 3 when AGENTS.md documents no command (`--allow-empty` accepts that); a command reported as skipped (for example an npm script missing from package.json, or a tool not in PATH) does not fail the run, so read the skipped results when every documented command must exist
+- `--json` reports `status` (`verified`, `unverified`, `failed`, `empty`) and `found`, the number of commands found
 
 Options:
 - `VERBOSE=true` - Show detailed output
 - `DRY_RUN=true` - Don't write the results file or the `--update-verified` date
+- `OUTPUT_JSON=PATH` - Results file (default: `.agents/command-verification.json` in the project); a relative path is relative to the current directory
 
 **Why this matters:** Research shows broken commands waste 500+ tokens as agents debug non-existent commands. Verified commands enable confident execution.
 

@@ -16,6 +16,7 @@ fi
 PROJECT_DIR="."
 JSON=false
 UPDATE_VERIFIED=false
+ALLOW_EMPTY=false
 
 # Parse flags. Preserves the original positional semantics (PROJECT_DIR="${1:-.}"):
 # the first non-flag argument becomes PROJECT_DIR, defaulting to "." when absent.
@@ -29,6 +30,10 @@ while [[ $# -gt 0 ]]; do
             UPDATE_VERIFIED=true
             shift
             ;;
+        --allow-empty)
+            ALLOW_EMPTY=true
+            shift
+            ;;
         --help|-h)
             cat <<EOF
 Usage: verify-commands.sh [PROJECT_DIR] [OPTIONS]
@@ -39,14 +44,23 @@ Options:
   --json                Emit machine-readable JSON on stdout (human output suppressed)
   --update-verified     On success, record today's date in the "Last verified"
                         marker of AGENTS.md (without it, AGENTS.md is not changed)
+  --allow-empty         Exit 0 when AGENTS.md documents no command (default: exit 3)
   --help, -h            Show this help message
+
+PROJECT_DIR may be relative, absolute or "."; it is resolved once.
+
+Exit status:
+  0  no check failed (commands reported as skipped do not fail the run)
+  1  a check failed, or the project directory or AGENTS.md cannot be read
+  3  AGENTS.md documents no command at all (nothing was verified)
 
 Environment variables:
   VERBOSE=true          Show detailed [INFO] output on stderr
   DRY_RUN=true          Skip writing the JSON sidecar and the --update-verified date
   SMOKE_TEST=true       Actually run safe commands (not just check existence)
   TIMEOUT=SECONDS       Per-command timeout for smoke tests (default: 60)
-  OUTPUT_JSON=PATH      Sidecar results file (default: PROJECT_DIR/.agents/command-verification.json)
+  OUTPUT_JSON=PATH      Sidecar results file (default: PROJECT_DIR/.agents/command-verification.json;
+                        a relative PATH is relative to the current directory)
 
 Examples:
   verify-commands.sh .                     # Verify commands in ./AGENTS.md
@@ -61,16 +75,10 @@ EOF
     esac
 done
 
-AGENTS_FILE="$PROJECT_DIR/AGENTS.md"
 VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 SMOKE_TEST="${SMOKE_TEST:-false}"
 TIMEOUT="${TIMEOUT:-60}"
-# The default sidecar lives inside the analysed project, so it is only written
-# when its directory is a real directory there (see write_json_results).
-OUTPUT_JSON_IS_DEFAULT=false
-[ -z "${OUTPUT_JSON:-}" ] && OUTPUT_JSON_IS_DEFAULT=true
-OUTPUT_JSON="${OUTPUT_JSON:-$PROJECT_DIR/.agents/command-verification.json}"
 
 # Colors
 RED='\033[0;31m'
@@ -96,9 +104,33 @@ warn() {
     echo -e "${YELLOW}[WARN]${NC} $*"
 }
 
-# Check if AGENTS.md exists
-if [ ! -f "$AGENTS_FILE" ]; then
+# Resolve the project directory once, before anything is derived from it: a
+# relative path joined to AGENTS.md and then used after the cd below would
+# point into the project twice. CDPATH is cleared so that cd neither prints
+# the directory nor picks one from CDPATH.
+if [[ ! -d "$PROJECT_DIR" ]]; then
+    error "project directory not found: $PROJECT_DIR"
+    exit 1
+fi
+PROJECT_DIR="$(CDPATH='' cd -P -- "$PROJECT_DIR" >/dev/null && pwd -P)"
+AGENTS_FILE="$PROJECT_DIR/AGENTS.md"
+
+# The default sidecar lives inside the analysed project, so it is only written
+# when its directory is a real directory there (see write_json_results). A
+# relative OUTPUT_JSON is relative to the directory the script was started in.
+OUTPUT_JSON_IS_DEFAULT=false
+[ -z "${OUTPUT_JSON:-}" ] && OUTPUT_JSON_IS_DEFAULT=true
+OUTPUT_JSON="${OUTPUT_JSON:-$PROJECT_DIR/.agents/command-verification.json}"
+[[ "$OUTPUT_JSON" == /* ]] || OUTPUT_JSON="$PWD/$OUTPUT_JSON"
+
+# Check if AGENTS.md exists and read it once. A read error is a diagnostic, not
+# an empty file: an empty inventory would otherwise pass as success.
+if [[ ! -f "$AGENTS_FILE" ]]; then
     error "AGENTS.md not found at $AGENTS_FILE"
+    exit 1
+fi
+if [[ ! -r "$AGENTS_FILE" ]] || ! AGENTS_CONTENT="$(cat -- "$AGENTS_FILE")"; then
+    error "cannot read $AGENTS_FILE"
     exit 1
 fi
 
@@ -317,12 +349,12 @@ write_json_results() {
 extract_commands() {
     # Extract from tables with backticks (| `command` | format)
     # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
-    grep -oE '\| `[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/| `//;s/`$//' | grep -v '^\s*$' || true
+    grep -oE '\| `[^`]+`' <<<"$AGENTS_CONTENT" | sed 's/| `//;s/`$//' | grep -v '^\s*$' || true
 
     # Extract from tables without backticks in Commands section
     # Look for lines like "| Lint | vendor/bin/php-cs-fixer fix --dry-run |"
     # Skip header row and separator row, get 3rd column (command), filter empty and time estimates
-    sed -n '/^## Commands/,/^##/p' "$AGENTS_FILE" 2>/dev/null | \
+    sed -n '/^## Commands/,/^##/p' <<<"$AGENTS_CONTENT" | \
         grep -E '^\|' | \
         tail -n +3 | \
         cut -d'|' -f3 | \
@@ -333,7 +365,7 @@ extract_commands() {
     # Extract from inline code that looks like commands
     # Includes: npm, yarn, pnpm, bun, make, go, composer, cargo, python, pip, poetry, uv, deno, gradle, php, vendor/bin
     # shellcheck disable=SC2016  # grep/sed pattern: backticks are literal.
-    grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |python |pip |poetry |uv |deno |gradle |php |vendor/bin/)[^`]+`' "$AGENTS_FILE" 2>/dev/null | sed 's/`//g' || true
+    grep -oE '`(npm |yarn |pnpm |bun |make |go |composer |cargo |pytest |python |pip |poetry |uv |deno |gradle |php |vendor/bin/)[^`]+`' <<<"$AGENTS_CONTENT" | sed 's/`//g' || true
 }
 
 # Print the makefile make would read in the current directory and every file
@@ -769,13 +801,15 @@ verify_command() {
 # Get unique commands
 mapfile -t commands < <(extract_commands | sort -u)
 
-if [ ${#commands[@]} -eq 0 ]; then
-    warn "No commands found in AGENTS.md"
+# An empty inventory is not a verified one: nothing was checked.
+if [[ ${#commands[@]} -eq 0 ]]; then
+    warn "No commands found in AGENTS.md: nothing was verified"
     if [[ "$JSON" = true ]]; then
         jq -nc --argjson p "$PASSED" --argjson s "$SKIPPED" --argjson f "$FAILED" \
-            '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:[]}' >&3
+            '{script:"verify-commands",schema:1,status:"empty",found:0,summary:{passed:$p,skipped:$s,failed:$f},commands:[]}' >&3
     fi
-    exit 0
+    [[ "$ALLOW_EMPTY" = true ]] && exit 0
+    exit 3
 fi
 
 echo "Found ${#commands[@]} unique commands to verify"
@@ -784,6 +818,14 @@ echo ""
 for cmd in "${commands[@]}"; do
     [ -n "$cmd" ] && verify_command "$cmd"
 done
+
+if [[ "$FAILED" -gt 0 ]]; then
+    STATUS=failed
+elif [[ "$PASSED" -gt 0 ]]; then
+    STATUS=verified
+else
+    STATUS=unverified
+fi
 
 # Emit JSON document (machine-readable) and exit before the human summary.
 # Summary counts come from the authoritative PASSED/SKIPPED/FAILED counters; the
@@ -813,10 +855,12 @@ if [[ "$JSON" = true ]]; then
 
     jq -nc \
         --argjson items "$arr_json" \
+        --arg status "$STATUS" \
+        --argjson found "${#commands[@]}" \
         --argjson p "$PASSED" \
         --argjson s "$SKIPPED" \
         --argjson f "$FAILED" \
-        '{script:"verify-commands",schema:1,summary:{passed:$p,skipped:$s,failed:$f},commands:$items}' >&3
+        '{script:"verify-commands",schema:1,status:$status,found:$found,summary:{passed:$p,skipped:$s,failed:$f},commands:$items}' >&3
 
     if [[ "$FAILED" -gt 0 ]]; then exit 1; fi
     exit 0
